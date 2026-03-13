@@ -35,10 +35,10 @@ function overallGrade(score: number): { label: string; color: string; bg1: strin
 function formatDuration(minutes: number): string {
   if (minutes < 1) return '<1 min';
   if (minutes < 60) return `${Math.round(minutes)} min`;
-  const hrs = Math.floor(minutes);
-  const mins = Math.round((minutes - hrs) * 60);
+  const hrs = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
   if (mins === 0) return `${hrs}h`;
-  return `${Math.floor(minutes / 60)}h ${mins}m`;
+  return `${hrs}h ${mins}m`;
 }
 
 function scoreArcColor(score: number): string {
