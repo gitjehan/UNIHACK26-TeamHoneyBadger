@@ -8,7 +8,7 @@ export const SLOUCH_THRESHOLD = 150;
 
 export const EAR_BLINK_THRESHOLD = 0.2;
 export const BLINK_MIN_FRAMES = 1;
-export const BLINK_MAX_FRAMES = 5;
+export const BLINK_MAX_FRAMES = 8;
 export const NORMAL_BLINK_RATE = { min: 15, max: 20 };
 export const EAR_NORMAL_RANGE = { drowsy: 0.18, alert: 0.33 };
 

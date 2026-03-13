@@ -129,15 +129,16 @@ export default function App(): JSX.Element {
     face.setCallbacks(
       (landmarks, emotionState, emotionConfidence, fps) => {
         scoreEngine.updateFaceFps(fps);
-        // Human returns 478 mesh points (MediaPipe-compatible). We need index
-        // 386 (RIGHT_EYE.top[0]) at minimum for blink detection → require 387.
-        const hasFaceMesh = landmarks.length >= 387;
-        if (hasFaceMesh) {
+        // Always feed face data through — the blink detector has its own
+        // internal check for specific eye-landmark indices and returns
+        // graceful fallback values when they're insufficient.
+        if (landmarks.length > 0) {
           scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
         }
+        const hasFaceMesh = landmarks.length >= 200;
         scoreEngine.setSystemStatus({
-          faceMesh: hasFaceMesh ? 'active' : 'degraded',
-          affectEngine: hasFaceMesh && emotionState ? 'active' : 'degraded',
+          faceMesh: hasFaceMesh ? 'active' : landmarks.length > 0 ? 'degraded' : 'inactive',
+          affectEngine: emotionState && emotionState !== 'neutral' ? 'active' : 'degraded',
         });
       },
       (status) => scoreEngine.setSystemStatus({ faceMesh: status, affectEngine: status }),

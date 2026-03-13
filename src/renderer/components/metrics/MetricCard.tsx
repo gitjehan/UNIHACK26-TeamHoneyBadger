@@ -66,18 +66,27 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
         <span style={{ marginRight: 4 }}>{KIND_ICON[kind]}</span>
         {label}
       </h3>
-      <div
-        className="metric-value"
-        style={{
-          color: statusColor(status),
-          transform: flash ? 'scale(1.03)' : 'scale(1)',
-          transition: 'color 0.25s ease, transform 0.2s ease-out',
-        }}
-      >
-        {value === null ? '--' : value}
-        {unit ? <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-tertiary)' }}> {unit}</span> : null}
-      </div>
-      <span className={`status-badge status-${status}`}>{statusLabel}</span>
+      {value === null ? (
+        <>
+          <div className="skeleton skeleton-value" />
+          <div className="skeleton skeleton-badge" />
+        </>
+      ) : (
+        <>
+          <div
+            className="metric-value"
+            style={{
+              color: statusColor(status),
+              transform: flash ? 'scale(1.03)' : 'scale(1)',
+              transition: 'color 0.25s ease, transform 0.2s ease-out',
+            }}
+          >
+            {value}
+            {unit ? <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-tertiary)' }}> {unit}</span> : null}
+          </div>
+          <span className={`status-badge status-${status}`}>{statusLabel}</span>
+        </>
+      )}
     </div>
   );
 });

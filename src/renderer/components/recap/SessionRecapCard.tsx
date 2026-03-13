@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SessionRecap } from '@renderer/lib/types';
 
 interface SessionRecapCardProps {
@@ -56,6 +56,8 @@ export function SessionRecapCard({
 }: SessionRecapCardProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dataUrlRef = useRef<string>('');
+  const [copyLabel, setCopyLabel] = useState('Copy');
+  const [saveLabel, setSaveLabel] = useState('Save');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -405,6 +407,8 @@ export function SessionRecapCard({
         ref={canvasRef}
         width={W}
         height={H}
+        aria-label="Session recap card with score breakdown"
+        role="img"
         style={{
           width: '100%',
           borderRadius: 14,
@@ -416,18 +420,28 @@ export function SessionRecapCard({
         <button
           className="btn btn-primary"
           type="button"
-          onClick={() => void onCopy(dataUrl())}
+          onClick={() => {
+            void onCopy(dataUrl()).then(() => {
+              setCopyLabel('Copied!');
+              setTimeout(() => setCopyLabel('Copy'), 2000);
+            });
+          }}
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
-          Copy
+          {copyLabel}
         </button>
         <button
           className="btn btn-secondary"
           type="button"
-          onClick={() => void onSave(dataUrl())}
+          onClick={() => {
+            void onSave(dataUrl()).then(() => {
+              setSaveLabel('Saved!');
+              setTimeout(() => setSaveLabel('Save'), 2000);
+            });
+          }}
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
-          Save PNG
+          {saveLabel}
         </button>
         <button
           className="btn btn-secondary"

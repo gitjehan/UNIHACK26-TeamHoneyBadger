@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { PetHealthState, PetState } from '@renderer/lib/types';
 
@@ -48,7 +48,7 @@ const HEALTH_BREATH_AMPLITUDE: Record<PetHealthState, number> = {
 // Hex values to skip during color lerp (non-body materials)
 const SKIP_COLORS = new Set([
   0xffffff, 0x222222, 0xf2e8ce, 0x333333, 0x8b0000, 0xe6dfd2,
-  0xf8f4ed, 0x5b8fa8, 0x4a7a94, 0x6b9db5, // egg shell + speckle blues
+  0xf8f4ed, // egg shell
 ]);
 
 // Hysteresis: health must be stable for this many ms before committing
@@ -56,15 +56,6 @@ const HEALTH_HYSTERESIS_MS = 3000;
 
 // Color lerp speed (0–1 per frame at 60fps ≈ 2s transition)
 const COLOR_LERP_SPEED = 0.02;
-
-// Seeded pseudo-random for consistent speckle placement
-function seededRandom(seed: number): () => number {
-  let s = seed;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
 
 export function BioPet({
   pet,
@@ -98,6 +89,10 @@ export function BioPet({
   // ── Color lerp refs ──
   const currentColorRef = useRef(HEALTH_COLORS[pet.health].clone());
   const targetColorRef = useRef(HEALTH_COLORS[pet.health].clone());
+
+  // State-driven committed health so Effect 4 re-runs on health changes
+  // (the ref alone never triggers re-renders when the interval commits a new value)
+  const [committedHealth, setCommittedHealth] = useState<PetHealthState>(pet.health);
 
   // ── Track current stage for rebuild detection ──
   const currentStageRef = useRef(pet.stage);
@@ -151,29 +146,6 @@ export function BioPet({
         // Egg shape: narrower at top, wider at bottom
         egg.scale.set(0.72, 1.0, 0.72);
         eggGroup.add(egg);
-
-        // Blue speckle dots scattered on the egg surface
-        const rand = seededRandom(42);
-        const speckleColors = [0x5b8fa8, 0x4a7a94, 0x6b9db5];
-        for (let i = 0; i < 18; i++) {
-          const theta = rand() * Math.PI * 2;
-          const phi = 0.3 + rand() * 2.2; // avoid very top and bottom
-          const r = 0.65;
-          const x = r * Math.sin(phi) * Math.cos(theta) * 0.72;
-          const y = r * Math.cos(phi);
-          const z = r * Math.sin(phi) * Math.sin(theta) * 0.72;
-
-          const dotSize = 0.02 + rand() * 0.03;
-          const dot = new THREE.Mesh(
-            new THREE.SphereGeometry(dotSize, 8, 8),
-            new THREE.MeshStandardMaterial({
-              color: speckleColors[i % 3],
-              roughness: 0.5,
-            }),
-          );
-          dot.position.set(x, y, z);
-          eggGroup.add(dot);
-        }
 
         group.add(eggGroup);
 
@@ -461,6 +433,7 @@ export function BioPet({
       healthRef.current = incomingHealth;
       targetColorRef.current = HEALTH_COLORS[incomingHealth].clone();
       breathAmplitudeRef.current = HEALTH_BREATH_AMPLITUDE[incomingHealth];
+      setCommittedHealth(incomingHealth);
     }
 
     if (incomingHealth === committedHealthRef.current) {
@@ -468,7 +441,6 @@ export function BioPet({
     }
   }, [pet.health]);
 
-  // Set up a recurring check for hysteresis timeout
   useEffect(() => {
     const interval = setInterval(() => {
       const pending = pendingHealthRef.current;
@@ -480,6 +452,7 @@ export function BioPet({
           healthRef.current = pending;
           targetColorRef.current = HEALTH_COLORS[pending].clone();
           breathAmplitudeRef.current = HEALTH_BREATH_AMPLITUDE[pending];
+          setCommittedHealth(pending);
         }
       }
     }, 500);
@@ -514,22 +487,19 @@ export function BioPet({
     const group = petGroupRef.current;
     if (!group) return;
 
-    const committed = committedHealthRef.current;
-
     group.traverse((child) => {
       if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
         if (SKIP_COLORS.has(child.material.color.getHex())) return;
-        child.material.emissiveIntensity = HEALTH_EMISSIVE_INTENSITY[committed];
+        child.material.emissiveIntensity = HEALTH_EMISSIVE_INTENSITY[committedHealth];
       }
     });
 
-    if (pet.stage > 0) {
-      buildPetGeometry(group, pet.stage, committed, pet.eggCrackProgress);
-      currentColorRef.current = HEALTH_COLORS[committed].clone();
-      targetColorRef.current = HEALTH_COLORS[committed].clone();
+    if (currentStageRef.current > 0) {
+      buildPetGeometry(group, currentStageRef.current, committedHealth, currentEggCrackRef.current);
+      currentColorRef.current = HEALTH_COLORS[committedHealth].clone();
+      targetColorRef.current = HEALTH_COLORS[committedHealth].clone();
     }
-    // eslint-disable-next-line
-  }, [committedHealthRef.current]);
+  }, [committedHealth, buildPetGeometry]);
 
   // ── Render ──────────────────────────────────────────────
 

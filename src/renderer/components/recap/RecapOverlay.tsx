@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { SessionRecap } from '@renderer/lib/types';
 import { SessionRecapCard } from './SessionRecapCard';
 
@@ -8,6 +9,22 @@ interface RecapOverlayProps {
 }
 
 export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProps): JSX.Element | null {
+  useEffect(() => {
+    if (!recap) return;
+
+    document.body.classList.add('overlay-open');
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKey);
+
+    return () => {
+      document.body.classList.remove('overlay-open');
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [recap, onClose]);
+
   if (!recap) return null;
 
   const copy = async (dataUrl: string) => {
@@ -28,7 +45,7 @@ export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProp
   };
 
   return (
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Session Recap">
       {/* Stop click propagation so clicking the card doesn't close */}
       <div onClick={(e) => e.stopPropagation()} style={{ animation: 'slideUp 0.3s ease-out' }}>
         <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} onRecalibrate={onRecalibrate} />

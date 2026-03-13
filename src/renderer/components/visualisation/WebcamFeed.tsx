@@ -353,7 +353,7 @@ export function WebcamFeed({
   const facePoints = faceLandmarks.length;
 
   return (
-    <div className="card" style={{ display: 'grid', gap: 10 }}>
+    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: 10, minHeight: 0, overflow: 'hidden' }}>
       <h3>Webcam Feed</h3>
       <div
         style={{
@@ -362,17 +362,20 @@ export function WebcamFeed({
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
+          minHeight: 0,
         }}
       >
         <video
           ref={videoRef}
-          style={{ width: '100%', transform: 'scaleX(-1)', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }}
           muted
           playsInline
           autoPlay
         />
         <canvas
           ref={overlayRef}
+          aria-label="Webcam feed with pose and face mesh overlay"
+          role="img"
           style={{
             position: 'absolute',
             inset: 0,
@@ -436,13 +439,15 @@ function drawEyeHighlight(
   cy /= count;
 
   const r = 12;
-  // Color based on eye state
+  // avgEAR is a rolling average — for instantaneous blink detection see BlinkDetector.
+  // Wider thresholds accommodate non-uniform normalization (x/width, y/height)
+  // which inflates EAR beyond the standard 0.25–0.35 textbook range.
   const eyeColor =
-    avgEAR < 0.15
-      ? 'rgba(255, 107, 107, 0.5)' // closed — red
-      : avgEAR < 0.2
-        ? 'rgba(255, 165, 2, 0.4)' // drowsy — amber
-        : 'rgba(123, 237, 159, 0.35)'; // open — green
+    avgEAR < 0.25
+      ? 'rgba(255, 107, 107, 0.5)'
+      : avgEAR < 0.40
+        ? 'rgba(255, 165, 2, 0.4)'
+        : 'rgba(123, 237, 159, 0.35)';
 
   ctx.strokeStyle = eyeColor;
   ctx.lineWidth = 1.5;

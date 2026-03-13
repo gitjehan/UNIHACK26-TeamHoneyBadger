@@ -24,9 +24,16 @@ export function Dashboard({
   visionBackend,
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
+  const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
 
   return (
     <div className="dashboard-grid">
+      {enginesInitializing && (
+        <div className="init-banner" style={{ gridColumn: '1 / -1' }}>
+          <div className="init-spinner" />
+          Initializing vision engines — metrics will appear shortly
+        </div>
+      )}
       <div className="column" style={{ gridTemplateRows: '1fr 1fr' }}>
         <DigitalTwin
           landmarks={state.poseLandmarks}
@@ -42,7 +49,7 @@ export function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto 1fr auto' }}>
         <div className="metric-grid">
           <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
           <MetricCard label="Blink Rate" value={snapshot.blink.rate} unit="bpm" kind="blinkRate" />
@@ -65,7 +72,7 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto auto' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto 1fr' }}>
         <OverallGauge value={snapshot.overall.score} />
         <SystemsPanel
           systems={state.systems}
