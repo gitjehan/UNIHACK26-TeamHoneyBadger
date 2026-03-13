@@ -101,27 +101,138 @@ Since Electron's renderer is Chromium, all browser ML libraries (MediaPipe, Huma
 └──────────────────────────────────────────────┘
 ```
 
-### IPC Contract (Renderer → Main)
+### Project File Structure
+
+```
+kinetic/
+├── forge.config.ts                  # Electron Forge configuration
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+│
+├── src/
+│   ├── main/                        # MAIN PROCESS (Node.js)
+│   │   ├── main.ts                  # App entry: window creation, IPC registration
+│   │   ├── ambient-controller.ts    # Brightness + gamma control with smoothing
+│   │   ├── gamma-helper.swift       # Compiled Swift binary for CoreGraphics gamma
+│   │   ├── elastic-client.ts        # Elasticsearch bulk indexing + leaderboard queries
+│   │   └── ipc-handlers.ts          # All ipcMain.handle/on registrations
+│   │
+│   ├── preload/
+│   │   └── preload.ts               # contextBridge exposing kinetic API to renderer
+│   │
+│   ├── renderer/                    # RENDERER PROCESS (React + Chromium)
+│   │   ├── index.html
+│   │   ├── index.tsx                # React root render
+│   │   ├── App.tsx                  # Top-level layout, state providers
+│   │   │
+│   │   ├── ml/                      # ML Pipeline
+│   │   │   ├── pose-engine.ts       # MediaPipe / Human pose detection loop (15fps)
+│   │   │   ├── face-engine.ts       # Human face mesh + affect loop (5fps)
+│   │   │   ├── posture-scorer.ts    # Neck angle, shoulder slant, trunk similarity → score
+│   │   │   ├── blink-detector.ts    # EAR calculation, blink counting, fatigue score
+│   │   │   ├── stress-estimator.ts  # Emotion + fidget + blink deviation → stress
+│   │   │   ├── score-engine.ts      # Central hub: combines all scores, manages state
+│   │   │   └── calibration.ts       # 3-second calibration capture + baseline storage
+│   │   │
+│   │   ├── components/              # React Components
+│   │   │   ├── layout/
+│   │   │   │   ├── Dashboard.tsx     # Main grid layout
+│   │   │   │   ├── Header.tsx        # "Kinetic" branding + state tabs
+│   │   │   │   └── Sidebar.tsx       # Right column (overall, systems, ambient)
+│   │   │   │
+│   │   │   ├── metrics/
+│   │   │   │   ├── MetricCard.tsx    # Reusable: value + unit + status badge
+│   │   │   │   ├── OverallGauge.tsx  # SVG circular arc gauge
+│   │   │   │   └── StateTabs.tsx     # Upright / Slouching / Fatigued tabs
+│   │   │   │
+│   │   │   ├── visualisation/
+│   │   │   │   ├── DigitalTwin.tsx   # Canvas stick figure with landmarks
+│   │   │   │   ├── WebcamFeed.tsx    # Video element + landmark overlay + FPS counter
+│   │   │   │   └── SessionTimeline.tsx # 3 sparkline area charts
+│   │   │   │
+│   │   │   ├── pet/
+│   │   │   │   ├── BioPet.tsx        # Three.js canvas wrapper
+│   │   │   │   ├── PetScene.ts       # Three.js scene setup, lighting, creature
+│   │   │   │   └── PetAnimator.ts    # State transitions, breathing, mirroring
+│   │   │   │
+│   │   │   ├── panels/
+│   │   │   │   ├── SystemsPanel.tsx  # Status dots for each subsystem
+│   │   │   │   └── AmbientPanel.tsx  # "Environment stable" + calm/elevated slider
+│   │   │   │
+│   │   │   ├── leaderboard/
+│   │   │   │   └── LeaderBoard.tsx   # Nickname entry + ranked list
+│   │   │   │
+│   │   │   └── onboarding/
+│   │   │       ├── CalibrationScreen.tsx  # "Sit up straight" flow
+│   │   │       └── WelcomeScreen.tsx      # First-launch intro
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useScores.ts          # Subscribe to score engine updates
+│   │   │   ├── useWebcam.ts          # getUserMedia + video ref management
+│   │   │   └── useElectronStore.ts   # Read/write to electron-store via IPC
+│   │   │
+│   │   ├── lib/
+│   │   │   ├── math.ts              # clamp, lerp, euclideanDist, cosineSimilarity, stddev
+│   │   │   ├── rolling-buffer.ts    # RollingAverage + RollingBuffer classes
+│   │   │   ├── constants.ts         # Thresholds, weights, landmark indices, connections
+│   │   │   └── types.ts             # All shared TypeScript interfaces
+│   │   │
+│   │   └── styles/
+│   │       └── globals.css           # Tailwind imports + design tokens as CSS vars
+│   │
+│   └── shared/
+│       └── ipc-channels.ts           # Channel name constants shared by main + renderer
+│
+└── assets/
+    ├── icon.png                      # App icon
+    └── models/                       # GLTF pet models (if used)
+```
+
+### IPC Contract
+
+All channel names defined in `src/shared/ipc-channels.ts`:
 
 ```typescript
-// Renderer sends to main:
-ipcRenderer.send('ambient:update', {
-  brightness: number;      // 0.0 – 1.0
-  warmth: number;          // 0.0 – 1.0 (maps to gamma shift)
+// src/shared/ipc-channels.ts
+export const IPC = {
+  // Renderer → Main (fire-and-forget)
+  AMBIENT_UPDATE:   'ambient:update',
+  BIOMETRIC_EVENT:  'biometric:event',
+
+  // Renderer → Main (request-response)
+  LEADERBOARD_GET:    'leaderboard:get',
+  LEADERBOARD_UPSERT: 'leaderboard:upsert',
+  STORE_GET:          'store:get',
+  STORE_SET:          'store:set',
+  SESSION_HISTORY:    'analytics:session-history',
+} as const;
+```
+
+```typescript
+// Renderer sends every second (fire-and-forget):
+window.kinetic.updateAmbient({
+  brightness: number,   // 0.0–1.0 (mapped from overall score)
+  warmth: number,        // 0.0–1.0 (mapped from posture + fatigue)
 });
 
-ipcRenderer.send('biometric:event', {
-  timestamp: string;
-  posture: { score: number; shoulderAngle: number; neckLean: number; isSlumping: boolean };
-  emotion: { dominant: string; confidence: number };
-  fatigue: { blinkRate: number; score: number; eyeAspectRatio: number };
-  ambient: { brightness: number; warmth: number; petState: string };
+// Renderer sends every 5 seconds (batched for Elasticsearch):
+window.kinetic.sendBiometric({
+  timestamp: string,
+  sessionId: string,
+  posture: { score, neckAngle, shoulderSlant, trunkSimilarity, isSlumping },
+  blink:   { rate, avgEAR, prolongedClosures },
+  focus:   { score },
+  stress:  { score, dominantEmotion, emotionConfidence },
+  overall: { score, state },
+  ambient: { brightness, warmth, petState },
 });
 
-// Renderer requests from main:
-ipcRenderer.invoke('leaderboard:get')    → LeaderboardEntry[]
-ipcRenderer.invoke('leaderboard:upsert', entry: LeaderboardEntry) → void
-ipcRenderer.invoke('analytics:session-history') → BiometricEvent[]
+// Renderer requests (async, returns data):
+window.kinetic.getLeaderboard()                    → LeaderboardEntry[]
+window.kinetic.upsertLeaderboard(entry)            → void
+window.kinetic.storeGet(key: string)               → any
+window.kinetic.storeSet(key: string, value: any)   → void
 ```
 
 ### Why No Supabase / Extra Database?
@@ -965,43 +1076,47 @@ interface LeaderboardEntry {
 
 ---
 
-## Key Implementation Details
+## Implementation Details
 
-### Electron Security (contextBridge)
+### Utility Functions (`src/renderer/lib/math.ts`)
 
-Never expose `ipcRenderer` directly to the renderer. Use `contextBridge`:
+These are referenced throughout the codebase — define them once:
 
 ```typescript
-// preload.ts
-import { contextBridge, ipcRenderer } from 'electron';
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
-contextBridge.exposeInMainWorld('kinetic', {
-  updateAmbient: (data: { brightness: number; warmth: number }) =>
-    ipcRenderer.send('ambient:update', data),
-  sendBiometric: (event: BiometricEvent) =>
-    ipcRenderer.send('biometric:event', event),
-  getLeaderboard: () => ipcRenderer.invoke('leaderboard:get'),
-  upsertLeaderboard: (entry: LeaderboardEntry) =>
-    ipcRenderer.invoke('leaderboard:upsert', entry),
-});
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+export function euclideanDist(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+export function cosineSimilarity(vecA: [number, number], vecB: [number, number]): number {
+  const dot = vecA[0] * vecB[0] + vecA[1] * vecB[1];
+  const magA = Math.sqrt(vecA[0] ** 2 + vecA[1] ** 2);
+  const magB = Math.sqrt(vecB[0] ** 2 + vecB[1] ** 2);
+  if (magA === 0 || magB === 0) return 0;
+  return dot / (magA * magB);
+}
+
+export function stddev(values: number[]): number {
+  if (values.length === 0) return 0;
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const squaredDiffs = values.map(v => (v - mean) ** 2);
+  return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / values.length);
+}
 ```
 
-### Webcam in Electron
+### Rolling Buffer (`src/renderer/lib/rolling-buffer.ts`)
 
-Electron handles camera permissions via `systemPreferences.askForMediaAccess('camera')` on macOS. Must be called from main process before renderer tries to access webcam.
-
-```typescript
-// main.ts (on app ready)
-import { systemPreferences } from 'electron';
-await systemPreferences.askForMediaAccess('camera');
-```
-
-Then in renderer, standard `navigator.mediaDevices.getUserMedia({ video: true })` works.
-
-### Rolling Average for Smoothing
+Used for smoothing scores and tracking time-series data:
 
 ```typescript
-class RollingAverage {
+export class RollingAverage {
   private buffer: number[] = [];
   constructor(private windowSize: number) {}
 
@@ -1010,10 +1125,740 @@ class RollingAverage {
     if (this.buffer.length > this.windowSize) this.buffer.shift();
     return this.buffer.reduce((a, b) => a + b, 0) / this.buffer.length;
   }
+
+  get values(): number[] { return [...this.buffer]; }
+  get length(): number { return this.buffer.length; }
+  get stddev(): number {
+    if (this.buffer.length === 0) return 0;
+    const mean = this.buffer.reduce((a, b) => a + b, 0) / this.buffer.length;
+    return Math.sqrt(this.buffer.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0) / this.buffer.length);
+  }
 }
 
-// Usage: 10-second window at 15fps = 150 samples
-const postureSmoothed = new RollingAverage(150);
-// On each ML frame:
-const smoothedScore = postureSmoothed.push(rawPostureScore);
+export class RollingBuffer<T> {
+  private buffer: T[] = [];
+  constructor(private maxSize: number) {}
+
+  push(item: T): void {
+    this.buffer.push(item);
+    if (this.buffer.length > this.maxSize) this.buffer.shift();
+  }
+
+  get items(): T[] { return [...this.buffer]; }
+  get length(): number { return this.buffer.length; }
+  get latest(): T | undefined { return this.buffer[this.buffer.length - 1]; }
+}
 ```
+
+Usage throughout the app:
+```typescript
+// Posture smoothing: 10-second window at 15fps = 150 samples
+const postureSmoothed = new RollingAverage(150);
+
+// Blink rate tracking: 60-second window (count blinks, compute rate)
+const blinkTimestamps = new RollingBuffer<number>(100); // last 100 blinks
+
+// Session timeline: 5 min of data at 1 sample/sec = 300 points
+const postureTimeline = new RollingBuffer<{ time: number; value: number }>(300);
+const focusTimeline   = new RollingBuffer<{ time: number; value: number }>(300);
+const stressTimeline  = new RollingBuffer<{ time: number; value: number }>(300);
+```
+
+### Constants (`src/renderer/lib/constants.ts`)
+
+Single source of truth for all thresholds, weights, and configuration:
+
+```typescript
+// --- Posture ---
+export const POSTURE_WEIGHTS = { neck: 0.45, shoulder: 0.20, trunk: 0.35 };
+export const NECK_ANGLE_RANGE = { perfect: 180, terrible: 140 }; // degrees
+export const SHOULDER_SLANT_MAX = 10; // degrees — above this = score 0
+export const TRUNK_SIMILARITY_RANGE = { perfect: 1.0, terrible: 0.85 };
+export const SLOUCH_THRESHOLD = 150; // neck angle below this = isSlumping
+
+// --- Blink / Fatigue ---
+export const EAR_BLINK_THRESHOLD = 0.20;
+export const BLINK_MIN_FRAMES = 1;
+export const BLINK_MAX_FRAMES = 5; // longer = prolonged closure
+export const NORMAL_BLINK_RATE = { min: 15, max: 20 }; // blinks per minute
+export const EAR_NORMAL_RANGE = { drowsy: 0.18, alert: 0.33 };
+
+// --- Stress ---
+export const EMOTION_STRESS_MAP: Record<string, number> = {
+  angry: 85, fearful: 80, sad: 70, disgusted: 65,
+  surprised: 40, neutral: 15, happy: 10,
+};
+export const STRESS_WEIGHTS = { emotion: 0.4, fidget: 0.35, blink: 0.25 };
+
+// --- Focus ---
+export const FOCUS_WEIGHTS = { posture: 0.3, inverseFatigue: 0.25, inverseStress: 0.20, stability: 0.25 };
+
+// --- Overall ---
+export const OVERALL_WEIGHTS = { posture: 0.40, focus: 0.35, inverseStress: 0.25 };
+export const STATE_THRESHOLDS = { upright: 65, slouching: 30 }; // ≥65 upright, 30-64 slouching, <30 fatigued
+
+// --- Metric Card Status ---
+export const STATUS_THRESHOLDS = {
+  posture:   { good: 70, fair: 40 },
+  blinkRate: { goodMin: 12, goodMax: 22, fairMin: 8, fairMax: 28 },
+  focus:     { good: 70, fair: 40 },
+  stress:    { good: 30, fair: 60 }, // inverted: low stress = good
+};
+
+// --- Ambient ---
+export const AMBIENT_UPDATE_INTERVAL = 1000; // ms between brightness/gamma updates
+export const AMBIENT_TRANSITION_DURATION = 2000; // ms to interpolate between states
+export const AMBIENT_MAP = [
+  { scoreMin: 80, scoreMax: 100, brightness: [0.7, 1.0], warmth: [0.0, 0.0] },
+  { scoreMin: 50, scoreMax: 80,  brightness: [0.5, 0.7], warmth: [0.2, 0.4] },
+  { scoreMin: 20, scoreMax: 50,  brightness: [0.3, 0.5], warmth: [0.4, 0.7] },
+  { scoreMin: 0,  scoreMax: 20,  brightness: [0.2, 0.3], warmth: [0.7, 0.9] },
+];
+
+// --- ML Performance ---
+export const POSE_FPS = 15;
+export const FACE_FPS = 5;
+export const POSE_LOOP_INTERVAL = Math.round(1000 / POSE_FPS);   // ~67ms
+export const FACE_LOOP_INTERVAL = Math.round(1000 / FACE_FPS);   // 200ms
+
+// --- MediaPipe Pose Landmarks ---
+export const LANDMARKS = {
+  NOSE: 0,
+  LEFT_EAR: 7, RIGHT_EAR: 8,
+  LEFT_SHOULDER: 11, RIGHT_SHOULDER: 12,
+  LEFT_ELBOW: 13, RIGHT_ELBOW: 14,
+  LEFT_WRIST: 15, RIGHT_WRIST: 16,
+  LEFT_HIP: 23, RIGHT_HIP: 24,
+  LEFT_KNEE: 25, RIGHT_KNEE: 26,
+  LEFT_ANKLE: 27, RIGHT_ANKLE: 28,
+};
+
+export const POSE_CONNECTIONS: [number, number][] = [
+  [0, 7], [0, 8],
+  [11, 12], [11, 23], [12, 24], [23, 24],
+  [11, 13], [13, 15], [12, 14], [14, 16],
+  [23, 25], [25, 27], [24, 26], [26, 28],
+];
+
+// --- Face Mesh Eye Landmarks ---
+export const LEFT_EYE = {
+  top: [159, 158, 157], bottom: [145, 144, 153],
+  left: 33, right: 133,
+};
+export const RIGHT_EYE = {
+  top: [386, 385, 384], bottom: [374, 373, 380],
+  left: 362, right: 263,
+};
+
+// --- Pet ---
+export const PET_STATES = {
+  THRIVING: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
+  FADING:   { minScore: 30, color: '#C4962C', label: 'Fading' },
+  WILTING:  { minScore: 0,  color: '#C0392B', label: 'Wilting' },
+};
+
+export const PET_EVOLUTION = [
+  { level: 1, title: 'Hatchling',  minMinutes: 0 },
+  { level: 2, title: 'Fledgling',  minMinutes: 30 },
+  { level: 3, title: 'Companion',  minMinutes: 120 },
+  { level: 4, title: 'Guardian',   minMinutes: 300 },
+  { level: 5, title: 'Ascended',   minMinutes: 600 },
+];
+
+// --- Elasticsearch ---
+export const ELASTIC_BATCH_INTERVAL = 5000; // ms
+export const LEADERBOARD_UPSERT_INTERVAL = 60000; // ms
+```
+
+### Types (`src/renderer/lib/types.ts`)
+
+```typescript
+export interface Point {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+}
+
+export interface PostureData {
+  score: number;
+  neckAngle: number;
+  shoulderSlant: number;
+  trunkSimilarity: number;
+  isSlumping: boolean;
+}
+
+export interface BlinkData {
+  rate: number;          // blinks per minute
+  avgEAR: number;
+  prolongedClosures: number;
+}
+
+export interface StressData {
+  score: number;
+  dominantEmotion: string;
+  emotionConfidence: number;
+}
+
+export interface ScoreSnapshot {
+  timestamp: number;
+  posture: PostureData;
+  blink: BlinkData;
+  focus: { score: number };
+  stress: StressData;
+  overall: { score: number; state: 'upright' | 'slouching' | 'fatigued' };
+}
+
+export type PetState = 'Thriving' | 'Fading' | 'Wilting';
+
+export interface CalibrationData {
+  uprightNeckAngle: number;
+  uprightShoulderSlant: number;
+  uprightTrunkVector: [number, number];
+  baselineBlinkRate: number;
+  baselineEAR: number;
+  timestamp: number;
+}
+
+export interface LeaderboardEntry {
+  nickname: string;
+  sessionId: string;
+  avgOverallScore: number;
+  bestStreak: number;
+  totalLockedInMinutes: number;
+  level: number;
+  levelTitle: string;
+  timestamp: string;
+}
+
+export type SystemStatus = 'active' | 'degraded' | 'inactive';
+
+export interface SystemsState {
+  poseDetection: SystemStatus;
+  faceMesh: SystemStatus;
+  affectEngine: SystemStatus;
+  ambientCtrl: SystemStatus;
+}
+```
+
+### State Management — Score Engine (`src/renderer/ml/score-engine.ts`)
+
+The Score Engine is the central hub. It subscribes to ML outputs and emits unified score snapshots. Uses a simple event emitter pattern — no Redux/Zustand needed for this app.
+
+```typescript
+type ScoreListener = (snapshot: ScoreSnapshot) => void;
+
+class ScoreEngine {
+  private listeners: ScoreListener[] = [];
+  private calibration: CalibrationData | null = null;
+
+  // Rolling buffers for smoothing
+  private postureBuffer = new RollingAverage(150);  // 10s at 15fps
+  private blinkTimestamps: number[] = [];            // timestamps of recent blinks
+  private earBuffer = new RollingAverage(30);         // 6s at 5fps
+  private postureHistory = new RollingAverage(60);    // 60 samples for variance (fidgeting)
+  private prolongedClosureCount = 0;
+
+  // Latest values from each ML module
+  private latestPosture: PostureData = { score: 0, neckAngle: 180, shoulderSlant: 0, trunkSimilarity: 1, isSlumping: false };
+  private latestBlink: BlinkData = { rate: 17, avgEAR: 0.3, prolongedClosures: 0 };
+  private latestEmotion = { dominant: 'neutral', confidence: 0 };
+
+  subscribe(listener: ScoreListener): () => void {
+    this.listeners.push(listener);
+    return () => { this.listeners = this.listeners.filter(l => l !== listener); };
+  }
+
+  setCalibration(data: CalibrationData): void {
+    this.calibration = data;
+  }
+
+  /** Called by pose-engine.ts on each frame (~15fps) */
+  updatePosture(landmarks: Point[]): void {
+    if (!this.calibration) return;
+    // Calculate raw posture using posture-scorer.ts
+    this.latestPosture = calculatePostureFromLandmarks(landmarks, this.calibration);
+    const smoothed = this.postureBuffer.push(this.latestPosture.score);
+    this.latestPosture.score = Math.round(smoothed);
+    this.postureHistory.push(smoothed);
+    this.emit();
+  }
+
+  /** Called by face-engine.ts on each frame (~5fps) */
+  updateFace(faceLandmarks: Point[], emotion: { dominant: string; confidence: number }): void {
+    // Blink detection via blink-detector.ts
+    const earResult = processEAR(faceLandmarks);
+    this.earBuffer.push(earResult.ear);
+
+    if (earResult.blinkDetected) {
+      this.blinkTimestamps.push(Date.now());
+    }
+    if (earResult.prolongedClosure) {
+      this.prolongedClosureCount++;
+    }
+
+    // Compute blink rate (blinks in last 60 seconds)
+    const now = Date.now();
+    this.blinkTimestamps = this.blinkTimestamps.filter(t => now - t < 60000);
+    this.latestBlink = {
+      rate: this.blinkTimestamps.length,
+      avgEAR: this.earBuffer.values.reduce((a, b) => a + b, 0) / Math.max(1, this.earBuffer.length),
+      prolongedClosures: this.prolongedClosureCount,
+    };
+
+    this.latestEmotion = emotion;
+    this.emit();
+  }
+
+  private emit(): void {
+    const fatigueScore = calculateFatigueScore(
+      this.latestBlink.rate,
+      this.calibration?.baselineBlinkRate ?? 17,
+      this.latestBlink.avgEAR,
+      this.latestBlink.prolongedClosures,
+    );
+    const stressScore = calculateStressScore(
+      this.latestEmotion.dominant,
+      this.latestEmotion.confidence,
+      this.postureHistory.stddev,
+      Math.abs(this.latestBlink.rate - (this.calibration?.baselineBlinkRate ?? 17)) / 17,
+    );
+    const focusScore = calculateFocusScore(
+      this.latestPosture.score,
+      fatigueScore,
+      stressScore,
+      clamp((1 - this.postureHistory.stddev / 20) * 100, 0, 100), // stability
+    );
+    const overallScore = calculateOverallScore(this.latestPosture.score, focusScore, stressScore);
+    const state = overallScore >= 65 ? 'upright' : overallScore >= 30 ? 'slouching' : 'fatigued';
+
+    const snapshot: ScoreSnapshot = {
+      timestamp: Date.now(),
+      posture: this.latestPosture,
+      blink: this.latestBlink,
+      focus: { score: focusScore },
+      stress: { score: stressScore, dominantEmotion: this.latestEmotion.dominant, emotionConfidence: this.latestEmotion.confidence },
+      overall: { score: overallScore, state },
+    };
+
+    for (const listener of this.listeners) listener(snapshot);
+  }
+}
+
+// Singleton — import this everywhere
+export const scoreEngine = new ScoreEngine();
+```
+
+### React Data Flow
+
+```
+scoreEngine (singleton, event emitter)
+   ↓ subscribe()
+useScores() hook (React hook, useState + useEffect)
+   ↓ returns ScoreSnapshot
+<Dashboard />
+   ├── <MetricCard metric="posture" value={scores.posture.score} />
+   ├── <MetricCard metric="blinkRate" value={scores.blink.rate} />
+   ├── <MetricCard metric="focus" value={scores.focus.score} />
+   ├── <MetricCard metric="stress" value={scores.stress.score} />
+   ├── <OverallGauge score={scores.overall.score} />
+   ├── <DigitalTwin landmarks={latestLandmarks} score={scores.posture.score} />
+   ├── <BioPet overallScore={scores.overall.score} shoulderSlant={scores.posture.shoulderSlant} />
+   ├── <SessionTimeline posture={...} focus={...} stress={...} />
+   ├── <SystemsPanel status={systemsState} />
+   └── <AmbientPanel score={scores.overall.score} />
+```
+
+```typescript
+// src/renderer/hooks/useScores.ts
+import { useState, useEffect } from 'react';
+import { scoreEngine } from '../ml/score-engine';
+import type { ScoreSnapshot } from '../lib/types';
+
+export function useScores(): ScoreSnapshot | null {
+  const [scores, setScores] = useState<ScoreSnapshot | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = scoreEngine.subscribe(setScores);
+    return unsubscribe;
+  }, []);
+
+  return scores;
+}
+```
+
+### ML Pipeline Orchestration
+
+Two independent loops running at different frame rates. They do NOT block each other.
+
+```typescript
+// src/renderer/ml/pose-engine.ts
+import { scoreEngine } from './score-engine';
+import { POSE_LOOP_INTERVAL } from '../lib/constants';
+
+let poseModel: PoseLandmarker | HumanPose;
+let videoElement: HTMLVideoElement;
+let running = false;
+
+export async function initPoseEngine(video: HTMLVideoElement): Promise<void> {
+  videoElement = video;
+  // Try @vladmandic/human first
+  // If accuracy bad → fall back to @mediapipe/tasks-vision PoseLandmarker
+  poseModel = await loadPoseModel();
+  running = true;
+  tick();
+}
+
+function tick(): void {
+  if (!running) return;
+  const landmarks = poseModel.detect(videoElement);
+  if (landmarks && landmarks.length > 0) {
+    scoreEngine.updatePosture(landmarks);
+  }
+  setTimeout(tick, POSE_LOOP_INTERVAL); // ~67ms = 15fps
+}
+
+export function stopPoseEngine(): void { running = false; }
+```
+
+```typescript
+// src/renderer/ml/face-engine.ts
+import { scoreEngine } from './score-engine';
+import { FACE_LOOP_INTERVAL } from '../lib/constants';
+
+let faceModel: Human;
+let videoElement: HTMLVideoElement;
+let running = false;
+
+export async function initFaceEngine(video: HTMLVideoElement): Promise<void> {
+  videoElement = video;
+  faceModel = await loadFaceModel(); // @vladmandic/human with face + emotion config
+  running = true;
+  tick();
+}
+
+function tick(): void {
+  if (!running) return;
+  const result = faceModel.detect(videoElement);
+  if (result?.face?.[0]) {
+    const face = result.face[0];
+    scoreEngine.updateFace(
+      face.mesh,                                     // 468 face landmarks
+      { dominant: face.emotion?.[0]?.emotion ?? 'neutral',
+        confidence: face.emotion?.[0]?.score ?? 0 }
+    );
+  }
+  setTimeout(tick, FACE_LOOP_INTERVAL); // 200ms = 5fps
+}
+
+export function stopFaceEngine(): void { running = false; }
+```
+
+### Ambient Controller (`src/main/ambient-controller.ts`)
+
+Runs in the main process. Receives target brightness/warmth from renderer, smoothly interpolates.
+
+```typescript
+import { exec } from 'child_process';
+import { AMBIENT_TRANSITION_DURATION } from '../shared/constants';
+
+class AmbientController {
+  private currentBrightness = 1.0;
+  private currentWarmth = 0.0;
+  private targetBrightness = 1.0;
+  private targetWarmth = 0.0;
+  private interpolating = false;
+
+  /** Called when renderer sends ambient:update */
+  setTarget(brightness: number, warmth: number): void {
+    this.targetBrightness = brightness;
+    this.targetWarmth = warmth;
+    if (!this.interpolating) this.startInterpolation();
+  }
+
+  private startInterpolation(): void {
+    this.interpolating = true;
+    const steps = AMBIENT_TRANSITION_DURATION / 50; // 50ms per step = 40 steps over 2s
+    let step = 0;
+
+    const interval = setInterval(() => {
+      step++;
+      const t = step / steps;
+
+      this.currentBrightness = lerp(this.currentBrightness, this.targetBrightness, t);
+      this.currentWarmth = lerp(this.currentWarmth, this.targetWarmth, t);
+
+      this.applyBrightness(this.currentBrightness);
+      this.applyGamma(this.currentWarmth);
+
+      if (step >= steps) {
+        clearInterval(interval);
+        this.interpolating = false;
+
+        // Check if target changed during interpolation
+        if (Math.abs(this.currentBrightness - this.targetBrightness) > 0.01 ||
+            Math.abs(this.currentWarmth - this.targetWarmth) > 0.01) {
+          this.startInterpolation(); // New target arrived, keep interpolating
+        }
+      }
+    }, 50);
+  }
+
+  private applyBrightness(level: number): void {
+    exec(`brightness ${level.toFixed(3)}`);
+  }
+
+  private applyGamma(warmth: number): void {
+    const red   = 1.0;
+    const green = (1.0 - warmth * 0.3).toFixed(3);
+    const blue  = (1.0 - warmth * 0.4).toFixed(3);
+    exec(`./gamma-helper ${red} ${green} ${blue}`);
+  }
+
+  /** MUST be called on app quit, crash, SIGTERM — resets screen to normal */
+  reset(): void {
+    exec('brightness 1.0');
+    exec('./gamma-helper 1.0 1.0 1.0');
+    this.currentBrightness = 1.0;
+    this.currentWarmth = 0.0;
+  }
+}
+
+export const ambientController = new AmbientController();
+```
+
+### Main Process Entry (`src/main/main.ts`)
+
+```typescript
+import { app, BrowserWindow, ipcMain, systemPreferences } from 'electron';
+import { ambientController } from './ambient-controller';
+import { IPC } from '../shared/ipc-channels';
+
+let mainWindow: BrowserWindow;
+
+app.whenReady().then(async () => {
+  // Request camera permission before creating window
+  await systemPreferences.askForMediaAccess('camera');
+
+  mainWindow = new BrowserWindow({
+    width: 1280,
+    height: 800,
+    minWidth: 1024,
+    minHeight: 700,
+    webPreferences: {
+      preload: path.join(__dirname, '../preload/preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    titleBarStyle: 'hiddenInset', // Clean macOS look
+    backgroundColor: '#FAF8F5',    // Matches design system cream
+  });
+
+  mainWindow.loadURL(/* vite dev server or built index.html */);
+
+  // --- IPC Handlers ---
+
+  ipcMain.on(IPC.AMBIENT_UPDATE, (_event, data: { brightness: number; warmth: number }) => {
+    ambientController.setTarget(data.brightness, data.warmth);
+  });
+
+  ipcMain.on(IPC.BIOMETRIC_EVENT, (_event, data) => {
+    // Queue for Elasticsearch bulk indexing (see elastic-client.ts)
+    elasticClient.queue(data);
+  });
+
+  ipcMain.handle(IPC.LEADERBOARD_GET, async () => {
+    return elasticClient.getLeaderboard();
+  });
+
+  ipcMain.handle(IPC.LEADERBOARD_UPSERT, async (_event, entry) => {
+    return elasticClient.upsertLeaderboard(entry);
+  });
+
+  ipcMain.handle(IPC.STORE_GET, (_event, key: string) => {
+    return store.get(key);
+  });
+
+  ipcMain.handle(IPC.STORE_SET, (_event, key: string, value: any) => {
+    store.set(key, value);
+  });
+});
+
+// --- Safety: ALWAYS reset gamma on exit ---
+app.on('will-quit', () => ambientController.reset());
+app.on('before-quit', () => ambientController.reset());
+process.on('SIGTERM', () => { ambientController.reset(); process.exit(0); });
+process.on('SIGINT',  () => { ambientController.reset(); process.exit(0); });
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  ambientController.reset();
+  process.exit(1);
+});
+```
+
+### Preload Bridge (`src/preload/preload.ts`)
+
+```typescript
+import { contextBridge, ipcRenderer } from 'electron';
+import { IPC } from '../shared/ipc-channels';
+
+contextBridge.exposeInMainWorld('kinetic', {
+  // Fire-and-forget
+  updateAmbient: (data: { brightness: number; warmth: number }) =>
+    ipcRenderer.send(IPC.AMBIENT_UPDATE, data),
+  sendBiometric: (event: any) =>
+    ipcRenderer.send(IPC.BIOMETRIC_EVENT, event),
+
+  // Request-response
+  getLeaderboard: () => ipcRenderer.invoke(IPC.LEADERBOARD_GET),
+  upsertLeaderboard: (entry: any) => ipcRenderer.invoke(IPC.LEADERBOARD_UPSERT, entry),
+  storeGet: (key: string) => ipcRenderer.invoke(IPC.STORE_GET, key),
+  storeSet: (key: string, value: any) => ipcRenderer.invoke(IPC.STORE_SET, key, value),
+});
+```
+
+### electron-store Schema
+
+What persists across app restarts:
+
+```typescript
+// Managed via IPC.STORE_GET / IPC.STORE_SET from renderer
+
+interface StoreSchema {
+  // Calibration
+  calibration: CalibrationData | null;
+
+  // Pet
+  pet: {
+    level: number;              // 1-5
+    totalLockedInMinutes: number;
+    lastEvolutionCheck: number; // timestamp
+  };
+
+  // User
+  nickname: string | null;
+
+  // Preferences
+  preferences: {
+    ambientEnabled: boolean;
+    brightnessRange: { min: number; max: number }; // user can limit how dim it gets
+    warmthIntensity: number; // 0-1 multiplier on warmth effect
+  };
+
+  // Session history (last 30 sessions, for local analytics if Elastic is down)
+  sessions: Array<{
+    id: string;
+    startTime: number;
+    endTime: number;
+    avgPosture: number;
+    avgFocus: number;
+    avgStress: number;
+    avgOverall: number;
+    bestStreak: number;
+    totalMinutes: number;
+  }>;
+}
+```
+
+### Design System / Color Tokens
+
+Based on the mockup's earth-tone palette. Defined as CSS custom properties in `globals.css` and referenced throughout with Tailwind.
+
+```css
+/* src/renderer/styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Background */
+  --bg-primary: #FAF8F5;         /* warm cream — app background */
+  --bg-card: #FFFFFF;             /* white — card surfaces */
+  --bg-card-hover: #F5F3F0;      /* subtle hover */
+
+  /* Text */
+  --text-primary: #2C2C2C;       /* near-black */
+  --text-secondary: #6B6B6B;     /* muted gray */
+  --text-tertiary: #9B9B9B;      /* light labels */
+
+  /* Status — Good */
+  --green-primary: #4A7C59;      /* score text, digital twin lines */
+  --green-bg: #E8F0EA;           /* badge background */
+  --green-badge: #4A7C59;        /* "Good" badge */
+
+  /* Status — Fair */
+  --amber-primary: #C4962C;      /* score text, digital twin lines */
+  --amber-bg: #FFF3DC;           /* badge background */
+  --amber-badge: #B8860B;        /* "Fair" badge */
+
+  /* Status — Poor */
+  --red-primary: #C0392B;        /* score text, digital twin lines */
+  --red-bg: #FDE8E5;             /* badge background */
+  --red-badge: #C0392B;          /* "Poor" badge */
+
+  /* Accents */
+  --accent-green: #4A7C59;       /* overall gauge stroke (good) */
+  --accent-amber: #C4962C;       /* overall gauge stroke (fair) */
+  --accent-red: #C0392B;         /* overall gauge stroke (poor) */
+
+  /* Charts */
+  --chart-posture: #4A7C59;
+  --chart-focus: #4A7C59;
+  --chart-stress: #C0392B;
+  --chart-fill-opacity: 0.15;
+
+  /* Borders */
+  --border-card: #E8E5E0;        /* subtle card borders */
+  --border-section: #D4D0CA;     /* section dividers */
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+  /* Font */
+  --font-mono: 'SF Mono', 'Menlo', monospace;
+  --font-sans: 'SF Pro Display', '-apple-system', system-ui, sans-serif;
+}
+```
+
+```typescript
+// tailwind.config.ts — extend theme with CSS variables
+export default {
+  theme: {
+    extend: {
+      colors: {
+        bg: { primary: 'var(--bg-primary)', card: 'var(--bg-card)' },
+        status: {
+          good: 'var(--green-primary)',
+          fair: 'var(--amber-primary)',
+          poor: 'var(--red-primary)',
+        },
+      },
+      fontFamily: {
+        sans: ['var(--font-sans)'],
+        mono: ['var(--font-mono)'],
+      },
+    },
+  },
+};
+```
+
+### Webcam Feed Overlay (`src/renderer/components/visualisation/WebcamFeed.tsx`)
+
+The mockup shows the webcam feed with landmark dots and metadata ("30 fps · 543 pts"):
+
+```typescript
+interface WebcamFeedProps {
+  videoRef: React.RefObject<HTMLVideoElement>;
+  landmarks: Point[] | null;
+  fps: number;
+  landmarkCount: number;
+}
+
+// Renders:
+// 1. <video> element (mirrored with CSS transform: scaleX(-1))
+// 2. <canvas> overlay on top drawing green/amber/red dots at each landmark position
+// 3. Footer bar: "30 fps · 543 pts" + "● REC" indicator
+// 4. Header: "WEBCAM — MEDIAPIPE HOLISTIC"
+```
+
+The canvas overlay draws small dots (radius 3px) at each detected landmark position. Same color scheme as the Digital Twin (green/amber/red based on posture score). This gives visual confirmation that the ML is tracking correctly.
