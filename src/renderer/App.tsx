@@ -397,6 +397,9 @@ export default function App(): JSX.Element {
           <div className="onboarding-card">
             <h2>Webcam access needed</h2>
             <p>{webcam.error}</p>
+            <p style={{ color: 'var(--text-tertiary)', fontSize: 13, margin: '8px 0 0' }}>
+              Make sure your camera is connected and permissions are enabled in System Settings &gt; Privacy &amp; Security &gt; Camera.
+            </p>
             <button className="btn btn-primary" type="button" onClick={() => window.location.reload()}>
               Retry
             </button>

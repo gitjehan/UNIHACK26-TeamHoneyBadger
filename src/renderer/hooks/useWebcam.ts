@@ -44,6 +44,9 @@ export function useWebcam(enabled: boolean): WebcamState {
 
     const run = async () => {
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('Camera API not available — check browser permissions or use HTTPS');
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' },
           audio: false,

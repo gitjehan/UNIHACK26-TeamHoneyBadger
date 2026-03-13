@@ -24,6 +24,8 @@ export class AmbientController {
 
   private timer: NodeJS.Timeout | null = null;
 
+  private busy = false;
+
   private step = 0;
 
   private totalSteps = 40;
@@ -54,13 +56,19 @@ export class AmbientController {
     this.startBrightness = this.currentBrightness;
     this.startWarmth = this.currentWarmth;
     this.timer = setInterval(async () => {
-      this.step += 1;
-      const t = clamp(this.step / this.totalSteps, 0, 1);
-      this.currentBrightness = lerp(this.startBrightness, this.targetBrightness, t);
-      this.currentWarmth = lerp(this.startWarmth, this.targetWarmth, t);
-      await this.applyBrightness(this.currentBrightness);
-      await this.applyGamma(this.currentWarmth);
-      if (t >= 1) this.clearTimer();
+      if (this.busy) return;
+      this.busy = true;
+      try {
+        this.step += 1;
+        const t = clamp(this.step / this.totalSteps, 0, 1);
+        this.currentBrightness = lerp(this.startBrightness, this.targetBrightness, t);
+        this.currentWarmth = lerp(this.startWarmth, this.targetWarmth, t);
+        await this.applyBrightness(this.currentBrightness);
+        await this.applyGamma(this.currentWarmth);
+        if (t >= 1) this.clearTimer();
+      } finally {
+        this.busy = false;
+      }
     }, 50);
   }
 

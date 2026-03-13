@@ -11,12 +11,20 @@ export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProp
   if (!recap) return null;
 
   const copy = async (dataUrl: string) => {
-    await window.kinetic.copyRecapToClipboard(dataUrl);
+    try {
+      await window.kinetic.copyRecapToClipboard(dataUrl);
+    } catch (err) {
+      console.error('Failed to copy recap to clipboard', err);
+    }
   };
 
   const save = async (dataUrl: string) => {
-    const filename = `kinetic-recap-${new Date().toISOString().slice(0, 10)}.png`;
-    await window.kinetic.exportRecapPng(dataUrl, filename);
+    try {
+      const filename = `kinetic-recap-${new Date().toISOString().slice(0, 10)}.png`;
+      await window.kinetic.exportRecapPng(dataUrl, filename);
+    } catch (err) {
+      console.error('Failed to save recap image', err);
+    }
   };
 
   return (
