@@ -1,0 +1,281 @@
+import { memo, useEffect, useRef } from 'react';
+import { LANDMARKS } from '@renderer/lib/constants';
+import type { Point } from '@renderer/lib/types';
+
+interface DigitalTwinProps {
+  landmarks: Point[];
+  postureScore: number;
+  shoulderSlant: number;
+}
+
+/* ── connections ─────────────────────────────────────── */
+const UPPER_CONNECTIONS: [number, number][] = [
+  [11, 12], // shoulders
+  [11, 13], [13, 15], // left arm
+  [12, 14], [14, 16], // right arm
+  [11, 23], [12, 24], // torso
+];
+
+const LOWER_CONNECTIONS: [number, number][] = [
+  [23, 24], // hips
+  [23, 25], [25, 27], // left leg
+  [24, 26], [26, 28], // right leg
+];
+
+/* ── colour by score ─────────────────────────────────── */
+function scoreColor(score: number): string {
+  if (score >= 70) return '#3D6B4F';
+  if (score >= 40) return '#C4962C';
+  return '#B85A4D';
+}
+
+function isVis(p: Point | undefined): p is Point {
+  return !!p && (p.visibility ?? 1) > 0.05;
+}
+
+const LERP = 0.3;
+
+/* ── component ──────────────────────────────────────── */
+function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwinProps): JSX.Element {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const frameRef = useRef<number>(0);
+  const mountedRef = useRef(false);
+
+  const landmarksRef = useRef<Point[]>(landmarks);
+  const postureScoreRef = useRef(postureScore);
+  const smoothedRef = useRef<Point[]>([]);
+
+  landmarksRef.current = landmarks;
+  postureScoreRef.current = postureScore;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || mountedRef.current) return;
+    mountedRef.current = true;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) return;
+
+    const syncSize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.round(rect.width * dpr);
+      const h = Math.round(rect.height * dpr);
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    };
+
+    const ro = new ResizeObserver(syncSize);
+    ro.observe(canvas);
+    syncSize();
+
+    const draw = () => {
+      frameRef.current = requestAnimationFrame(draw);
+
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.width / dpr;
+      const H = canvas.height / dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const score = postureScoreRef.current;
+      const lm = landmarksRef.current;
+      const color = scoreColor(score);
+
+      // Clear with muted background
+      ctx.fillStyle = '#f0ebe3';
+      ctx.fillRect(0, 0, W, H);
+
+      if (!lm.length) return;
+
+      // Smooth landmarks
+      const sm = smoothedRef.current;
+      for (let i = 0; i < lm.length; i++) {
+        const target = lm[i];
+        const prev = sm[i];
+        if (!prev || !isVis(prev) || !isVis(target)) {
+          sm[i] = { ...target };
+        } else {
+          sm[i] = {
+            x: prev.x + (target.x - prev.x) * LERP,
+            y: prev.y + (target.y - prev.y) * LERP,
+            z: target.z,
+            visibility: target.visibility,
+          };
+        }
+      }
+
+      // Derive lower body from shoulders
+      const lS = sm[LANDMARKS.LEFT_SHOULDER];
+      const rS = sm[LANDMARKS.RIGHT_SHOULDER];
+
+      if (isVis(lS) && isVis(rS)) {
+        const mx = (lS.x + rS.x) / 2;
+        const sSpan = Math.abs(rS.x - lS.x);
+        const sY = (lS.y + rS.y) / 2;
+        const below = Math.max(1.0 - sY, 0.25);
+
+        sm[LANDMARKS.LEFT_HIP] = { x: mx - sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
+        sm[LANDMARKS.RIGHT_HIP] = { x: mx + sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
+        sm[LANDMARKS.LEFT_KNEE] = { x: mx - sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
+        sm[LANDMARKS.RIGHT_KNEE] = { x: mx + sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
+        sm[LANDMARKS.LEFT_ANKLE] = { x: mx - sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
+        sm[LANDMARKS.RIGHT_ANKLE] = { x: mx + sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
+      }
+
+      // Map to canvas coords
+      const pad = 0.08;
+      const dW = W * (1 - 2 * pad);
+      const dH = H * (1 - 2 * pad);
+      const oX = W * pad;
+      const oY = H * pad;
+      const mp = (p: Point) => ({ x: oX + p.x * dW, y: oY + p.y * dH });
+
+      // Draw connections
+      const drawLine = (a: number, b: number, alpha: number, width: number) => {
+        const pA = sm[a], pB = sm[b];
+        if (!isVis(pA) || !isVis(pB)) return;
+        const p1 = mp(pA), p2 = mp(pB);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      };
+
+      // Lower body (faded)
+      for (const [a, b] of LOWER_CONNECTIONS) drawLine(a, b, 0.35, 3);
+
+      // Upper body
+      ctx.globalAlpha = 1;
+      for (const [a, b] of UPPER_CONNECTIONS) drawLine(a, b, 1, 4);
+
+      // Head - simple circle
+      const headPts = [sm[LANDMARKS.NOSE], sm[LANDMARKS.LEFT_EAR], sm[LANDMARKS.RIGHT_EAR]].filter(isVis);
+      if (headPts.length && isVis(lS) && isVis(rS)) {
+        const hc = {
+          x: headPts.reduce((s, p) => s + p.x, 0) / headPts.length,
+          y: headPts.reduce((s, p) => s + p.y, 0) / headPts.length,
+        };
+        const sMid = mp({ x: (lS.x + rS.x) / 2, y: (lS.y + rS.y) / 2 } as Point);
+        const hm = mp(hc as Point);
+        const sSpan = Math.abs(rS.x - lS.x);
+        const headR = Math.max(sSpan * dW * 0.28, 12);
+
+        // Neck
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(hm.x, hm.y + headR * 0.8);
+        ctx.lineTo(sMid.x, sMid.y);
+        ctx.stroke();
+
+        // Head circle
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(hm.x, hm.y, headR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Joints - simple dots
+      ctx.globalAlpha = 1;
+      const jointIds = [
+        LANDMARKS.LEFT_SHOULDER, LANDMARKS.RIGHT_SHOULDER,
+        LANDMARKS.LEFT_ELBOW, LANDMARKS.RIGHT_ELBOW,
+        LANDMARKS.LEFT_WRIST, LANDMARKS.RIGHT_WRIST,
+      ];
+
+      for (const i of jointIds) {
+        const pt = sm[i];
+        if (!isVis(pt)) continue;
+        const m = mp(pt);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Lower joints (faded)
+      ctx.globalAlpha = 0.35;
+      const lowerIds = [
+        LANDMARKS.LEFT_HIP, LANDMARKS.RIGHT_HIP,
+        LANDMARKS.LEFT_KNEE, LANDMARKS.RIGHT_KNEE,
+        LANDMARKS.LEFT_ANKLE, LANDMARKS.RIGHT_ANKLE,
+      ];
+
+      for (const i of lowerIds) {
+        const pt = sm[i];
+        if (!isVis(pt)) continue;
+        const m = mp(pt);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(frameRef.current);
+      ro.disconnect();
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const live = landmarks.length > 0;
+  const color = scoreColor(postureScore);
+
+  return (
+    <div className="card" style={{ display: 'grid', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+          Digital Twin
+        </h3>
+        <span style={{ fontSize: 11, color: live ? '#3D6B4F' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span
+            style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: live ? '#3D6B4F' : '#bbb',
+            }}
+          />
+          Live
+        </span>
+      </div>
+
+      <canvas
+        ref={canvasRef}
+        style={{
+          width: '100%',
+          aspectRatio: '5 / 6',
+          borderRadius: 10,
+          background: 'var(--bg-card-muted)',
+          border: '1px solid var(--border-card)',
+        }}
+      />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '2px 0' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          {shoulderSlant.toFixed(1)}° tilt
+        </span>
+        <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
+          <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+            Alignment
+          </div>
+          <span style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.02em' }}>
+            {postureScore}
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>/100</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const DigitalTwin = memo(DigitalTwinImpl);

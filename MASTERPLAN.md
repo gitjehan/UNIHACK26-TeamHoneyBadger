@@ -8,11 +8,9 @@
 
 ## Context
 
-UNIHACK 2026 — 48-hour hackathon, 500+ students, $7k+ prizes.
+UNIHACK 2026 — 500+ students, $7k+ prizes.
 
-**Team**: 4-5 members, first hackathon.
-
-This plan covers technical architecture, execution order, and timeline.
+This plan covers technical architecture, execution order, and build phases.
 
 ---
 
@@ -315,7 +313,7 @@ window.kinetic.storeSet(key: string, value: any)   → void
 - Elasticsearch covers server-side storage (biometrics + leaderboard)
 - No user accounts needed — leaderboard is nickname-based
 - electron-store handles local state (pet evolution, calibration data, preferences)
-- Fewer moving parts = fewer things to break in 48 hours
+- Fewer moving parts = fewer things to break
 
 ### Critical Architecture Decision: ML Pipeline
 
@@ -996,9 +994,11 @@ function blinkRateLabel(rate: number): string {
 
 ## Execution Order & Build Phases
 
+**For the coding agent**: Execute all phases (0 through 8) sequentially and autonomously. Do NOT stop to ask for confirmation between phases. After each phase, run the corresponding tests from the Testing section, fix any failures, then immediately proceed to the next phase. If you hit a blocker that cannot be resolved, skip it, note what failed, and continue with the next phase. The goal is a fully working app at the end — keep moving.
+
 Build the riskiest, most uncertain pieces first so you fail fast, and layer polish on top.
 
-### Phase 0: Electron Scaffold + Webcam (Hour 0–2)
+### Phase 0: Electron Scaffold + Webcam
 **Goal**: A running Electron app with webcam feed displayed.
 
 - [ ] Scaffold with Electron Forge: `npm init electron-app@latest kinetic -- --template=vite-typescript`
@@ -1014,46 +1014,46 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Who**: 1 person scaffolds, pushes. Everyone else clones and verifies it runs.
 
-### Phase 1: ML Spike — Posture Detection + Digital Twin (Hour 2–8)
+### Phase 1: ML Spike — Posture Detection + Digital Twin
 **Goal**: Webcam → posture score on screen + live stick figure. This is the riskiest piece — if this doesn't work, nothing works.
 
-- [ ] **ML library test** (Hour 2–3): Load `@vladmandic/human` in the renderer with pose config enabled. Draw landmarks on a canvas overlay. Measure FPS. Key questions:
+- [ ] **ML library test**: Load `@vladmandic/human` in the renderer with pose config enabled. Draw landmarks on a canvas overlay. Measure FPS. Key questions:
   - Does it detect landmarks 0, 7, 8, 11, 12, 23, 24 (nose, ears, shoulders, hips) accurately?
   - What FPS do we get? (Need ≥10fps minimum)
   - If accuracy is bad → switch to `@mediapipe/tasks-vision` Pose Landmarker
-- [ ] **Digital Twin renderer** (Hour 3–4): Canvas component that draws the stick figure:
+- [ ] **Digital Twin renderer**: Canvas component that draws the stick figure:
   - Map normalised landmarks to canvas coordinates
   - Draw POSE_CONNECTIONS lines + circles at joints (see Section 6 in Core Functionality)
   - Color-code: green (good), amber (fair), red (poor)
   - Display tilt angle below the figure
   - Smooth positions with lerp between frames
-- [ ] **Posture algorithm** (Hour 4–6): Implement the 3-metric system (see Section 1 in Core Functionality):
+- [ ] **Posture algorithm**: Implement the 3-metric system (see Section 1 in Core Functionality):
   - **Neck Inclination**: `atan2` angle at shoulder formed by ear-shoulder-hip. Threshold: <150° = slouching
   - **Shoulder Slant**: `atan2` of shoulder-to-shoulder line vs horizontal. Display as "X.X° tilt"
   - **Trunk Lean**: Cosine similarity between current shoulder→hip vector and calibrated upright vector
   - **Composite score**: `neckScore * 0.45 + shoulderScore * 0.20 + trunkScore * 0.35`
-- [ ] **Calibration** (Hour 6–7): On first launch, prompt "Sit up straight and look at the screen". Capture 3 seconds (45 frames at 15fps). Average landmarks to get baseline vectors + angles. Store in electron-store.
-- [ ] **Wire to UI** (Hour 7–8): Show posture score as big number + the Digital Twin stick figure side by side. Score color coded: green ≥70, amber 40–69, red <40.
+- [ ] **Calibration**: On first launch, prompt "Sit up straight and look at the screen". Capture 3 seconds (45 frames at 15fps). Average landmarks to get baseline vectors + angles. Store in electron-store.
+- [ ] **Wire to UI**: Show posture score as big number + the Digital Twin stick figure side by side. Score color coded: green ≥70, amber 40–69, red <40.
 
 **Output**: Electron app with live webcam feed, a Digital Twin stick figure that moves with you, and a posture score that drops when you slouch.
 
 **Risk mitigation**: If cosine similarity doesn't work well, fall back to just neck angle + shoulder slant (two metrics). Two signals is enough.
 
-### Phase 2: macOS Ambient Control (Hour 8–12)
+### Phase 2: macOS Ambient Control
 **Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes KINETIC a real product.
 
-- [ ] **Brightness helper** (Hour 8–9):
+- [ ] **Brightness helper**:
   - Install `brightness` CLI: `brew install brightness`
   - Write a `setBrightness(level: number)` function in main process that calls `brightness ${level}`
   - Test: can we smoothly step from 1.0 → 0.3 → 1.0?
   - Fallback if `brightness` CLI doesn't work: use AppleScript via `osascript`
-- [ ] **Gamma / color temp helper** (Hour 9–10):
+- [ ] **Gamma / color temp helper**:
   - Write and compile `gamma-helper.swift` (see Technical Architecture section above)
   - Write a `setColorTemp(warmth: number)` function in main process
   - Test: verify warm shift is visible, reversible, and doesn't persist after app quits
   - **Important**: Register an `app.on('will-quit')` handler that resets gamma to (1.0, 1.0, 1.0) so the screen returns to normal when the app closes
-- [ ] **IPC wiring** (Hour 10–11): Renderer sends `ambient:update` events with `{ brightness, warmth }` via IPC. Main process receives and calls the helpers. Rate-limit to max 1 update per second.
-- [ ] **Smoothing + mapping** (Hour 11–12): Don't send raw scores to brightness. Instead:
+- [ ] **IPC wiring**: Renderer sends `ambient:update` events with `{ brightness, warmth }` via IPC. Main process receives and calls the helpers. Rate-limit to max 1 update per second.
+- [ ] **Smoothing + mapping**: Don't send raw scores to brightness. Instead:
   - Keep a rolling average of posture score (last 10 seconds)
   - Map the smoothed score to brightness + warmth (see mapping table in architecture)
   - Interpolate between current and target brightness/warmth over 2–3 seconds (use `setInterval` with small steps, e.g., 50ms intervals over 2 seconds = 40 steps)
@@ -1063,44 +1063,44 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Critical**: This phase is what separates KINETIC from every other wellness app. Spend time getting the feel right.
 
-### Phase 3: Dashboard (Hour 12–18)
+### Phase 3: Dashboard
 **Goal**: Build the full dashboard matching the mockup design (see Section 7 in Core Functionality).
 
-- [ ] **Layout skeleton** (Hour 12–13): Implement the grid layout from the mockup:
+- [ ] **Layout skeleton**: Implement the grid layout from the mockup:
   - Left column: Digital Twin (already built) + Bio-Pet placeholder
   - Center top: 4 metric cards (Posture, Blink Rate, Focus, Stress) — show posture score live, others as "--" placeholder
   - Center middle: Webcam feed with MediaPipe overlay + FPS/landmark count
   - Center bottom: Session Timeline (3 sparkline charts)
   - Right column: Overall gauge + Systems panel + Ambient Response panel
   - Header: "Kinetic bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
-- [ ] **Metric cards** (Hour 13–14): Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
-- [ ] **Overall circular gauge** (Hour 14–15): Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
-- [ ] **Session Timeline** (Hour 15–16): Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
-- [ ] **Systems panel** (Hour 16–17): Status indicators with green/amber/red dots for: Pose Detection, Face Mesh, Affect Engine, Ambient Ctrl. Wired to actual system state.
-- [ ] **Ambient Response panel** (Hour 17–18): Text description of current ambient state + calm-to-elevated slider visualisation.
-- [ ] **State tabs** (Hour 18): Wire the Upright/Slouching/Fatigued tabs to overall score thresholds (≥65 / 30–64 / <30). Active tab changes dashboard color theme subtly.
+- [ ] **Metric cards**: Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
+- [ ] **Overall circular gauge**: Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
+- [ ] **Session Timeline**: Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
+- [ ] **Systems panel**: Status indicators with green/amber/red dots for: Pose Detection, Face Mesh, Affect Engine, Ambient Ctrl. Wired to actual system state.
+- [ ] **Ambient Response panel**: Text description of current ambient state + calm-to-elevated slider visualisation.
+- [ ] **State tabs**: Wire the Upright/Slouching/Fatigued tabs to overall score thresholds (≥65 / 30–64 / <30). Active tab changes dashboard color theme subtly.
 
 **Output**: The full dashboard from the mockup, with live posture data flowing. Blink/Focus/Stress cards show placeholder until Phase 4.
 
-### Phase 4: Blink Rate + Stress + Focus (Hour 18–24)
+### Phase 4: Blink Rate + Stress + Focus
 **Goal**: Complete all 4 metrics. The dashboard goes from 1 live metric to 4.
 
-- [ ] **Face mesh activation** (Hour 18–19): Enable `@vladmandic/human` face module. Run at 5fps in a separate loop from posture (15fps). Verify it detects 468 face landmarks including eye landmarks.
-- [ ] **EAR + Blink detection** (Hour 19–21): Implement the EAR formula from Section 2:
+- [ ] **Face mesh activation**: Enable `@vladmandic/human` face module. Run at 5fps in a separate loop from posture (15fps). Verify it detects 468 face landmarks including eye landmarks.
+- [ ] **EAR + Blink detection**: Implement the EAR formula from Section 2:
   - Calculate EAR for both eyes each frame, average them
   - Detect blinks: EAR < 0.20 for 1–5 frames then recovers
   - Track blinks per minute (rolling 60-second window)
   - Detect prolonged closures (EAR < 0.20 for >5 frames)
   - Display blink rate in bpm on the Blink Rate card
-- [ ] **Stress estimation** (Hour 21–22): Implement stress score from Section 3:
+- [ ] **Stress estimation**: Implement stress score from Section 3:
   - Emotion component from `@vladmandic/human` affect module (angry/fearful = high stress, happy/neutral = low)
   - Posture variance component (fidgeting detection — stddev of posture score over 60s window)
   - Blink rate deviation component
   - Composite: `emotionScore * 0.4 + fidgetScore * 0.35 + blinkStress * 0.25`
-- [ ] **Focus score** (Hour 22–23): Implement from Section 4:
+- [ ] **Focus score**: Implement from Section 4:
   - `postureScore * 0.3 + (100 - fatigueScore) * 0.25 + (100 - stressScore) * 0.20 + postureStability * 0.25`
   - Posture stability = inverse of posture variance over last 2 minutes
-- [ ] **Overall score + multi-signal ambient** (Hour 23–24):
+- [ ] **Overall score + multi-signal ambient**:
   - Overall = `postureScore * 0.40 + focusScore * 0.35 + (100 - stressScore) * 0.25`
   - Update ambient mapping: posture drives warmth, fatigue (derived from blink) drives brightness dimming
   - Wire all 4 metric cards + overall gauge to live data
@@ -1108,29 +1108,29 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All 4 metric cards live. Overall gauge accurate. Ambient responds to multiple signals. Dashboard fully functional.
 
-### Phase 5: Bio-Pet Lifecycle (Hour 24–34)
+### Phase 5: Bio-Pet Lifecycle
 **Goal**: A creature that starts as an egg, hatches from good posture, gets sick when you slouch, and evolves the more you use KINETIC. People sit up straight because they care about the creature.
 
-- [ ] **Egg state** (Hour 24–26): First thing the user sees in the pet panel.
+- [ ] **Egg state**: First thing the user sees in the pet panel.
   - Three.js scene: an egg shape (ellipsoid geometry or simple GLTF)
   - Subtle glow pulse animation (emissive material oscillation)
   - As the user accumulates upright minutes (Overall ≥ 65), cracks appear on the egg (texture swap or progressive line overlays at 25%, 50%, 75% progress toward 10 min)
   - At 10 cumulative upright minutes → **hatch animation**: egg cracks open, creature emerges. Celebration particles. This is the first "wow" moment.
   - If user closes app before hatching, progress is saved in electron-store. Egg resumes with cracks.
-- [ ] **Base creature** (Hour 26–28): Post-hatch creature (Stage 1: Hatchling).
+- [ ] **Base creature**: Post-hatch creature (Stage 1: Hatchling).
   - Start simple: low-poly blob/orb with dot eyes, built from Three.js primitives (SphereGeometry body + smaller sphere head + circle eyes)
   - Idle breathing animation (smooth Y-axis scale oscillation)
   - Eyes follow mouse or head position from webcam landmarks (driven by nose landmark relative position)
   - At higher evolution stages: creature gets bigger, gains accessories, colors intensify
-- [ ] **Health states** (Hour 28–30): Real-time health driven by Overall score:
+- [ ] **Health states**: Real-time health driven by Overall score:
   - **Thriving** (≥ 65): Happy face, bouncy idle, green glow, particles. "Your pet glows and blooms with energy."
   - **Fading** (30–64): Neutral/concerned face, amber tones, slower animation. "Your pet loses petals and its glow dims."
   - **Wilting** (< 30): **Sick state**. Drooping, shivering, red tones, eyes half-closed. "Your pet curls inward, urging a reset."
   - The sick state is the key emotional lever — at higher evolution stages, a Guardian going sick looks *wrong* and creates urgent motivation to fix posture
   - Transitions between states: lerp colors/scale/position over 3–5 seconds
   - Each state shows: Posture score, Focus score, Stress score beneath the pet
-- [ ] **Posture mirroring** (Hour 30–31): Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
-- [ ] **Streak system + evolution** (Hour 31–33):
+- [ ] **Posture mirroring**: Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
+- [ ] **Streak system + evolution**:
   - Streak: consecutive minutes with Overall ≥ 65
   - 30-second grace period before streak breaks
   - Pet reacts to milestones: bounce at 10 min, celebration at 30 min, special animation at 60 min
@@ -1138,7 +1138,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Evolution stages: Egg (0) → Hatchling (10 min) → Fledgling (30 min) → Companion (120 min) → Guardian (300 min) → Ascended (600 min)
   - Each evolution: size increase, color shift, added visual features
   - Evolution triggers a big celebration animation + accessory unlock
-- [ ] **Accessories** (Hour 33–34): Visual trophies unlocked by milestones:
+- [ ] **Accessories**: Visual trophies unlocked by milestones:
   - Scarf (first session > 30 min), Hat (3 sessions), Glasses (streak > 45 min), Cape (Stage 3), Wings (Stage 4), Halo (Stage 5), Crown (#1 on leaderboard)
   - Rendered as additional Three.js meshes attached to the creature
   - Persist in electron-store. Shown on pet and on leaderboard avatar.
@@ -1146,27 +1146,27 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: An egg that hatches into a creature that gets sick when you slouch, evolves over days of use, and accumulates visual trophies. The emotional attachment drives posture improvement better than any notification ever could.
 
-### Phase 6: Elasticsearch + Leaderboard (Hour 34–40)
+### Phase 6: Elasticsearch + Leaderboard
 **Goal**: Biometric data pipeline + competitive leaderboard. Easiest to bolt on last.
 
-- [ ] **Elastic Cloud setup** (Hour 34–35):
+- [ ] **Elastic Cloud setup**:
   - Create free Elastic Cloud trial (14-day, no credit card)
   - Get cloud endpoint URL + API key
   - Create index `kinetic-biometrics` with BiometricEvent mapping
   - Create index `kinetic-leaderboard` with LeaderboardEntry mapping
   - Store credentials in environment variables (loaded in main process)
-- [ ] **Data pipeline** (Hour 35–37):
+- [ ] **Data pipeline**:
   - Main process: accumulate BiometricEvent objects from renderer via IPC
   - Every 5 seconds, bulk-index the batch to Elasticsearch: `POST /_bulk`
   - This runs entirely in the main process — no API route needed since it's a desktop app and the API key stays in the main process
-- [ ] **Leaderboard** (Hour 37–39):
+- [ ] **Leaderboard**:
   - Nickname entry on first launch (simple text input, stored in electron-store)
   - Every 60 seconds (and on session end / app quit), upsert leaderboard entry:
     - nickname, sessionId, avgLockInScore, bestStreak, totalLockedInMinutes, pet level
   - Leaderboard page in the app: query top 20 entries sorted by `avgLockInScore` desc
   - Show: rank, nickname, pet avatar (at current level), best streak, avg score
   - Pre-seed 3–4 entries so the board isn't empty on first load
-- [ ] **Kibana dashboard** (Hour 39–40):
+- [ ] **Kibana dashboard**:
   - Create a Kibana dashboard in Elastic Cloud:
     - Time-series line chart of posture score over a session
     - Pie chart of emotion distribution
@@ -1175,10 +1175,10 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All biometric data flowing to Elasticsearch. Functional leaderboard. Kibana analytics dashboard.
 
-### Phase 7: Session Recap Card (Hour 40–44)
+### Phase 7: Session Recap Card
 **Goal**: A Spotify Wrapped-style shareable card generated at end of each session.
 
-- [ ] **Session data collection** (Hour 40–41): Track session-level aggregates in memory throughout the session:
+- [ ] **Session data collection**: Track session-level aggregates in memory throughout the session:
   - Total session duration
   - Total upright minutes (Overall ≥ 65)
   - Average posture, focus, stress, overall scores
@@ -1186,33 +1186,33 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Average blink rate
   - Pet milestones this session (evolution? new accessory?)
   - Store the previous pet level at session start so we can detect evolution
-- [ ] **Recap card component** (Hour 41–43): `SessionRecapCard.tsx`
+- [ ] **Recap card component**: `SessionRecapCard.tsx`
   - Styled card (480×640px) matching the earth-tone design system
   - Content: date, pet visual (rendered from current Three.js scene → snapshot to canvas), upright hours, percentile rank (if Elasticsearch available), best streak, avg posture, blink rate label, pet milestones
   - Render onto an offscreen `<canvas>` for image export
   - Shown as a modal overlay when user clicks "End Session" or after a configurable session duration
-- [ ] **Share / Save buttons** (Hour 43–44):
+- [ ] **Share / Save buttons**:
   - **Copy to clipboard**: `nativeImage.createFromDataURL(canvas.toDataURL())` → `clipboard.writeImage()`
   - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'kinetic-recap.png' })` → write buffer to file
   - Both exposed via IPC from main process
-- [ ] **Percentile calculation** (Hour 44): If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
+- [ ] **Percentile calculation**: If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
 
 **Output**: At end of session, a beautiful shareable card pops up. User can copy it to clipboard or save as PNG. It shows their pet, their stats, and any milestones. Designed to be screenshotted and posted.
 
-### Phase 8: Polish & Demo Prep (Hour 44–48)
+### Phase 8: Polish & Demo Prep
 **Goal**: Make it demo-ready and beautiful.
 
-- [ ] **UI polish** (Hour 44–45):
+- [ ] **UI polish**:
   - Landing / onboarding screen explaining KINETIC on first launch
   - Loading states for webcam/ML initialization (progress bar while models load)
   - Error handling: webcam denied, ML failed to load, Elasticsearch unreachable (graceful degradation — app works without Elastic)
   - App icon, window title, menu bar cleanup
   - Dark theme (ambient brightness effects look much better on dark UI)
-- [ ] **Gamma reset safety** (Hour 45): Double-check that gamma always resets to default on:
+- [ ] **Gamma reset safety**: Double-check that gamma always resets to default on:
   - Normal app quit
   - Force quit / crash (register signal handlers)
   - This is critical — you don't want to demo and have the screen stuck amber
-- [ ] **Demo script** (Hour 45–47): Plan the exact demo flow:
+- [ ] **Demo script**: Plan the exact demo flow:
   1. Launch KINETIC, show onboarding — egg is visible in pet panel (5 sec)
   2. Grant webcam, run calibration (10 sec)
   3. Sit up straight — score goes green, egg starts cracking, screen at normal brightness (10 sec)
@@ -1223,8 +1223,8 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   8. Trigger session end — show the Wrapped-style recap card with stats + pet (10 sec)
   9. Show the leaderboard with pet avatars (5 sec)
 - [ ] **Demo prep**: Pre-seed electron-store so the pet is at Stage 2+ with an accessory, and pre-seed 3–4 leaderboard entries. This makes the demo richer without needing hours of real usage.
-- [ ] **Bug fixes & edge cases** (Hour 47): Test with different lighting, different people, different postures.
-- [ ] **Presentation slides** (Hour 47–48): 3–5 slides max. Problem → Solution → Demo → Tech.
+- [ ] **Bug fixes & edge cases**: Test with different lighting, different people, different postures.
+- [ ] **Presentation slides**: 3–5 slides max. Problem → Solution → Demo → Tech.
 
 ---
 
@@ -1232,7 +1232,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 Not everything is sequential. Here's how to split work across 4 team members:
 
-### Hour 0–12 (Foundation)
+### Stream 1: Foundation
 | Person | Task |
 |--------|------|
 | **Dev 1 (ML Lead)** | Phase 0 scaffold → Phase 1: ML spike (posture algorithm: neck angle, shoulder slant, trunk cosine similarity + calibration + Digital Twin canvas) |
@@ -1240,7 +1240,7 @@ Not everything is sequential. Here's how to split work across 4 team members:
 | **Dev 3 (Creative)** | Research Three.js pet approaches, build egg with glow pulse + crack progression, hatch animation, base creature with breathing + 3 health states using mock scores |
 | **Dev 4 (Frontend)** | Build full dashboard layout from mockup: 4 metric cards, overall gauge, systems panel, ambient response panel, session timeline — all with mock data |
 
-### Hour 12–24 (Core Features)
+### Stream 2: Core Features
 | Person | Task |
 |--------|------|
 | **Dev 1** | Phase 4: Face mesh → EAR blink detection → stress estimation → focus score → wire all 4 metrics live |
@@ -1248,7 +1248,7 @@ Not everything is sequential. Here's how to split work across 4 team members:
 | **Dev 3** | Phase 5: Pet posture mirroring + sick state visual + state transitions driven by overall score |
 | **Dev 4** | Phase 3: Wire live ML data into dashboard, state tabs (Upright/Slouching/Fatigued), session timeline charts |
 
-### Hour 24–40 (Integration & Polish)
+### Stream 3: Integration & Polish
 | Person | Task |
 |--------|------|
 | **Dev 1** | Phase 6: Elasticsearch setup + biometric data pipeline |
@@ -1256,7 +1256,7 @@ Not everything is sequential. Here's how to split work across 4 team members:
 | **Dev 3** | Phase 5: Pet evolution stages + accessories + streak system + electron-store persistence |
 | **Dev 4** | Dashboard polish: webcam overlay with FPS/landmark count, overall UI refinement |
 
-### Hour 40–48 (Final Polish)
+### Stream 4: Final Polish
 | Person | Task |
 |--------|------|
 | **Dev 1** | Kibana dashboard + Elasticsearch analytics + percentile calculation for recap card |
@@ -1311,11 +1311,82 @@ interface LeaderboardEntry {
 
 ---
 
+## Testing — On-Machine Verification
+
+**For the coding agent**: After implementing each phase, you MUST write and run automated tests that verify the implementation works on the real machine. Write these as executable test scripts (using Playwright for Electron E2E, or plain Node.js scripts for system-level checks). Run them yourself and fix any failures before moving to the next phase. No mocks — all tests hit the real webcam, real system APIs, and real Electron app. If a test requires a person in front of the camera, log clear instructions for what to do and assert on the ML output.
+
+### 1. ML Pipeline Verification
+
+- Launch renderer process, load both ML models (`@vladmandic/human` or `@mediapipe/tasks-vision` for pose, `@vladmandic/human` for face)
+- Feed a real webcam frame through pose detection → assert the returned landmarks array has 33 points with all coordinates in the 0–1 range
+- Feed a real webcam frame through face detection → assert 468 face mesh landmarks returned
+- Verify landmark indices 0, 7, 8, 11, 12, 23, 24 (nose, ears, shoulders, hips) all have `visibility > 0.5` when a person is sitting in front of the camera
+- Run continuous inference for 30 seconds → assert average FPS stays above 10fps for pose, above 3fps for face
+
+### 2. Posture Scoring (Real Webcam)
+
+- Complete calibration flow (sit upright for 3 seconds) → assert `CalibrationData` is stored in electron-store with reasonable values (neck angle 160–180°, shoulder slant < 3°, trunk similarity > 0.95)
+- Sit upright after calibration → assert posture score > 70 within 5 seconds
+- Deliberately slouch forward → assert posture score drops below 50 within 5 seconds
+- Tilt shoulders visibly → assert `shoulderSlant` value increases above 5°
+- Return to upright → assert score recovers above 70 within 10 seconds
+
+### 3. Blink & Fatigue Detection
+
+- Sit normally for 60 seconds → assert blink rate is between 8–30 bpm (sane range)
+- Deliberately hold eyes closed for 3 seconds → assert a prolonged closure is registered
+- Assert `avgEAR` is between 0.15–0.40 during normal usage (sanity check on eye landmark detection)
+
+### 4. Ambient Control (Real System Calls)
+
+- Run `brightness 0.5` from main process → run `brightness -l` → assert reported brightness is approximately 0.5 (within ±0.05)
+- Run `brightness 1.0` → assert brightness restores to ~1.0
+- Run `./gamma-helper 1.0 0.7 0.6` → assert process exits with code 0 (no crash)
+- Run `./gamma-helper 1.0 1.0 1.0` → assert gamma resets cleanly
+- Kill the Electron app with SIGTERM → run `brightness -l` → assert brightness is back to 1.0 (verifies the reset handler works)
+
+### 5. IPC Round-Trip
+
+- Launch full Electron app
+- From renderer, call `window.kinetic.storeSet('test-key', 'test-value')` → then `window.kinetic.storeGet('test-key')` → assert returns `'test-value'`
+- From renderer, call `window.kinetic.updateAmbient({ brightness: 0.6, warmth: 0.3 })` → wait 3 seconds → run `brightness -l` from a shell → assert brightness is approximately 0.6
+
+### 6. Pet State Machine
+
+- Set electron-store pet state to stage 0 (Egg), `totalLockedInMinutes: 0`
+- Run app with good posture (Overall ≥ 65) for 10+ minutes → assert pet stage transitions from 0 to 1 (Hatchling)
+- While sitting upright, assert pet health state is `'Thriving'`
+- Slouch until Overall drops below 30 → assert pet health transitions to `'Wilting'`
+- Sit back up → assert pet health recovers to `'Thriving'` or `'Fading'`
+- Close and reopen app → assert pet stage and `totalLockedInMinutes` persist from electron-store
+
+### 7. Dashboard Rendering
+
+- Launch app, complete calibration → assert all 4 metric cards are visible and updating (values are not stuck at 0 or "--")
+- Assert the Digital Twin canvas is drawing (check canvas has non-zero image data)
+- Assert the Overall gauge reflects a score between 0–100
+- Assert Session Timeline charts have data points accumulating over 30 seconds
+- Assert Systems Panel shows Pose Detection as `'active'` (green dot)
+
+### 8. Full End-to-End Flow
+
+Run the complete user journey as a single test:
+
+1. Launch KINETIC → assert window opens, welcome/calibration screen appears
+2. Complete calibration → assert calibration data saved, dashboard appears
+3. Sit upright for 30 seconds → assert posture score > 70, pet is Thriving, ambient brightness near 1.0
+4. Slouch for 15 seconds → assert posture score < 50, pet transitions to Fading or Wilting, screen brightness dims noticeably (read back via `brightness -l`)
+5. Sit back up for 15 seconds → assert score recovers, pet recovers, brightness returns toward 1.0
+6. Trigger session end → assert recap card modal appears with non-zero stats
+7. Quit app → assert gamma and brightness reset to defaults
+
+---
+
 ## Key Technical Risks & Mitigations
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| ML models too slow in Electron renderer | No real-time feedback = no product | Test in Phase 1 hour 2–4. Fallback: reduce to posture-only, drop emotion. Hard limit: must hit 10fps. Electron's Chromium should perform same as Chrome. |
+| ML models too slow in Electron renderer | No real-time feedback = no product | Test in Phase 1 immediately. Fallback: reduce to posture-only, drop emotion. Hard limit: must hit 10fps. Electron's Chromium should perform same as Chrome. |
 | Posture algorithm inaccurate | Scores feel random, kills trust | Calibration baseline makes it relative to each person. Smooth with rolling average. Test on multiple people early. |
 | `brightness` CLI doesn't work on team member's Mac | No brightness control | Fallback: AppleScript brightness keys, or IOKit direct calls. Test on every team member's machine in Phase 2. |
 | CoreGraphics gamma doesn't reset on crash | Screen stuck amber after force quit | Register `process.on('SIGTERM')`, `app.on('will-quit')`, AND `process.on('uncaughtException')` handlers that all reset gamma to (1.0, 1.0, 1.0). |
@@ -1329,89 +1400,13 @@ interface LeaderboardEntry {
 
 ### Utility Functions (`src/renderer/lib/math.ts`)
 
-These are referenced throughout the codebase — define them once:
-
-```typescript
-export function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-export function euclideanDist(a: { x: number; y: number }, b: { x: number; y: number }): number {
-  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
-}
-
-export function cosineSimilarity(vecA: [number, number], vecB: [number, number]): number {
-  const dot = vecA[0] * vecB[0] + vecA[1] * vecB[1];
-  const magA = Math.sqrt(vecA[0] ** 2 + vecA[1] ** 2);
-  const magB = Math.sqrt(vecB[0] ** 2 + vecB[1] ** 2);
-  if (magA === 0 || magB === 0) return 0;
-  return dot / (magA * magB);
-}
-
-export function stddev(values: number[]): number {
-  if (values.length === 0) return 0;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const squaredDiffs = values.map(v => (v - mean) ** 2);
-  return Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / values.length);
-}
-```
+Standard math helpers used throughout: `clamp`, `lerp`, `euclideanDist`, `cosineSimilarity`, `stddev`.
 
 ### Rolling Buffer (`src/renderer/lib/rolling-buffer.ts`)
 
-Used for smoothing scores and tracking time-series data:
-
-```typescript
-export class RollingAverage {
-  private buffer: number[] = [];
-  constructor(private windowSize: number) {}
-
-  push(value: number): number {
-    this.buffer.push(value);
-    if (this.buffer.length > this.windowSize) this.buffer.shift();
-    return this.buffer.reduce((a, b) => a + b, 0) / this.buffer.length;
-  }
-
-  get values(): number[] { return [...this.buffer]; }
-  get length(): number { return this.buffer.length; }
-  get stddev(): number {
-    if (this.buffer.length === 0) return 0;
-    const mean = this.buffer.reduce((a, b) => a + b, 0) / this.buffer.length;
-    return Math.sqrt(this.buffer.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0) / this.buffer.length);
-  }
-}
-
-export class RollingBuffer<T> {
-  private buffer: T[] = [];
-  constructor(private maxSize: number) {}
-
-  push(item: T): void {
-    this.buffer.push(item);
-    if (this.buffer.length > this.maxSize) this.buffer.shift();
-  }
-
-  get items(): T[] { return [...this.buffer]; }
-  get length(): number { return this.buffer.length; }
-  get latest(): T | undefined { return this.buffer[this.buffer.length - 1]; }
-}
-```
-
-Usage throughout the app:
-```typescript
-// Posture smoothing: 10-second window at 15fps = 150 samples
-const postureSmoothed = new RollingAverage(150);
-
-// Blink rate tracking: 60-second window (count blinks, compute rate)
-const blinkTimestamps = new RollingBuffer<number>(100); // last 100 blinks
-
-// Session timeline: 5 min of data at 1 sample/sec = 300 points
-const postureTimeline = new RollingBuffer<{ time: number; value: number }>(300);
-const focusTimeline   = new RollingBuffer<{ time: number; value: number }>(300);
-const stressTimeline  = new RollingBuffer<{ time: number; value: number }>(300);
-```
+Two classes used for score smoothing and time-series tracking:
+- `RollingAverage(windowSize)` — push numbers, get running average. Exposes `.stddev` for variance detection (fidgeting). Window sizes: posture smoothing = 150 (10s at 15fps), EAR = 30 (6s at 5fps), posture history = 60 (variance).
+- `RollingBuffer<T>(maxSize)` — generic ring buffer. Used for blink timestamps (100), session timeline data points (300 = 5 min at 1/sec per metric).
 
 ### Constants (`src/renderer/lib/constants.ts`)
 
@@ -1638,385 +1633,73 @@ export interface SystemsState {
 
 ### State Management — Score Engine (`src/renderer/ml/score-engine.ts`)
 
-The Score Engine is the central hub. It subscribes to ML outputs and emits unified score snapshots. Uses a simple event emitter pattern — no Redux/Zustand needed for this app.
+The Score Engine is the central hub — a singleton with a simple event emitter pattern (no Redux/Zustand needed). It subscribes to ML outputs and emits unified `ScoreSnapshot` objects.
 
-```typescript
-type ScoreListener = (snapshot: ScoreSnapshot) => void;
-
-class ScoreEngine {
-  private listeners: ScoreListener[] = [];
-  private calibration: CalibrationData | null = null;
-
-  // Rolling buffers for smoothing
-  private postureBuffer = new RollingAverage(150);  // 10s at 15fps
-  private blinkTimestamps: number[] = [];            // timestamps of recent blinks
-  private earBuffer = new RollingAverage(30);         // 6s at 5fps
-  private postureHistory = new RollingAverage(60);    // 60 samples for variance (fidgeting)
-  private prolongedClosureCount = 0;
-
-  // Latest values from each ML module
-  private latestPosture: PostureData = { score: 0, neckAngle: 180, shoulderSlant: 0, trunkSimilarity: 1, isSlumping: false };
-  private latestBlink: BlinkData = { rate: 17, avgEAR: 0.3, prolongedClosures: 0 };
-  private latestEmotion = { dominant: 'neutral', confidence: 0 };
-
-  subscribe(listener: ScoreListener): () => void {
-    this.listeners.push(listener);
-    return () => { this.listeners = this.listeners.filter(l => l !== listener); };
-  }
-
-  setCalibration(data: CalibrationData): void {
-    this.calibration = data;
-  }
-
-  /** Called by pose-engine.ts on each frame (~15fps) */
-  updatePosture(landmarks: Point[]): void {
-    if (!this.calibration) return;
-    // Calculate raw posture using posture-scorer.ts
-    this.latestPosture = calculatePostureFromLandmarks(landmarks, this.calibration);
-    const smoothed = this.postureBuffer.push(this.latestPosture.score);
-    this.latestPosture.score = Math.round(smoothed);
-    this.postureHistory.push(smoothed);
-    this.emit();
-  }
-
-  /** Called by face-engine.ts on each frame (~5fps) */
-  updateFace(faceLandmarks: Point[], emotion: { dominant: string; confidence: number }): void {
-    // Blink detection via blink-detector.ts
-    const earResult = processEAR(faceLandmarks);
-    this.earBuffer.push(earResult.ear);
-
-    if (earResult.blinkDetected) {
-      this.blinkTimestamps.push(Date.now());
-    }
-    if (earResult.prolongedClosure) {
-      this.prolongedClosureCount++;
-    }
-
-    // Compute blink rate (blinks in last 60 seconds)
-    const now = Date.now();
-    this.blinkTimestamps = this.blinkTimestamps.filter(t => now - t < 60000);
-    this.latestBlink = {
-      rate: this.blinkTimestamps.length,
-      avgEAR: this.earBuffer.values.reduce((a, b) => a + b, 0) / Math.max(1, this.earBuffer.length),
-      prolongedClosures: this.prolongedClosureCount,
-    };
-
-    this.latestEmotion = emotion;
-    this.emit();
-  }
-
-  private emit(): void {
-    const fatigueScore = calculateFatigueScore(
-      this.latestBlink.rate,
-      this.calibration?.baselineBlinkRate ?? 17,
-      this.latestBlink.avgEAR,
-      this.latestBlink.prolongedClosures,
-    );
-    const stressScore = calculateStressScore(
-      this.latestEmotion.dominant,
-      this.latestEmotion.confidence,
-      this.postureHistory.stddev,
-      Math.abs(this.latestBlink.rate - (this.calibration?.baselineBlinkRate ?? 17)) / 17,
-    );
-    const focusScore = calculateFocusScore(
-      this.latestPosture.score,
-      fatigueScore,
-      stressScore,
-      clamp((1 - this.postureHistory.stddev / 20) * 100, 0, 100), // stability
-    );
-    const overallScore = calculateOverallScore(this.latestPosture.score, focusScore, stressScore);
-    const state = overallScore >= 65 ? 'upright' : overallScore >= 30 ? 'slouching' : 'fatigued';
-
-    const snapshot: ScoreSnapshot = {
-      timestamp: Date.now(),
-      posture: this.latestPosture,
-      blink: this.latestBlink,
-      focus: { score: focusScore },
-      stress: { score: stressScore, dominantEmotion: this.latestEmotion.dominant, emotionConfidence: this.latestEmotion.confidence },
-      overall: { score: overallScore, state },
-    };
-
-    for (const listener of this.listeners) listener(snapshot);
-  }
-}
-
-// Singleton — import this everywhere
-export const scoreEngine = new ScoreEngine();
-```
+Architecture:
+- **Inputs**: `updatePosture(landmarks)` called by pose-engine at ~15fps, `updateFace(faceLandmarks, emotion)` called by face-engine at ~5fps
+- **Internal state**: Rolling buffers for posture smoothing (150 samples = 10s at 15fps), blink timestamps (60s window), EAR buffer (30 samples), posture history (60 samples for variance/fidgeting)
+- **On each update**: Recalculates all composite scores using the formulas defined in Core Functionality (fatigue, stress, focus, overall), builds a `ScoreSnapshot`, and emits to all listeners
+- **Calibration**: Must call `setCalibration(data)` before posture scoring works. Posture updates are no-ops without calibration.
+- Subscribe via `scoreEngine.subscribe(callback)` which returns an unsubscribe function
 
 ### React Data Flow
 
 ```
 scoreEngine (singleton, event emitter)
    ↓ subscribe()
-useScores() hook (React hook, useState + useEffect)
+useScores() hook (useState + useEffect, subscribes to scoreEngine)
    ↓ returns ScoreSnapshot
 <Dashboard />
-   ├── <MetricCard metric="posture" value={scores.posture.score} />
-   ├── <MetricCard metric="blinkRate" value={scores.blink.rate} />
-   ├── <MetricCard metric="focus" value={scores.focus.score} />
-   ├── <MetricCard metric="stress" value={scores.stress.score} />
-   ├── <OverallGauge score={scores.overall.score} />
-   ├── <DigitalTwin landmarks={latestLandmarks} score={scores.posture.score} />
-   ├── <BioPet overallScore={scores.overall.score} shoulderSlant={scores.posture.shoulderSlant} />
-   ├── <SessionTimeline posture={...} focus={...} stress={...} />
-   ├── <SystemsPanel status={systemsState} />
-   └── <AmbientPanel score={scores.overall.score} />
-```
-
-```typescript
-// src/renderer/hooks/useScores.ts
-import { useState, useEffect } from 'react';
-import { scoreEngine } from '../ml/score-engine';
-import type { ScoreSnapshot } from '../lib/types';
-
-export function useScores(): ScoreSnapshot | null {
-  const [scores, setScores] = useState<ScoreSnapshot | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = scoreEngine.subscribe(setScores);
-    return unsubscribe;
-  }, []);
-
-  return scores;
-}
+   ├── <MetricCard metric="posture" />
+   ├── <MetricCard metric="blinkRate" />
+   ├── <MetricCard metric="focus" />
+   ├── <MetricCard metric="stress" />
+   ├── <OverallGauge />
+   ├── <DigitalTwin />
+   ├── <BioPet />
+   ├── <SessionTimeline />
+   ├── <SystemsPanel />
+   └── <AmbientPanel />
 ```
 
 ### ML Pipeline Orchestration
 
 Two independent loops running at different frame rates. They do NOT block each other.
 
-```typescript
-// src/renderer/ml/pose-engine.ts
-import { scoreEngine } from './score-engine';
-import { POSE_LOOP_INTERVAL } from '../lib/constants';
-
-let poseModel: PoseLandmarker | HumanPose;
-let videoElement: HTMLVideoElement;
-let running = false;
-
-export async function initPoseEngine(video: HTMLVideoElement): Promise<void> {
-  videoElement = video;
-  // Try @vladmandic/human first
-  // If accuracy bad → fall back to @mediapipe/tasks-vision PoseLandmarker
-  poseModel = await loadPoseModel();
-  running = true;
-  tick();
-}
-
-function tick(): void {
-  if (!running) return;
-  const landmarks = poseModel.detect(videoElement);
-  if (landmarks && landmarks.length > 0) {
-    scoreEngine.updatePosture(landmarks);
-  }
-  setTimeout(tick, POSE_LOOP_INTERVAL); // ~67ms = 15fps
-}
-
-export function stopPoseEngine(): void { running = false; }
-```
-
-```typescript
-// src/renderer/ml/face-engine.ts
-import { scoreEngine } from './score-engine';
-import { FACE_LOOP_INTERVAL } from '../lib/constants';
-
-let faceModel: Human;
-let videoElement: HTMLVideoElement;
-let running = false;
-
-export async function initFaceEngine(video: HTMLVideoElement): Promise<void> {
-  videoElement = video;
-  faceModel = await loadFaceModel(); // @vladmandic/human with face + emotion config
-  running = true;
-  tick();
-}
-
-function tick(): void {
-  if (!running) return;
-  const result = faceModel.detect(videoElement);
-  if (result?.face?.[0]) {
-    const face = result.face[0];
-    scoreEngine.updateFace(
-      face.mesh,                                     // 468 face landmarks
-      { dominant: face.emotion?.[0]?.emotion ?? 'neutral',
-        confidence: face.emotion?.[0]?.score ?? 0 }
-    );
-  }
-  setTimeout(tick, FACE_LOOP_INTERVAL); // 200ms = 5fps
-}
-
-export function stopFaceEngine(): void { running = false; }
-```
+- **pose-engine.ts**: Loads pose model (try `@vladmandic/human` first, fallback to `@mediapipe/tasks-vision`). Runs detection loop at `POSE_LOOP_INTERVAL` (~67ms = 15fps). On each frame, calls `scoreEngine.updatePosture(landmarks)`.
+- **face-engine.ts**: Loads `@vladmandic/human` with face + emotion config. Runs at `FACE_LOOP_INTERVAL` (200ms = 5fps). Extracts 468 face mesh landmarks + dominant emotion, calls `scoreEngine.updateFace(mesh, emotion)`.
+- Both use `requestAnimationFrame` with timestamp-based throttling (preferred over `setTimeout` to avoid queue buildup when inference is slow).
 
 ### Ambient Controller (`src/main/ambient-controller.ts`)
 
-Runs in the main process. Receives target brightness/warmth from renderer, smoothly interpolates.
+Singleton running in the main process. Receives target `{ brightness, warmth }` from renderer via IPC and smoothly interpolates from current to target values over `AMBIENT_TRANSITION_DURATION` (2s).
 
-```typescript
-import { exec } from 'child_process';
-import { AMBIENT_TRANSITION_DURATION } from '../shared/constants';
-
-class AmbientController {
-  private currentBrightness = 1.0;
-  private currentWarmth = 0.0;
-  private targetBrightness = 1.0;
-  private targetWarmth = 0.0;
-  private interpolating = false;
-
-  /** Called when renderer sends ambient:update */
-  setTarget(brightness: number, warmth: number): void {
-    this.targetBrightness = brightness;
-    this.targetWarmth = warmth;
-    if (!this.interpolating) this.startInterpolation();
-  }
-
-  private startInterpolation(): void {
-    this.interpolating = true;
-    const steps = AMBIENT_TRANSITION_DURATION / 50; // 50ms per step = 40 steps over 2s
-    let step = 0;
-
-    const interval = setInterval(() => {
-      step++;
-      const t = step / steps;
-
-      this.currentBrightness = lerp(this.currentBrightness, this.targetBrightness, t);
-      this.currentWarmth = lerp(this.currentWarmth, this.targetWarmth, t);
-
-      this.applyBrightness(this.currentBrightness);
-      this.applyGamma(this.currentWarmth);
-
-      if (step >= steps) {
-        clearInterval(interval);
-        this.interpolating = false;
-
-        // Check if target changed during interpolation
-        if (Math.abs(this.currentBrightness - this.targetBrightness) > 0.01 ||
-            Math.abs(this.currentWarmth - this.targetWarmth) > 0.01) {
-          this.startInterpolation(); // New target arrived, keep interpolating
-        }
-      }
-    }, 50);
-  }
-
-  private applyBrightness(level: number): void {
-    exec(`brightness ${level.toFixed(3)}`);
-  }
-
-  private applyGamma(warmth: number): void {
-    const red   = 1.0;
-    const green = (1.0 - warmth * 0.3).toFixed(3);
-    const blue  = (1.0 - warmth * 0.4).toFixed(3);
-    exec(`./gamma-helper ${red} ${green} ${blue}`);
-  }
-
-  /** MUST be called on app quit, crash, SIGTERM — resets screen to normal */
-  reset(): void {
-    exec('brightness 1.0');
-    exec('./gamma-helper 1.0 1.0 1.0');
-    this.currentBrightness = 1.0;
-    this.currentWarmth = 0.0;
-  }
-}
-
-export const ambientController = new AmbientController();
-```
+Key behavior:
+- `setTarget(brightness, warmth)` — sets new target, starts interpolation if not already running
+- Interpolation: capture `startBrightness` / `startWarmth` at the beginning, lerp from start→target using `t = step/totalSteps` over ~40 steps (50ms each). **Important**: lerp from the captured start values, not from the continuously-updated current values, to get linear (not exponential) easing.
+- `applyBrightness(level)` — calls `brightness` CLI
+- `applyGamma(warmth)` — calls `./gamma-helper` with RGB values derived from warmth (see warmth→RGB mapping in macOS System Control Details)
+- `reset()` — resets brightness to 1.0 and gamma to (1.0, 1.0, 1.0). **Must** be called on every exit path (see main.ts).
+- If a new target arrives during interpolation, restart interpolation from current position toward new target.
 
 ### Main Process Entry (`src/main/main.ts`)
 
-```typescript
-import { app, BrowserWindow, ipcMain, systemPreferences } from 'electron';
-import { ambientController } from './ambient-controller';
-import { IPC } from '../shared/ipc-channels';
+Key responsibilities:
+- Request camera permission via `systemPreferences.askForMediaAccess('camera')` before creating window
+- Create `BrowserWindow` with `contextIsolation: true`, `nodeIntegration: false`, `titleBarStyle: 'hiddenInset'`
+- Window: 1280×800, minWidth 1024, minHeight 700, background `#FAF8F5`
+- Register all IPC handlers from `ipc-channels.ts` (ambient → ambientController, biometric → elasticClient, store → electron-store, leaderboard → elasticClient)
 
-let mainWindow: BrowserWindow;
+**Critical — gamma reset safety**: Register `ambientController.reset()` on ALL of these:
+- `app.on('will-quit')`, `app.on('before-quit')`
+- `process.on('SIGTERM')`, `process.on('SIGINT')`
+- `process.on('uncaughtException')`
 
-app.whenReady().then(async () => {
-  // Request camera permission before creating window
-  await systemPreferences.askForMediaAccess('camera');
-
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 1024,
-    minHeight: 700,
-    webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-    titleBarStyle: 'hiddenInset', // Clean macOS look
-    backgroundColor: '#FAF8F5',    // Matches design system cream
-  });
-
-  mainWindow.loadURL(/* vite dev server or built index.html */);
-
-  // --- IPC Handlers ---
-
-  ipcMain.on(IPC.AMBIENT_UPDATE, (_event, data: { brightness: number; warmth: number }) => {
-    ambientController.setTarget(data.brightness, data.warmth);
-  });
-
-  ipcMain.on(IPC.BIOMETRIC_EVENT, (_event, data) => {
-    // Queue for Elasticsearch bulk indexing (see elastic-client.ts)
-    elasticClient.queue(data);
-  });
-
-  ipcMain.handle(IPC.LEADERBOARD_GET, async () => {
-    return elasticClient.getLeaderboard();
-  });
-
-  ipcMain.handle(IPC.LEADERBOARD_UPSERT, async (_event, entry) => {
-    return elasticClient.upsertLeaderboard(entry);
-  });
-
-  ipcMain.handle(IPC.STORE_GET, (_event, key: string) => {
-    return store.get(key);
-  });
-
-  ipcMain.handle(IPC.STORE_SET, (_event, key: string, value: any) => {
-    store.set(key, value);
-  });
-});
-
-// --- Safety: ALWAYS reset gamma on exit ---
-app.on('will-quit', () => ambientController.reset());
-app.on('before-quit', () => ambientController.reset());
-process.on('SIGTERM', () => { ambientController.reset(); process.exit(0); });
-process.on('SIGINT',  () => { ambientController.reset(); process.exit(0); });
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught exception:', err);
-  ambientController.reset();
-  process.exit(1);
-});
-```
+This ensures the screen always returns to normal brightness/color even on crash.
 
 ### Preload Bridge (`src/preload/preload.ts`)
 
-```typescript
-import { contextBridge, ipcRenderer } from 'electron';
-import { IPC } from '../shared/ipc-channels';
-
-contextBridge.exposeInMainWorld('kinetic', {
-  // Fire-and-forget
-  updateAmbient: (data: { brightness: number; warmth: number }) =>
-    ipcRenderer.send(IPC.AMBIENT_UPDATE, data),
-  sendBiometric: (event: any) =>
-    ipcRenderer.send(IPC.BIOMETRIC_EVENT, event),
-
-  // Request-response
-  getLeaderboard: () => ipcRenderer.invoke(IPC.LEADERBOARD_GET),
-  upsertLeaderboard: (entry: any) => ipcRenderer.invoke(IPC.LEADERBOARD_UPSERT, entry),
-  storeGet: (key: string) => ipcRenderer.invoke(IPC.STORE_GET, key),
-  storeSet: (key: string, value: any) => ipcRenderer.invoke(IPC.STORE_SET, key, value),
-
-  // Recap card
-  exportRecapPng: (pngBuffer: ArrayBuffer, filename: string) =>
-    ipcRenderer.invoke(IPC.RECAP_EXPORT, pngBuffer, filename),
-  copyRecapToClipboard: (pngBuffer: ArrayBuffer) =>
-    ipcRenderer.invoke(IPC.RECAP_CLIPBOARD, pngBuffer),
-});
-```
+Use `contextBridge.exposeInMainWorld('kinetic', { ... })` to expose all IPC channels defined in `ipc-channels.ts` to the renderer. Fire-and-forget channels use `ipcRenderer.send()`, request-response channels use `ipcRenderer.invoke()`.
 
 ### electron-store Schema
 
@@ -2153,21 +1836,4 @@ export default {
 
 ### Webcam Feed Overlay (`src/renderer/components/visualisation/WebcamFeed.tsx`)
 
-The mockup shows the webcam feed with landmark dots and metadata ("30 fps · 543 pts"):
-
-```typescript
-interface WebcamFeedProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
-  landmarks: Point[] | null;
-  fps: number;
-  landmarkCount: number;
-}
-
-// Renders:
-// 1. <video> element (mirrored with CSS transform: scaleX(-1))
-// 2. <canvas> overlay on top drawing green/amber/red dots at each landmark position
-// 3. Footer bar: "30 fps · 543 pts" + "● REC" indicator
-// 4. Header: "WEBCAM — MEDIAPIPE HOLISTIC"
-```
-
-The canvas overlay draws small dots (radius 3px) at each detected landmark position. Same color scheme as the Digital Twin (green/amber/red based on posture score). This gives visual confirmation that the ML is tracking correctly.
+Renders the webcam feed with a canvas overlay showing landmark dots (green/amber/red based on posture score) and metadata footer ("30 fps · 543 pts" + "● REC" indicator). Video element should be mirrored (`scaleX(-1)`).
