@@ -1,0 +1,287 @@
+:root {
+  --bg-primary: #0f1319;
+  --bg-card: #1a212b;
+  --bg-card-muted: #151b23;
+  --text-primary: #eef2f6;
+  --text-secondary: #a7b1bc;
+  --text-tertiary: #7d8794;
+  --green-primary: #4a7c59;
+  --green-bg: #1d3225;
+  --amber-primary: #c4962c;
+  --amber-bg: #312712;
+  --red-primary: #c0392b;
+  --red-bg: #3a1c1a;
+  --border-card: #253040;
+  --accent: #8cd3b0;
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.22);
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SF Mono', Menlo, Monaco, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app-shell {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.top-header {
+  border-bottom: 1px solid var(--border-card);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.8px;
+}
+
+.brand span {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.dashboard-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 320px 1fr 300px;
+  gap: 12px;
+  padding: 12px;
+}
+
+.column {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.card {
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  padding: 14px;
+  min-height: 0;
+}
+
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-value {
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.status-good {
+  background: var(--green-bg);
+  color: #98d7ad;
+}
+
+.status-fair {
+  background: var(--amber-bg);
+  color: #edc66f;
+}
+
+.status-poor {
+  background: var(--red-bg);
+  color: #f2a39b;
+}
+
+.systems-list {
+  display: grid;
+  gap: 8px;
+}
+
+.systems-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.systems-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.dot-active {
+  background: #5fd18f;
+}
+
+.dot-degraded {
+  background: #e9b45f;
+}
+
+.dot-inactive {
+  background: #777;
+}
+
+.state-tabs {
+  display: inline-flex;
+  gap: 8px;
+  background: var(--bg-card-muted);
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  padding: 6px;
+}
+
+.state-tab {
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.state-tab.active {
+  background: #273547;
+  color: var(--text-primary);
+}
+
+.onboarding {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.onboarding-card {
+  width: min(760px, 100%);
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: var(--shadow-card);
+}
+
+.onboarding-card h2 {
+  margin: 0 0 10px;
+  font-size: 30px;
+}
+
+.onboarding-card p {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  max-width: 70ch;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0b1116;
+}
+
+.btn-secondary {
+  background: #253040;
+  color: #d8e2eb;
+}
+
+.timeline {
+  width: 100%;
+  height: 180px;
+}
+
+.pet-meta {
+  margin-top: 10px;
+  display: grid;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+  padding: 8px 4px;
+  border-bottom: 1px solid #253040;
+  text-align: left;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+}
