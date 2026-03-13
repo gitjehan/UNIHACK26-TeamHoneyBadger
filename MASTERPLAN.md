@@ -154,7 +154,14 @@ kinetic/
 │   │   │   ├── pet/
 │   │   │   │   ├── BioPet.tsx        # Three.js canvas wrapper
 │   │   │   │   ├── PetScene.ts       # Three.js scene setup, lighting, creature
-│   │   │   │   └── PetAnimator.ts    # State transitions, breathing, mirroring
+│   │   │   │   ├── PetAnimator.ts    # State transitions, breathing, mirroring
+│   │   │   │   ├── EggStage.ts       # Egg rendering, crack progression, hatch animation
+│   │   │   │   └── Accessories.ts    # Accessory attachment points + unlocked items
+│   │   │   │
+│   │   │   ├── recap/
+│   │   │   │   ├── SessionRecapCard.tsx  # Wrapped-style recap card renderer
+│   │   │   │   ├── RecapCanvas.ts        # Canvas-based PNG export for sharing
+│   │   │   │   └── RecapOverlay.tsx      # Modal overlay with share/save buttons
 │   │   │   │
 │   │   │   ├── panels/
 │   │   │   │   ├── SystemsPanel.tsx  # Status dots for each subsystem
@@ -206,6 +213,10 @@ export const IPC = {
   STORE_GET:          'store:get',
   STORE_SET:          'store:set',
   SESSION_HISTORY:    'analytics:session-history',
+
+  // Recap card
+  RECAP_EXPORT:       'recap:export-png',     // renderer sends canvas data → main saves to fs
+  RECAP_CLIPBOARD:    'recap:copy-clipboard',  // renderer sends PNG buffer → main writes to clipboard
 } as const;
 ```
 
@@ -1495,7 +1506,40 @@ export interface ScoreSnapshot {
   overall: { score: number; state: 'upright' | 'slouching' | 'fatigued' };
 }
 
-export type PetState = 'Thriving' | 'Fading' | 'Wilting';
+export type PetHealthState = 'Thriving' | 'Fading' | 'Wilting';
+
+export interface PetState {
+  stage: number;           // 0 = Egg, 1-5 = evolution stages
+  stageName: string;       // 'Egg' | 'Blob' | 'Sprout' | 'Critter' | 'Beast' | 'Guardian'
+  health: PetHealthState;
+  totalLockedInMinutes: number;
+  eggCrackProgress: number;  // 0-100, only used during stage 0
+  accessories: string[];     // IDs of unlocked accessories
+  lastEvolutionCheck: number;
+  sickSince: number | null;  // timestamp when pet entered Wilting, null if healthy
+}
+
+export interface SessionRecap {
+  sessionId: string;
+  date: string;
+  durationMinutes: number;
+  avgPosture: number;
+  avgFocus: number;
+  avgStress: number;
+  avgOverall: number;
+  bestStreak: number;
+  totalUprightMinutes: number;
+  petStageAtEnd: number;
+  petHealthAtEnd: PetHealthState;
+  accessoriesUnlocked: string[];   // accessories earned this session
+  highlights: RecapHighlight[];
+}
+
+export interface RecapHighlight {
+  label: string;            // e.g. "Longest Focus Streak"
+  value: string;            // e.g. "47 min"
+  percentile?: number;      // e.g. 78 → "better than 78% of users"
+}
 
 export interface CalibrationData {
   uprightNeckAngle: number;
@@ -1900,6 +1944,12 @@ contextBridge.exposeInMainWorld('kinetic', {
   upsertLeaderboard: (entry: any) => ipcRenderer.invoke(IPC.LEADERBOARD_UPSERT, entry),
   storeGet: (key: string) => ipcRenderer.invoke(IPC.STORE_GET, key),
   storeSet: (key: string, value: any) => ipcRenderer.invoke(IPC.STORE_SET, key, value),
+
+  // Recap card
+  exportRecapPng: (pngBuffer: ArrayBuffer, filename: string) =>
+    ipcRenderer.invoke(IPC.RECAP_EXPORT, pngBuffer, filename),
+  copyRecapToClipboard: (pngBuffer: ArrayBuffer) =>
+    ipcRenderer.invoke(IPC.RECAP_CLIPBOARD, pngBuffer),
 });
 ```
 
@@ -1914,11 +1964,16 @@ interface StoreSchema {
   // Calibration
   calibration: CalibrationData | null;
 
-  // Pet
+  // Pet (full lifecycle state)
   pet: {
-    level: number;              // 1-5
+    stage: number;                // 0 = Egg, 1-5 = evolution stages
+    stageName: string;            // current stage display name
+    health: 'Thriving' | 'Fading' | 'Wilting';
     totalLockedInMinutes: number;
-    lastEvolutionCheck: number; // timestamp
+    eggCrackProgress: number;     // 0-100, used during stage 0 only
+    accessories: string[];        // IDs of unlocked accessories
+    lastEvolutionCheck: number;   // timestamp
+    sickSince: number | null;     // timestamp when pet entered Wilting, null if healthy
   };
 
   // User
@@ -1943,6 +1998,9 @@ interface StoreSchema {
     bestStreak: number;
     totalMinutes: number;
   }>;
+
+  // Session recap cards (last 30, for re-viewing/sharing past recaps)
+  recaps: SessionRecap[];
 }
 ```
 
