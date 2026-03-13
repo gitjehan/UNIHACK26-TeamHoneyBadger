@@ -1,5 +1,5 @@
 import { LANDMARKS, POSTURE_WEIGHTS, SHOULDER_SLANT_MAX, SLOUCH_THRESHOLD } from '@renderer/lib/constants';
-import { calculateAngle, clamp, cosineSimilarity } from '@renderer/lib/math';
+import { calculateAngle, clamp, cosineSimilarity, euclideanDist } from '@renderer/lib/math';
 import type { CalibrationData, Point, PostureData } from '@renderer/lib/types';
 
 function averagePoint(a: Point, b: Point): Point {
@@ -37,15 +37,28 @@ export function calculatePostureMetrics(
   );
 
   const currentVec: [number, number] = [hip.x - shoulder.x, hip.y - shoulder.y];
-  const trunkSimilarity = calibration
-    ? cosineSimilarity(currentVec, calibration.uprightTrunkVector)
-    : 1;
+  let trunkSimilarity = 1;
+  if (calibration) {
+    const angularSimilarity = cosineSimilarity(currentVec, calibration.uprightTrunkVector);
+    const currentMagnitude = euclideanDist(shoulder, hip);
+    const baselineMagnitude = Math.max(
+      0.0001,
+      Math.sqrt(
+        calibration.uprightTrunkVector[0] ** 2 + calibration.uprightTrunkVector[1] ** 2,
+      ),
+    );
+    const magnitudeRatio = clamp(currentMagnitude / baselineMagnitude, 0.7, 1.2);
+    trunkSimilarity = clamp(angularSimilarity * magnitudeRatio, 0, 1);
+  }
 
   return {
     neckAngle,
     shoulderSlant,
     trunkSimilarity,
-    isSlumping: neckAngle < SLOUCH_THRESHOLD,
+    isSlumping:
+      neckAngle < SLOUCH_THRESHOLD ||
+      trunkSimilarity < 0.9 ||
+      shoulderSlant > 7,
   };
 }
 

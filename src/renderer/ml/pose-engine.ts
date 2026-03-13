@@ -32,6 +32,24 @@ const REQUIRED_INDICES = [
   LANDMARKS.RIGHT_HIP,
 ];
 
+const COCO_TO_MEDIAPIPE_INDEX: Array<[number, number]> = [
+  [0, LANDMARKS.NOSE],
+  [3, LANDMARKS.LEFT_EAR],
+  [4, LANDMARKS.RIGHT_EAR],
+  [5, LANDMARKS.LEFT_SHOULDER],
+  [6, LANDMARKS.RIGHT_SHOULDER],
+  [7, LANDMARKS.LEFT_ELBOW],
+  [8, LANDMARKS.RIGHT_ELBOW],
+  [9, LANDMARKS.LEFT_WRIST],
+  [10, LANDMARKS.RIGHT_WRIST],
+  [11, LANDMARKS.LEFT_HIP],
+  [12, LANDMARKS.RIGHT_HIP],
+  [13, LANDMARKS.LEFT_KNEE],
+  [14, LANDMARKS.RIGHT_KNEE],
+  [15, LANDMARKS.LEFT_ANKLE],
+  [16, LANDMARKS.RIGHT_ANKLE],
+];
+
 export class PoseEngine {
   private onPose: PoseCallback | null = null;
 
@@ -51,6 +69,8 @@ export class PoseEngine {
 
   private fallbackPhase = 0;
 
+  private runtimeStatus: 'active' | 'degraded' | 'inactive' = 'inactive';
+
   setCallbacks(onPose: PoseCallback, onStatus: StatusCallback): void {
     this.onPose = onPose;
     this.onStatus = onStatus;
@@ -60,11 +80,11 @@ export class PoseEngine {
     this.running = true;
     try {
       await this.initHuman();
-      this.onStatus?.('active');
+      this.setStatus('active');
     } catch (error) {
       // Keep app functional even if model init fails.
       console.error('Pose model init failed, using fallback landmarks', error);
-      this.onStatus?.('degraded');
+      this.setStatus('degraded');
     }
 
     const tick = async (now: number) => {
@@ -87,7 +107,7 @@ export class PoseEngine {
 
   stop(): void {
     this.running = false;
-    this.onStatus?.('inactive');
+    this.setStatus('inactive');
   }
 
   private async initHuman(): Promise<void> {
@@ -110,6 +130,7 @@ export class PoseEngine {
 
   private async detectPose(video: HTMLVideoElement): Promise<Point[]> {
     if (!this.human || !video.videoWidth || !video.videoHeight) {
+      this.setStatus('degraded');
       return this.syntheticPose();
     }
 
@@ -117,20 +138,28 @@ export class PoseEngine {
       const result = await this.human.detect(video);
       const body: HumanBodyResult | undefined = result?.body?.[0];
       const points = this.toNormalizedLandmarks(body?.keypoints ?? [], video.videoWidth, video.videoHeight);
-      if (
-        !points.length ||
-        !REQUIRED_INDICES.every((index) => {
-          const visibility = points[index]?.visibility ?? 0;
-          return visibility > 0.15;
-        })
-      ) {
+      const hasRequired = REQUIRED_INDICES.every((index) => {
+        const visibility = points[index]?.visibility ?? 0;
+        return visibility > 0.15;
+      });
+
+      if (!points.length || !hasRequired) {
+        this.setStatus('degraded');
         return this.syntheticPose();
       }
+      this.setStatus('active');
       return points;
     } catch (error) {
       console.warn('Pose detect failed, using synthetic landmarks', error);
+      this.setStatus('degraded');
       return this.syntheticPose();
     }
+  }
+
+  private setStatus(status: 'active' | 'degraded' | 'inactive'): void {
+    if (this.runtimeStatus === status) return;
+    this.runtimeStatus = status;
+    this.onStatus?.(status);
   }
 
   private toNormalizedLandmarks(
@@ -139,17 +168,32 @@ export class PoseEngine {
     videoHeight: number,
   ): Point[] {
     if (!keypoints.length) return [];
-    return keypoints.map((point) => {
-      const px = point.position?.[0] ?? point.x ?? 0;
-      const py = point.position?.[1] ?? point.y ?? 0;
-      const pz = point.position?.[2] ?? point.z ?? 0;
+    const normalizePoint = (point: HumanBodyKeypoint): Point => {
+      const rawX = point.position?.[0] ?? point.x ?? 0;
+      const rawY = point.position?.[1] ?? point.y ?? 0;
+      const rawZ = point.position?.[2] ?? point.z ?? 0;
+      const x = rawX > 1 ? (videoWidth ? rawX / videoWidth : 0) : rawX;
+      const y = rawY > 1 ? (videoHeight ? rawY / videoHeight : 0) : rawY;
       return {
-        x: videoWidth ? px / videoWidth : 0,
-        y: videoHeight ? py / videoHeight : 0,
-        z: pz,
+        x: Math.max(0, Math.min(1, x)),
+        y: Math.max(0, Math.min(1, y)),
+        z: rawZ,
         visibility: point.score ?? 1,
       };
-    });
+    };
+
+    // Some Human body models return COCO-17 keypoints. Map to MediaPipe-style indices we use.
+    if (keypoints.length >= 17 && keypoints.length < 33) {
+      const mapped: Point[] = new Array(33)
+        .fill(0)
+        .map(() => ({ x: 0.5, y: 0.5, z: 0, visibility: 0 }));
+      for (const [src, dest] of COCO_TO_MEDIAPIPE_INDEX) {
+        mapped[dest] = normalizePoint(keypoints[src]);
+      }
+      return mapped;
+    }
+
+    return keypoints.map(normalizePoint);
   }
 
   private syntheticPose(): Point[] {
