@@ -994,6 +994,8 @@ function blinkRateLabel(rate: number): string {
 
 ## Execution Order & Build Phases
 
+**For the coding agent**: Execute all phases (0 through 8) sequentially and autonomously. Do NOT stop to ask for confirmation between phases. After each phase, run the corresponding tests from the Testing section, fix any failures, then immediately proceed to the next phase. If you hit a blocker that cannot be resolved, skip it, note what failed, and continue with the next phase. The goal is a fully working app at the end — keep moving.
+
 Build the riskiest, most uncertain pieces first so you fail fast, and layer polish on top.
 
 ### Phase 0: Electron Scaffold + Webcam
@@ -1306,6 +1308,77 @@ interface LeaderboardEntry {
   timestamp: string;
 }
 ```
+
+---
+
+## Testing — On-Machine Verification
+
+**For the coding agent**: After implementing each phase, you MUST write and run automated tests that verify the implementation works on the real machine. Write these as executable test scripts (using Playwright for Electron E2E, or plain Node.js scripts for system-level checks). Run them yourself and fix any failures before moving to the next phase. No mocks — all tests hit the real webcam, real system APIs, and real Electron app. If a test requires a person in front of the camera, log clear instructions for what to do and assert on the ML output.
+
+### 1. ML Pipeline Verification
+
+- Launch renderer process, load both ML models (`@vladmandic/human` or `@mediapipe/tasks-vision` for pose, `@vladmandic/human` for face)
+- Feed a real webcam frame through pose detection → assert the returned landmarks array has 33 points with all coordinates in the 0–1 range
+- Feed a real webcam frame through face detection → assert 468 face mesh landmarks returned
+- Verify landmark indices 0, 7, 8, 11, 12, 23, 24 (nose, ears, shoulders, hips) all have `visibility > 0.5` when a person is sitting in front of the camera
+- Run continuous inference for 30 seconds → assert average FPS stays above 10fps for pose, above 3fps for face
+
+### 2. Posture Scoring (Real Webcam)
+
+- Complete calibration flow (sit upright for 3 seconds) → assert `CalibrationData` is stored in electron-store with reasonable values (neck angle 160–180°, shoulder slant < 3°, trunk similarity > 0.95)
+- Sit upright after calibration → assert posture score > 70 within 5 seconds
+- Deliberately slouch forward → assert posture score drops below 50 within 5 seconds
+- Tilt shoulders visibly → assert `shoulderSlant` value increases above 5°
+- Return to upright → assert score recovers above 70 within 10 seconds
+
+### 3. Blink & Fatigue Detection
+
+- Sit normally for 60 seconds → assert blink rate is between 8–30 bpm (sane range)
+- Deliberately hold eyes closed for 3 seconds → assert a prolonged closure is registered
+- Assert `avgEAR` is between 0.15–0.40 during normal usage (sanity check on eye landmark detection)
+
+### 4. Ambient Control (Real System Calls)
+
+- Run `brightness 0.5` from main process → run `brightness -l` → assert reported brightness is approximately 0.5 (within ±0.05)
+- Run `brightness 1.0` → assert brightness restores to ~1.0
+- Run `./gamma-helper 1.0 0.7 0.6` → assert process exits with code 0 (no crash)
+- Run `./gamma-helper 1.0 1.0 1.0` → assert gamma resets cleanly
+- Kill the Electron app with SIGTERM → run `brightness -l` → assert brightness is back to 1.0 (verifies the reset handler works)
+
+### 5. IPC Round-Trip
+
+- Launch full Electron app
+- From renderer, call `window.kinetic.storeSet('test-key', 'test-value')` → then `window.kinetic.storeGet('test-key')` → assert returns `'test-value'`
+- From renderer, call `window.kinetic.updateAmbient({ brightness: 0.6, warmth: 0.3 })` → wait 3 seconds → run `brightness -l` from a shell → assert brightness is approximately 0.6
+
+### 6. Pet State Machine
+
+- Set electron-store pet state to stage 0 (Egg), `totalLockedInMinutes: 0`
+- Run app with good posture (Overall ≥ 65) for 10+ minutes → assert pet stage transitions from 0 to 1 (Hatchling)
+- While sitting upright, assert pet health state is `'Thriving'`
+- Slouch until Overall drops below 30 → assert pet health transitions to `'Wilting'`
+- Sit back up → assert pet health recovers to `'Thriving'` or `'Fading'`
+- Close and reopen app → assert pet stage and `totalLockedInMinutes` persist from electron-store
+
+### 7. Dashboard Rendering
+
+- Launch app, complete calibration → assert all 4 metric cards are visible and updating (values are not stuck at 0 or "--")
+- Assert the Digital Twin canvas is drawing (check canvas has non-zero image data)
+- Assert the Overall gauge reflects a score between 0–100
+- Assert Session Timeline charts have data points accumulating over 30 seconds
+- Assert Systems Panel shows Pose Detection as `'active'` (green dot)
+
+### 8. Full End-to-End Flow
+
+Run the complete user journey as a single test:
+
+1. Launch KINETIC → assert window opens, welcome/calibration screen appears
+2. Complete calibration → assert calibration data saved, dashboard appears
+3. Sit upright for 30 seconds → assert posture score > 70, pet is Thriving, ambient brightness near 1.0
+4. Slouch for 15 seconds → assert posture score < 50, pet transitions to Fading or Wilting, screen brightness dims noticeably (read back via `brightness -l`)
+5. Sit back up for 15 seconds → assert score recovers, pet recovers, brightness returns toward 1.0
+6. Trigger session end → assert recap card modal appears with non-zero stats
+7. Quit app → assert gamma and brightness reset to defaults
 
 ---
 
