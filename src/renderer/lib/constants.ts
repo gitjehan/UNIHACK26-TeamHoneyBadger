@@ -48,7 +48,7 @@ export const AMBIENT_MAP = [
   { scoreMin: 0, scoreMax: 20, brightness: [0.2, 0.3], warmth: [0.7, 0.9] },
 ] as const;
 
-export const POSE_FPS = 15;
+export const POSE_FPS = 10;
 export const FACE_FPS = 5;
 export const POSE_LOOP_INTERVAL = Math.round(1000 / POSE_FPS);
 export const FACE_LOOP_INTERVAL = Math.round(1000 / FACE_FPS);
@@ -103,9 +103,9 @@ export const RIGHT_EYE = {
 };
 
 export const PET_HEALTH: Record<PetHealthState, { minScore: number; color: string; label: PetHealthState }> = {
-  Thriving: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
+  Thriving: { minScore: 65, color: '#3D6B4F', label: 'Thriving' },
   Fading: { minScore: 30, color: '#C4962C', label: 'Fading' },
-  Wilting: { minScore: 0, color: '#C0392B', label: 'Wilting' },
+  Wilting: { minScore: 0, color: '#B85A4D', label: 'Wilting' },
 };
 
 export const PET_EVOLUTION = [

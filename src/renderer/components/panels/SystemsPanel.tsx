@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { SystemsState, VisionBackend } from '@renderer/lib/types';
 
 interface SystemsPanelProps {
@@ -19,7 +20,7 @@ function backendLabel(backend: VisionBackend): string {
   return 'Initializing';
 }
 
-export function SystemsPanel({ systems, poseBackend, faceBackend }: SystemsPanelProps): JSX.Element {
+export const SystemsPanel = memo(function SystemsPanel({ systems, poseBackend, faceBackend }: SystemsPanelProps): JSX.Element {
   return (
     <div className="card">
       <h3>Systems</h3>
@@ -49,4 +50,4 @@ export function SystemsPanel({ systems, poseBackend, faceBackend }: SystemsPanel
       </div>
     </div>
   );
-}
+});

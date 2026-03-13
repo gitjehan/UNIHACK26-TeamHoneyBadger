@@ -92,6 +92,12 @@ class ScoreEngine {
 
   private snapshot: ScoreSnapshot = initialSnapshot();
 
+  private lastEmitTime = 0;
+
+  private emitScheduled = false;
+
+  private emitTimer: ReturnType<typeof setTimeout> | null = null;
+
   private fatigueScore = 15;
 
   private blinkDetector = new BlinkDetector();
@@ -242,11 +248,20 @@ class ScoreEngine {
   }
 
   setSystemStatus(partial: Partial<SystemsState>): void {
+    let changed = false;
+    for (const key of Object.keys(partial) as (keyof SystemsState)[]) {
+      if (this.systems[key] !== partial[key]) {
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) return;
     this.systems = { ...this.systems, ...partial };
     this.emit();
   }
 
   setAmbientStatus(status: SystemsState['ambientCtrl']): void {
+    if (this.systems.ambientCtrl === status) return;
     this.systems = { ...this.systems, ambientCtrl: status };
     this.emit();
   }
@@ -425,6 +440,24 @@ class ScoreEngine {
   }
 
   private emit(): void {
+    const now = Date.now();
+    const elapsed = now - this.lastEmitTime;
+
+    if (elapsed < 250) {
+      if (!this.emitScheduled) {
+        this.emitScheduled = true;
+        this.emitTimer = setTimeout(() => {
+          this.emitScheduled = false;
+          this.emitTimer = null;
+          this.lastEmitTime = Date.now();
+          const current = this.state;
+          this.listeners.forEach((listener) => listener(current));
+        }, 250 - elapsed);
+      }
+      return;
+    }
+
+    this.lastEmitTime = now;
     const current = this.state;
     this.listeners.forEach((listener) => listener(current));
   }

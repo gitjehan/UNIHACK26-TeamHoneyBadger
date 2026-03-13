@@ -59,6 +59,9 @@ export default function App(): JSX.Element {
   const webcam = useWebcam(enabled);
   const state = useScores();
 
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   const sessionEntry = useMemo(
     () => ({
       nickname,
@@ -126,7 +129,9 @@ export default function App(): JSX.Element {
     face.setCallbacks(
       (landmarks, emotionState, emotionConfidence, fps) => {
         scoreEngine.updateFaceFps(fps);
-        const hasFaceMesh = landmarks.length >= 390;
+        // Human returns 478 mesh points (MediaPipe-compatible). We need index
+        // 386 (RIGHT_EYE.top[0]) at minimum for blink detection → require 387.
+        const hasFaceMesh = landmarks.length >= 387;
         if (hasFaceMesh) {
           scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
         }
@@ -142,8 +147,18 @@ export default function App(): JSX.Element {
         ),
     );
 
-    pose.init(sourceVideo).catch((error) => console.warn('Pose engine init failed', error));
-    face.init(sourceVideo).catch((error) => console.warn('Face engine init failed', error));
+    (async () => {
+      try {
+        await pose.init(sourceVideo);
+      } catch (error) {
+        console.warn('Pose engine init failed', error);
+      }
+      try {
+        await face.init(sourceVideo);
+      } catch (error) {
+        console.warn('Face engine init failed', error);
+      }
+    })();
 
     return () => {
       pose.stop();
@@ -172,13 +187,23 @@ export default function App(): JSX.Element {
   useEffect(() => {
     if (stage !== 'ready') return;
     scoreEngine.setAmbientStatus('active');
-    window.kinetic.updateAmbient(state.ambient);
-  }, [stage, state.ambient]);
+    window.kinetic.updateAmbient(stateRef.current.ambient);
+    const interval = setInterval(() => {
+      window.kinetic.updateAmbient(stateRef.current.ambient);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [stage]);
 
   useEffect(() => {
     if (stage !== 'ready') return;
-    ambientAudio.update(state.snapshot.overall.score, state.snapshot.stress.score);
-  }, [stage, state.snapshot.overall.score, state.snapshot.stress.score]);
+    const s = stateRef.current;
+    ambientAudio.update(s.snapshot.overall.score, s.snapshot.stress.score);
+    const interval = setInterval(() => {
+      const latest = stateRef.current;
+      ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [stage]);
 
   useEffect(
     () => () => {
@@ -190,23 +215,24 @@ export default function App(): JSX.Element {
   useEffect(() => {
     if (stage !== 'ready') return;
     const interval = setInterval(() => {
+      const s = stateRef.current;
       window.kinetic.sendBiometric({
         timestamp: new Date().toISOString(),
         sessionId: sessionIdRef.current,
-        posture: state.snapshot.posture,
-        blink: state.snapshot.blink,
-        focus: state.snapshot.focus,
-        stress: state.snapshot.stress,
-        overall: state.snapshot.overall,
+        posture: s.snapshot.posture,
+        blink: s.snapshot.blink,
+        focus: s.snapshot.focus,
+        stress: s.snapshot.stress,
+        overall: s.snapshot.overall,
         ambient: {
-          brightness: state.ambient.brightness,
-          warmth: state.ambient.warmth,
-          petState: state.pet.health,
+          brightness: s.ambient.brightness,
+          warmth: s.ambient.warmth,
+          petState: s.pet.health,
         },
       });
     }, 5000);
     return () => clearInterval(interval);
-  }, [stage, state]);
+  }, [stage]);
 
   useEffect(() => {
     let mounted = true;
@@ -333,17 +359,18 @@ export default function App(): JSX.Element {
   };
 
   useEffect(() => {
+    const s = stateRef.current;
     (window as Window & { __kineticDebug?: Record<string, unknown> }).__kineticDebug = {
       stage,
-      posture: state.snapshot.posture.score,
-      overall: state.snapshot.overall.score,
-      petHealth: state.pet.health,
+      posture: s.snapshot.posture.score,
+      overall: s.snapshot.overall.score,
+      petHealth: s.pet.health,
       timelinePoints: timeline.length,
       recapVisible: Boolean(recap),
-      systems: state.systems,
+      systems: s.systems,
       backend: visionBackend,
     };
-  }, [stage, state, timeline.length, recap, visionBackend]);
+  }, [stage, timeline.length, recap, visionBackend]);
 
   const startCalibration = () => {
     ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));

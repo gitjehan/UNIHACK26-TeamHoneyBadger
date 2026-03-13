@@ -7,11 +7,30 @@ import {
   RIGHT_EYE,
 } from '@renderer/lib/constants';
 import { clamp, euclideanDist } from '@renderer/lib/math';
-import { RollingAverage, RollingBuffer } from '@renderer/lib/rolling-buffer';
+import { RollingAverage } from '@renderer/lib/rolling-buffer';
 import type { BlinkData, Point } from '@renderer/lib/types';
 
 export interface BlinkFrame extends BlinkData {
   fatigueScore: number;
+}
+
+/** Minimum number of face-mesh points required for reliable EAR computation. */
+const MIN_EYE_LANDMARKS = 387; // max index used is RIGHT_EYE.top[0] = 386
+
+/** How far back (ms) to count blinks for the per-minute rate. */
+const BLINK_WINDOW_MS = 60_000;
+
+/** How far back (ms) to count prolonged closures. */
+const CLOSURE_WINDOW_MS = 300_000;
+
+function hasEyeLandmarks(landmarks: Point[]): boolean {
+  if (landmarks.length < MIN_EYE_LANDMARKS) return false;
+  // Spot-check the corner indices actually contain data
+  const ll = landmarks[LEFT_EYE.left];
+  const lr = landmarks[LEFT_EYE.right];
+  const rl = landmarks[RIGHT_EYE.left];
+  const rr = landmarks[RIGHT_EYE.right];
+  return !!(ll && lr && rl && rr);
 }
 
 function eyeAspectRatio(landmarks: Point[], eye: typeof LEFT_EYE): number {
@@ -32,52 +51,132 @@ function eyeAspectRatio(landmarks: Point[], eye: typeof LEFT_EYE): number {
 }
 
 export class BlinkDetector {
-  private blinkTimestamps = new RollingBuffer<number>(400);
+  /** Raw timestamps of recent blinks (ring buffer). */
+  private blinkTimes: number[] = [];
+
+  /** Raw timestamps of recent prolonged closures. */
+  private closureTimes: number[] = [];
 
   private earBuffer = new RollingAverage(30);
 
-  private prolongedClosures = new RollingBuffer<number>(100);
-
   private closedFrames = 0;
 
+  private lastLogTime = 0;
+
+  private framesSinceLastData = 0;
+
+  /** Track whether we've ever received valid EAR data */
+  private hasReceivedData = false;
+
+  /** Cached blink rate — recomputed at most every 500 ms. */
+  private cachedBlinkRate = 0;
+
+  private cachedClosureCount = 0;
+
+  private lastCacheTime = 0;
+
   update(faceLandmarks: Point[], baselineBlinkRate: number): BlinkFrame {
+    // Guard: verify we have the eye landmarks we need
+    if (!hasEyeLandmarks(faceLandmarks)) {
+      this.framesSinceLastData += 1;
+      return this.buildFallbackFrame(baselineBlinkRate);
+    }
+
+    this.hasReceivedData = true;
+    this.framesSinceLastData = 0;
+
     const left = eyeAspectRatio(faceLandmarks, LEFT_EYE);
     const right = eyeAspectRatio(faceLandmarks, RIGHT_EYE);
     const ear = (left + right) / 2;
+
+    // Diagnostic logging every 5 seconds
+    const now = Date.now();
+    if (now - this.lastLogTime > 5000) {
+      this.lastLogTime = now;
+      console.log(
+        `[BlinkDetector] EAR: ${ear.toFixed(4)} | L: ${left.toFixed(4)} R: ${right.toFixed(4)} | closed: ${this.closedFrames} | landmarks: ${faceLandmarks.length}`,
+      );
+    }
+
+    // If EAR is exactly 0, the landmarks exist but have degenerate positions — skip
+    if (ear <= 0) {
+      return this.buildFallbackFrame(baselineBlinkRate);
+    }
+
     this.earBuffer.push(ear);
 
     if (ear < EAR_BLINK_THRESHOLD) {
       this.closedFrames += 1;
     } else if (this.closedFrames > 0) {
       if (this.closedFrames >= BLINK_MIN_FRAMES && this.closedFrames <= BLINK_MAX_FRAMES) {
-        this.blinkTimestamps.push(Date.now());
+        this.blinkTimes.push(now);
       } else if (this.closedFrames > BLINK_MAX_FRAMES) {
-        this.prolongedClosures.push(Date.now());
+        this.closureTimes.push(now);
       }
       this.closedFrames = 0;
     }
 
-    const minuteAgo = Date.now() - 60_000;
-    const fiveMinAgo = Date.now() - 300_000;
+    return this.buildFrame(now, baselineBlinkRate);
+  }
 
-    const blinkRate = this.blinkTimestamps.items.filter((timestamp) => timestamp >= minuteAgo).length;
-    const prolongedClosures = this.prolongedClosures.items.filter(
-      (timestamp) => timestamp >= fiveMinAgo,
-    ).length;
+  /** Build a result frame from actual tracked data */
+  private buildFrame(now: number, baselineBlinkRate: number): BlinkFrame {
+    // Recompute window counts at most every 500 ms to avoid work on every frame
+    if (now - this.lastCacheTime >= 500) {
+      this.lastCacheTime = now;
+
+      const blinkCutoff = now - BLINK_WINDOW_MS;
+      const closureCutoff = now - CLOSURE_WINDOW_MS;
+
+      // Prune old entries from the front (they're in chronological order)
+      this.pruneOlderThan(this.blinkTimes, blinkCutoff);
+      this.pruneOlderThan(this.closureTimes, closureCutoff);
+
+      this.cachedBlinkRate = this.blinkTimes.length;
+      this.cachedClosureCount = this.closureTimes.length;
+    }
 
     const fatigueScore = calculateFatigueScore(
-      blinkRate,
+      this.cachedBlinkRate,
       baselineBlinkRate || 17,
       this.earBuffer.average,
-      prolongedClosures,
+      this.cachedClosureCount,
     );
 
     return {
-      rate: blinkRate,
+      rate: this.cachedBlinkRate,
       avgEAR: this.earBuffer.average,
-      prolongedClosures,
+      prolongedClosures: this.cachedClosureCount,
       fatigueScore,
     };
+  }
+
+  /**
+   * When face mesh data is unavailable or degenerate, return a sensible
+   * fallback so downstream scores (fatigue, stress) don't zero out.
+   */
+  private buildFallbackFrame(baselineBlinkRate: number): BlinkFrame {
+    // If we've previously accumulated real data, use what we have
+    if (this.hasReceivedData && this.earBuffer.average > 0) {
+      return this.buildFrame(Date.now(), baselineBlinkRate);
+    }
+
+    // Otherwise return a neutral baseline so scores stay reasonable
+    return {
+      rate: baselineBlinkRate || 17,
+      avgEAR: 0.27,
+      prolongedClosures: 0,
+      fatigueScore: 15,
+    };
+  }
+
+  /** Remove all entries older than cutoff from a sorted timestamp array. */
+  private pruneOlderThan(arr: number[], cutoff: number): void {
+    let pruneCount = 0;
+    while (pruneCount < arr.length && arr[pruneCount] < cutoff) {
+      pruneCount += 1;
+    }
+    if (pruneCount > 0) arr.splice(0, pruneCount);
   }
 }
 

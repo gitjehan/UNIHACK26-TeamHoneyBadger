@@ -2,7 +2,9 @@ import { LANDMARKS, POSTURE_WEIGHTS, SHOULDER_SLANT_MAX, SLOUCH_THRESHOLD } from
 import { calculateAngle, clamp, cosineSimilarity } from '@renderer/lib/math';
 import type { CalibrationData, Point, PostureData } from '@renderer/lib/types';
 
-function isUsable(point: Point | undefined, minVisibility = 0.04): point is Point {
+let lastDebugLog = 0;
+
+function isUsable(point: Point | undefined, minVisibility = 0.15): point is Point {
   if (!point) return false;
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
   return (point.visibility ?? 1) >= minVisibility;
@@ -25,9 +27,9 @@ function getShoulder(landmarks: Point[]): Point {
 }
 
 function getHead(landmarks: Point[], shoulder: Point): Point {
-  const leftEar = isUsable(landmarks[LANDMARKS.LEFT_EAR], 0.01) ? landmarks[LANDMARKS.LEFT_EAR] : undefined;
-  const rightEar = isUsable(landmarks[LANDMARKS.RIGHT_EAR], 0.01) ? landmarks[LANDMARKS.RIGHT_EAR] : undefined;
-  const nose = isUsable(landmarks[LANDMARKS.NOSE], 0.01) ? landmarks[LANDMARKS.NOSE] : undefined;
+  const leftEar = isUsable(landmarks[LANDMARKS.LEFT_EAR], 0.2) ? landmarks[LANDMARKS.LEFT_EAR] : undefined;
+  const rightEar = isUsable(landmarks[LANDMARKS.RIGHT_EAR], 0.2) ? landmarks[LANDMARKS.RIGHT_EAR] : undefined;
+  const nose = isUsable(landmarks[LANDMARKS.NOSE], 0.2) ? landmarks[LANDMARKS.NOSE] : undefined;
   const earOnly = [leftEar, rightEar].filter((point): point is Point => Boolean(point));
   if (earOnly.length >= 2) {
     return averageAvailable(earOnly, { x: shoulder.x, y: Math.max(0, shoulder.y - 0.14) });
@@ -35,16 +37,15 @@ function getHead(landmarks: Point[], shoulder: Point): Point {
   return averageAvailable([leftEar, rightEar, nose], { x: shoulder.x, y: Math.max(0, shoulder.y - 0.14) });
 }
 
-function getTorsoReferenceVector(head: Point, shoulder: Point, calibration: CalibrationData | null): [number, number] {
+function getTorsoReferenceVector(_head: Point, _shoulder: Point, calibration: CalibrationData | null): [number, number] {
   if (calibration) {
     const [x, y] = calibration.uprightTrunkVector;
     if (Number.isFinite(x) && Number.isFinite(y) && Math.hypot(x, y) > 0.01) {
       return [x, y];
     }
   }
-  const inferred: [number, number] = [shoulder.x - head.x, shoulder.y - head.y];
-  if (Math.hypot(inferred[0], inferred[1]) > 0.01) return inferred;
-  return [0, 0.22];
+  // Without calibration, assume ideal upright: shoulder directly below head
+  return [0, 0.15];
 }
 
 export function calculatePostureMetrics(
@@ -85,7 +86,20 @@ export function calculatePostureMetrics(
     const magnitudeSimilarity = clamp(1 - Math.abs(1 - magnitudeRatio), 0, 1);
     trunkSimilarity = clamp(angularSimilarity * 0.75 + magnitudeSimilarity * 0.25, 0, 1);
   } else {
-    trunkSimilarity = clamp(cosineSimilarity(currentVec, torsoReference), 0, 1);
+    const similarity = cosineSimilarity(currentVec, torsoReference);
+    trunkSimilarity = clamp(similarity, 0, 1);
+  }
+
+  const now = Date.now();
+  if (now - lastDebugLog >= 2000) {
+    lastDebugLog = now;
+    const lsVis = (landmarks[LANDMARKS.LEFT_SHOULDER]?.visibility ?? 0).toFixed(2);
+    const rsVis = (landmarks[LANDMARKS.RIGHT_SHOULDER]?.visibility ?? 0).toFixed(2);
+    const leVis = (landmarks[LANDMARKS.LEFT_EAR]?.visibility ?? 0).toFixed(2);
+    const reVis = (landmarks[LANDMARKS.RIGHT_EAR]?.visibility ?? 0).toFixed(2);
+    console.log(
+      `[Posture] neck=${neckAngle.toFixed(1)}° slant=${shoulderSlant.toFixed(1)}° trunk=${trunkSimilarity.toFixed(3)} | vis: LS=${lsVis} RS=${rsVis} LE=${leVis} RE=${reVis} | cal=${calibration ? 'yes' : 'no'}`,
+    );
   }
 
   return {
@@ -104,7 +118,9 @@ export function calculatePostureScore(
   shoulderSlant: number,
   trunkSimilarity: number,
 ): number {
-  const neckScore = clamp(((neckAngle - 140) / 40) * 100, 0, 100);
+  // Neck: 180° = perfect (100), 130° = terrible (0). 50° range is more forgiving
+  // than 40° for seated use where slight forward lean is natural.
+  const neckScore = clamp(((neckAngle - 130) / 50) * 100, 0, 100);
   const shoulderScore = clamp((1 - shoulderSlant / SHOULDER_SLANT_MAX) * 100, 0, 100);
   const trunkScore = clamp(((trunkSimilarity - 0.85) / 0.15) * 100, 0, 100);
 

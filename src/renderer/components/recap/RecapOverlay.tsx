@@ -20,8 +20,11 @@ export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProp
   };
 
   return (
-    <div className="overlay">
-      <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} onRecalibrate={onRecalibrate} />
+    <div className="overlay" onClick={onClose}>
+      {/* Stop click propagation so clicking the card doesn't close */}
+      <div onClick={(e) => e.stopPropagation()} style={{ animation: 'slideUp 0.3s ease-out' }}>
+        <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} onRecalibrate={onRecalibrate} />
+      </div>
     </div>
   );
 }

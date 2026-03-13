@@ -41,12 +41,11 @@ export function useWebcam(enabled: boolean): WebcamState {
     }
 
     let cancelled = false;
-    let syncTimer: ReturnType<typeof setInterval> | null = null;
 
     const run = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720, facingMode: 'user' },
+          video: { width: 640, height: 480, facingMode: 'user' },
           audio: false,
         });
         if (cancelled) {
@@ -63,17 +62,6 @@ export function useWebcam(enabled: boolean): WebcamState {
           await attachStream(videoRef.current, stream);
         }
 
-        syncTimer = setInterval(() => {
-          const display = videoRef.current;
-          const activeStream = streamRef.current;
-          if (!display || !activeStream) return;
-          if (display.srcObject !== activeStream) {
-            attachStream(display, activeStream).catch((error) => {
-              console.warn('Display webcam sync failed', error);
-            });
-          }
-        }, 300);
-
         setReady(true);
         setError(null);
       } catch (err) {
@@ -86,7 +74,6 @@ export function useWebcam(enabled: boolean): WebcamState {
 
     return () => {
       cancelled = true;
-      if (syncTimer) clearInterval(syncTimer);
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;

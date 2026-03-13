@@ -23,8 +23,8 @@ function averagePoint(points: Point[], fallback: Point): Point {
 export function buildCalibration(
   samples: Array<{ landmarks: Point[]; neckAngle: number; shoulderSlant: number; ear?: number }>,
 ): CalibrationData {
-  const neck = avg(samples.map((sample) => sample.neckAngle));
-  const slant = avg(samples.map((sample) => sample.shoulderSlant));
+  const rawNeck = avg(samples.map((sample) => sample.neckAngle));
+  const rawSlant = avg(samples.map((sample) => sample.shoulderSlant));
   const baselineEAR = avg(samples.map((sample) => sample.ear ?? 0.27));
 
   const trunkVectors = samples.map((sample) => {
@@ -47,10 +47,31 @@ export function buildCalibration(
     return [midShoulder.x - head.x, midShoulder.y - head.y] as [number, number];
   });
 
-  const uprightTrunkVector: [number, number] = [
+  let uprightTrunkVector: [number, number] = [
     avg(trunkVectors.map((vector) => vector[0])),
     avg(trunkVectors.map((vector) => vector[1])),
   ];
+
+  // Sanity checks: if user calibrated while slouching, clamp to reasonable defaults
+  const neck = rawNeck < 150
+    ? (console.warn(`Calibration: neck angle ${rawNeck.toFixed(1)}° too low, clamping to 170°`), 170)
+    : rawNeck;
+
+  const slant = rawSlant > 8
+    ? (console.warn(`Calibration: shoulder slant ${rawSlant.toFixed(1)}° too high, clamping to 2°`), 2)
+    : rawSlant;
+
+  const trunkMag = Math.hypot(uprightTrunkVector[0], uprightTrunkVector[1]);
+  if (trunkMag < 0.03) {
+    console.warn(`Calibration: trunk vector magnitude ${trunkMag.toFixed(4)} too small, using default`);
+    uprightTrunkVector = [0, 0.15];
+  }
+
+  // The trunk Y component should be positive (shoulder below head in normalized coords)
+  if (uprightTrunkVector[1] < 0) {
+    console.warn('Calibration: trunk vector Y is negative (head below shoulders?), flipping');
+    uprightTrunkVector[1] = Math.abs(uprightTrunkVector[1]);
+  }
 
   return {
     uprightNeckAngle: neck,

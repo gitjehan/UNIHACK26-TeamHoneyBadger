@@ -62,6 +62,8 @@ const HEAD_INDICES = [LANDMARKS.NOSE, LANDMARKS.LEFT_EAR, LANDMARKS.RIGHT_EAR];
 
 const COCO_TO_MEDIAPIPE_INDEX: Array<[number, number]> = [
   [0, LANDMARKS.NOSE],
+  [1, 1],  // left_eye → MediaPipe index 1
+  [2, 4],  // right_eye → MediaPipe index 4
   [3, LANDMARKS.LEFT_EAR],
   [4, LANDMARKS.RIGHT_EAR],
   [5, LANDMARKS.LEFT_SHOULDER],
@@ -287,13 +289,13 @@ export class PoseEngine {
     if (!points.length) return false;
     const hasShoulders = SHOULDER_INDICES.every((index) => {
       const visibility = points[index]?.visibility ?? 0;
-      return visibility > 0.08;
+      return visibility > 0.3;
     });
     if (!hasShoulders) return false;
 
     const hasHead = HEAD_INDICES.some((index) => {
       const visibility = points[index]?.visibility ?? 0;
-      return visibility > 0.03;
+      return visibility > 0.2;
     });
     return hasHead;
   }

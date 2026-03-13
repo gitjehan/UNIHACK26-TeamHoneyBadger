@@ -48,6 +48,8 @@ export class FaceEngine {
 
   private onBackend: BackendCallback | null = null;
 
+  private lastDiagTime = 0;
+
   setCallbacks(onFace: FaceCallback, onStatus: StatusCallback, onBackend?: BackendCallback): void {
     this.onFace = onFace;
     this.onStatus = onStatus;
@@ -57,11 +59,13 @@ export class FaceEngine {
   async init(video: HTMLVideoElement): Promise<void> {
     this.running = true;
     try {
+      console.log('[FaceEngine] Initializing Human face model...');
       await this.initHuman();
+      console.log('[FaceEngine] Face model ready');
       this.setStatus('active');
       this.setBackend('human');
     } catch (error) {
-      console.error('Face model init failed', error);
+      console.error('[FaceEngine] Face model init failed:', error);
       this.setStatus('degraded');
       this.setBackend('unavailable');
     }
@@ -113,6 +117,7 @@ export class FaceEngine {
       gesture: { enabled: false },
     }) as HumanAdapter;
     await this.human.load();
+    console.log('[FaceEngine] Models loaded, warming up...');
     await this.human.warmup();
   }
 
@@ -130,6 +135,15 @@ export class FaceEngine {
       const face = result?.face?.[0];
       const rawMesh: number[][] | undefined = face?.mesh;
       const emotions: EmotionResult[] = face?.emotion ?? [];
+
+      // Diagnostic logging every 5 seconds
+      const now = Date.now();
+      if (now - this.lastDiagTime > 5000) {
+        this.lastDiagTime = now;
+        console.log(
+          `[FaceEngine] mesh points: ${rawMesh?.length ?? 0} | emotions: ${emotions.length} | top: ${emotions[0]?.emotion ?? 'none'} (${(emotions[0]?.score ?? 0).toFixed(2)})`,
+        );
+      }
 
       if (!rawMesh?.length) {
         this.setStatus('degraded');
@@ -150,7 +164,7 @@ export class FaceEngine {
         emotionConfidence: dominant?.score ?? 0.4,
       };
     } catch (error) {
-      console.warn('Face detect failed', error);
+      console.warn('[FaceEngine] Face detect failed:', error);
       this.setStatus('degraded');
       this.setBackend('unavailable');
       return { landmarks: [], emotionState: 'neutral', emotionConfidence: 0 };

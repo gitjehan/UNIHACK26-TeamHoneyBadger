@@ -52,7 +52,13 @@ export function Dashboard({
         <WebcamFeed
           videoRef={videoRef}
           landmarks={state.poseLandmarks}
+          faceLandmarks={state.faceLandmarks}
           postureScore={snapshot.posture.score}
+          neckAngle={snapshot.posture.neckAngle}
+          shoulderSlant={snapshot.posture.shoulderSlant}
+          emotionState={snapshot.stress.dominantEmotion}
+          blinkRate={snapshot.blink.rate}
+          avgEAR={snapshot.blink.avgEAR}
           poseFps={state.poseFps}
           faceFps={state.faceFps}
         />
