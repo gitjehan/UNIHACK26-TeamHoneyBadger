@@ -289,12 +289,12 @@ class ScoreEngine {
     this.recompute(adjustedPosture);
   }
 
-  updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number): void {
+  updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number, aspectRatio = 4 / 3): void {
     this.faceLandmarks = landmarks;
     this.emotionState = emotionState || 'neutral';
     this.emotionConfidence = emotionConfidence || 0.5;
 
-    const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17);
+    const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17, aspectRatio);
     this.snapshot = { ...this.snapshot, blink: blinkFrame };
     this.fatigueScore = blinkFrame.fatigueScore;
     this.recompute(this.snapshot.posture, blinkFrame);

@@ -8,7 +8,7 @@ export const SLOUCH_THRESHOLD = 150;
 
 export const EAR_BLINK_THRESHOLD = 0.2;
 export const BLINK_MIN_FRAMES = 1;
-export const BLINK_MAX_FRAMES = 8;
+export const BLINK_MAX_FRAMES = 4;
 export const NORMAL_BLINK_RATE = { min: 15, max: 20 };
 export const EAR_NORMAL_RANGE = { drowsy: 0.18, alert: 0.33 };
 
@@ -49,7 +49,7 @@ export const AMBIENT_MAP = [
 ] as const;
 
 export const POSE_FPS = 10;
-export const FACE_FPS = 5;
+export const FACE_FPS = 10;
 export const POSE_LOOP_INTERVAL = Math.round(1000 / POSE_FPS);
 export const FACE_LOOP_INTERVAL = Math.round(1000 / FACE_FPS);
 

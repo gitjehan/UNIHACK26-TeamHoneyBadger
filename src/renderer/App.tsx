@@ -127,13 +127,13 @@ export default function App(): JSX.Element {
     );
 
     face.setCallbacks(
-      (landmarks, emotionState, emotionConfidence, fps) => {
+      (landmarks, emotionState, emotionConfidence, fps, aspectRatio) => {
         scoreEngine.updateFaceFps(fps);
         // Always feed face data through — the blink detector has its own
         // internal check for specific eye-landmark indices and returns
         // graceful fallback values when they're insufficient.
         if (landmarks.length > 0) {
-          scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
+          scoreEngine.updateFace(landmarks, emotionState, emotionConfidence, aspectRatio);
         }
         const hasFaceMesh = landmarks.length >= 200;
         scoreEngine.setSystemStatus({
