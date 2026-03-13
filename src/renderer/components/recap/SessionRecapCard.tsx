@@ -22,7 +22,7 @@ export function SessionRecapCard({ recap, onCopy, onSave, onClose, onRecalibrate
     () =>
       recap.percentileRank === null
         ? 'Percentile unavailable (not enough board data)'
-        : `Neck angle better than ${recap.percentileRank}% of users`,
+        : `Overall score better than ${recap.percentileRank}% of users`,
     [recap.percentileRank],
   );
 

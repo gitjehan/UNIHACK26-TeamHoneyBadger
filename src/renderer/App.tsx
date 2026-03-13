@@ -294,7 +294,7 @@ export default function App(): JSX.Element {
   const endSession = async () => {
     const sessionRecap = scoreEngine.endSession(sessionIdRef.current);
     if (leaderboard.length >= 3) {
-      const below = leaderboard.filter((entry) => entry.avgOverallScore < sessionRecap.avgPosture).length;
+      const below = leaderboard.filter((entry) => entry.avgOverallScore < sessionRecap.avgOverall).length;
       sessionRecap.percentileRank = Math.round((below / leaderboard.length) * 100);
     }
     setRecap(sessionRecap);
