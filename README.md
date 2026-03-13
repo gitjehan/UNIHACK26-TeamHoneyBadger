@@ -16,6 +16,9 @@ npm install
 cp .env.example .env.local
 ```
 
+Optional:
+- Store a `kibanaUrl` value in Electron store to enable the analytics panel button in-app.
+
 3. Compile gamma helper once:
 
 ```bash
@@ -33,6 +36,8 @@ brew install brightness
 ```bash
 npm run dev
 ```
+
+The first onboarding click also unlocks ambient audio synthesis (`tone`) and initializes calibration.
 
 ## Verification
 

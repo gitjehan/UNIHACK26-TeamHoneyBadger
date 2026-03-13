@@ -3,6 +3,7 @@ import { LeaderBoard } from '@renderer/components/leaderboard/LeaderBoard';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
+import { AnalyticsPanel } from '@renderer/components/panels/AnalyticsPanel';
 import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
@@ -66,7 +67,7 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto auto 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto auto auto 1fr' }}>
         <OverallGauge value={snapshot.overall.score} />
         <SystemsPanel systems={state.systems} />
         <AmbientPanel
@@ -74,6 +75,7 @@ export function Dashboard({
           warmth={state.ambient.warmth}
           overallScore={snapshot.overall.score}
         />
+        <AnalyticsPanel />
         <LeaderBoard
           nickname={nickname}
           entries={leaderboard}

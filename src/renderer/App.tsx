@@ -7,6 +7,7 @@ import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
 import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
+import { ambientAudio } from '@renderer/lib/ambient-audio';
 import type { CalibrationData, LeaderboardEntry, PetState, SessionRecap } from '@renderer/lib/types';
 import { buildCalibration } from '@renderer/ml/calibration';
 import { FaceEngine } from '@renderer/ml/face-engine';
@@ -134,6 +135,18 @@ export default function App(): JSX.Element {
     scoreEngine.setAmbientStatus('active');
     window.kinetic.updateAmbient(state.ambient);
   }, [stage, state.ambient]);
+
+  useEffect(() => {
+    if (stage !== 'ready') return;
+    ambientAudio.update(state.snapshot.overall.score, state.snapshot.stress.score);
+  }, [stage, state.snapshot.overall.score, state.snapshot.stress.score]);
+
+  useEffect(
+    () => () => {
+      ambientAudio.stop();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (stage !== 'ready') return;
@@ -273,7 +286,12 @@ export default function App(): JSX.Element {
     scoreEngine.startSession();
   };
 
-  if (stage === 'welcome') return <WelcomeScreen onStart={() => setStage('calibrating')} />;
+  const startCalibration = () => {
+    ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));
+    setStage('calibrating');
+  };
+
+  if (stage === 'welcome') return <WelcomeScreen onStart={startCalibration} />;
   if (stage === 'calibrating') return <CalibrationScreen secondsLeft={secondsLeft} collecting={webcam.ready} />;
 
   return (
