@@ -24,18 +24,18 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
   const clamped = Math.max(0, Math.min(100, value));
   const targetOffset = circumference - (clamped / 100) * circumference;
 
-  // Animate offset on mount and value changes
   const [offset, setOffset] = useState(circumference);
   const mounted = useRef(false);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (!mounted.current) {
-      // Initial mount: animate from empty to current value
       mounted.current = true;
-      requestAnimationFrame(() => setOffset(targetOffset));
+      rafRef.current = requestAnimationFrame(() => setOffset(targetOffset));
     } else {
       setOffset(targetOffset);
     }
+    return () => cancelAnimationFrame(rafRef.current);
   }, [targetOffset]);
 
   const color = gaugeColor(clamped);
@@ -52,12 +52,8 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
         aria-label={`Overall score: ${clamped} out of 100`}
         style={{ display: 'block', margin: '0 auto' }}
       >
-        {/* Zone indicator (faint background ring) */}
         <circle cx="90" cy="90" r={radius} stroke="#e4dfd5" strokeWidth="14" fill="none" />
-
-        {/* Score arc */}
         <circle
-          className="gauge-arc"
           cx="90"
           cy="90"
           r={radius}
@@ -70,18 +66,12 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dashoffset 0.6s ease-out, stroke 0.4s ease' }}
         />
-
-        {/* Score number */}
         <text x="90" y="86" textAnchor="middle" fill="var(--text-primary)" fontSize="38" fontWeight={700}>
           {clamped}
         </text>
-
-        {/* /100 label */}
         <text x="90" y="106" textAnchor="middle" fill="var(--text-tertiary)" fontSize="12">
           /100
         </text>
-
-        {/* Grade label */}
         <text x="90" y="126" textAnchor="middle" fill={color} fontSize="13" fontWeight={600}>
           {grade}
         </text>

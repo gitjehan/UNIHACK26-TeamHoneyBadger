@@ -13,12 +13,12 @@ const states: Array<{ id: OverallState; label: string; icon: string }> = [
 
 export const StateTabs = memo(function StateTabs({ state }: StateTabsProps): JSX.Element {
   return (
-    <div className="state-tabs">
+    <div className="state-tabs" role="status" aria-label={`Current state: ${state}`}>
       {states.map((item) => (
-        <button key={item.id} className={`state-tab ${item.id === state ? 'active' : ''}`} type="button">
+        <div key={item.id} className={`state-tab ${item.id === state ? 'active' : ''}`}>
           <span style={{ marginRight: 4, fontSize: 10 }}>{item.icon}</span>
           {item.label}
-        </button>
+        </div>
       ))}
     </div>
   );

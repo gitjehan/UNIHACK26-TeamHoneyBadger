@@ -44,7 +44,7 @@ export const SystemsPanel = memo(function SystemsPanel({ systems, poseBackend, f
           <span className={dotClass(systems.affectEngine)} />
         </div>
         <div className="systems-row">
-          <span>Ambient Ctrl</span>
+          <span>Ambient Control</span>
           <span className={dotClass(systems.ambientCtrl)} />
         </div>
       </div>

@@ -151,16 +151,20 @@ export function SessionRecapCard({
     ctx.arc(arcCx, arcCy, arcR, startAngle, startAngle + Math.PI * 1.5);
     ctx.stroke();
 
-    // Score arc (colored)
+    // Score arc (colored) with glow
+    ctx.save();
     const arcGrad = ctx.createLinearGradient(arcCx - arcR, arcCy, arcCx + arcR, arcCy);
     arcGrad.addColorStop(0, scoreArcColor(recap.avgOverall));
     arcGrad.addColorStop(1, grade.accent);
     ctx.strokeStyle = arcGrad;
     ctx.lineWidth = arcWidth;
     ctx.lineCap = 'round';
+    ctx.shadowColor = scoreArcColor(recap.avgOverall);
+    ctx.shadowBlur = 16;
     ctx.beginPath();
     ctx.arc(arcCx, arcCy, arcR, startAngle, startAngle + scoreAngle);
     ctx.stroke();
+    ctx.restore();
 
     // Score number
     ctx.fillStyle = '#ffffff';
@@ -177,6 +181,13 @@ export function SessionRecapCard({
     ctx.fillStyle = grade.accent;
     ctx.font = '700 16px system-ui, -apple-system, sans-serif';
     ctx.fillText(grade.label, arcCx, arcCy + 60);
+
+    // Percentile rank (if available)
+    if (recap.percentileRank !== null && recap.percentileRank !== undefined) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.font = '400 12px system-ui, -apple-system, sans-serif';
+      ctx.fillText(`Top ${100 - recap.percentileRank}% of sessions`, arcCx, arcCy + 80);
+    }
     ctx.textAlign = 'left';
 
     // ── Stat cards grid (2×2) ────────────────────────────

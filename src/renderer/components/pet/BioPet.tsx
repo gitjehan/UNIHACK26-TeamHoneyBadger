@@ -533,6 +533,17 @@ export function BioPet({
 
   // ── Render ──────────────────────────────────────────────
 
+  const healthColor =
+    pet.health === 'Thriving' ? 'var(--green-primary)' : pet.health === 'Fading' ? 'var(--amber-primary)' : 'var(--red-primary)';
+  const healthBg =
+    pet.health === 'Thriving' ? 'var(--green-bg)' : pet.health === 'Fading' ? 'var(--amber-bg)' : 'var(--red-bg)';
+
+  // Evolution progress toward next stage
+  const STAGE_MINS = [0, 10, 30, 120, 300, 600];
+  const nextMin = STAGE_MINS[Math.min(pet.stage + 1, STAGE_MINS.length - 1)];
+  const curMin = STAGE_MINS[pet.stage] ?? 0;
+  const stageProgress = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - curMin) / Math.max(1, nextMin - curMin)) * 100));
+
   return (
     <div className="card">
       <h3>Bio-Pet</h3>
@@ -540,15 +551,66 @@ export function BioPet({
         ref={mountRef}
         style={{ width: '100%', height: 220, borderRadius: 10, overflow: 'hidden' }}
       />
-      <div className="pet-meta">
-        <strong>
-          Stage {pet.stage} · {pet.stageName} · {pet.health}
-        </strong>
-        <span>
-          Posture {postureScore} · Focus {focusScore} · Stress {stressScore}
-        </span>
-        <span>Locked in {Math.round(pet.totalLockedInMinutes)} min</span>
+      <div className="pet-meta" style={{ marginTop: 12, gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <strong style={{ fontSize: 14 }}>
+            Stage {pet.stage} · {pet.stageName}
+          </strong>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              background: healthBg,
+              color: healthColor,
+              borderRadius: 999,
+              padding: '2px 10px',
+              fontSize: 11,
+              fontWeight: 600,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: healthColor }} />
+            {pet.health}
+          </span>
+        </div>
+
+        {pet.stage < 5 && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 3 }}>
+              <span>Evolution</span>
+              <span>{stageProgress}%</span>
+            </div>
+            <div style={{ height: 5, background: 'var(--bg-card-muted)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${stageProgress}%`, borderRadius: 999, background: healthColor, transition: 'width 0.6s ease-out' }} />
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <PetChip label="Posture" value={postureScore} />
+          <PetChip label="Focus" value={focusScore} />
+          <PetChip label="Stress" value={stressScore} />
+          <PetChip label="Time" value={`${Math.round(pet.totalLockedInMinutes)}m`} />
+        </div>
       </div>
     </div>
+  );
+}
+
+function PetChip({ label, value }: { label: string; value: number | string }) {
+  return (
+    <span
+      style={{
+        background: 'var(--bg-card-muted)',
+        border: '1px solid var(--border-card)',
+        borderRadius: 6,
+        padding: '2px 8px',
+        fontSize: 11,
+        color: 'var(--text-secondary)',
+        fontVariantNumeric: 'tabular-nums',
+      }}
+    >
+      {label} <strong style={{ color: 'var(--text-primary)' }}>{value}</strong>
+    </span>
   );
 }

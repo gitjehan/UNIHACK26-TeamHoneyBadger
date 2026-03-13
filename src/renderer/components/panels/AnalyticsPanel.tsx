@@ -25,7 +25,7 @@ export function AnalyticsPanel(): JSX.Element {
         comparisons.
       </p>
       <button className="btn btn-secondary" type="button" onClick={openKibana} disabled={!kibanaUrl}>
-        {kibanaUrl ? 'Open Kibana' : 'Store a kibanaUrl key to enable'}
+        {kibanaUrl ? 'Open Kibana' : 'Kibana not configured'}
       </button>
     </div>
   );

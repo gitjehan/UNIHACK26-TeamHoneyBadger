@@ -376,12 +376,12 @@ export function DigitalTwin({ landmarks, postureScore, shoulderSlant }: DigitalT
         <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
           Digital Twin
         </h3>
-        <span style={{ fontSize: 11, color: live ? '#4A7C59' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 11, color: live ? '#3D6B4F' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span
             style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: live ? '#4A7C59' : '#bbb',
-              boxShadow: live ? '0 0 4px rgba(74,124,89,0.5)' : 'none',
+              background: live ? '#3D6B4F' : '#bbb',
+              boxShadow: live ? '0 0 4px rgba(61,107,79,0.5)' : 'none',
             }}
           />
           Live

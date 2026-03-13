@@ -25,7 +25,7 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
           <span>calm</span>
           <span>elevated</span>
         </div>
-        <div style={{ height: 8, background: '#e8e2d6', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{ height: 8, background: 'var(--border-card)', borderRadius: 999, overflow: 'hidden' }}>
           <div
             style={{
               height: '100%',
