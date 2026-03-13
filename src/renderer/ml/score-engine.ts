@@ -265,7 +265,7 @@ class ScoreEngine {
     this.postureSmoothing.push(posture.score);
     const slouchPenalty = posture.isSlumping ? 15 : 0;
     const smoothedPosture = clamp(
-      Math.round((this.postureSmoothing.average || posture.score) - slouchPenalty),
+      Math.round((this.postureSmoothing.average ?? posture.score) - slouchPenalty),
       0,
       100,
     );

@@ -96,5 +96,5 @@ export function calculateFatigueScore(
     100,
   );
   const closurePenalty = clamp(prolongedClosures * 15, 0, 50);
-  return Math.round(Math.max(0, blinkScore * 0.4 + earScore * 0.4 + (100 - closurePenalty) * 0.2));
+  return 100 - Math.round(Math.max(0, blinkScore * 0.4 + earScore * 0.4 + (100 - closurePenalty) * 0.2));
 }
