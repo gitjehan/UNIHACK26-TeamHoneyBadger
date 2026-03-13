@@ -382,7 +382,15 @@ export default function App(): JSX.Element {
           visionBackend={visionBackend}
         />
       )}
-      <RecapOverlay recap={recap} onClose={() => setRecap(null)} />
+      <RecapOverlay
+        recap={recap}
+        onClose={() => setRecap(null)}
+        onRecalibrate={() => {
+          setRecap(null);
+          void window.kinetic.storeSet('calibration', null);
+          setStage('calibrating');
+        }}
+      />
     </div>
   );
 }

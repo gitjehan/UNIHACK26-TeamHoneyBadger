@@ -4,9 +4,10 @@ import { SessionRecapCard } from './SessionRecapCard';
 interface RecapOverlayProps {
   recap: SessionRecap | null;
   onClose: () => void;
+  onRecalibrate: () => void;
 }
 
-export function RecapOverlay({ recap, onClose }: RecapOverlayProps): JSX.Element | null {
+export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProps): JSX.Element | null {
   if (!recap) return null;
 
   const copy = async (dataUrl: string) => {
@@ -20,7 +21,7 @@ export function RecapOverlay({ recap, onClose }: RecapOverlayProps): JSX.Element
 
   return (
     <div className="overlay">
-      <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} />
+      <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} onRecalibrate={onRecalibrate} />
     </div>
   );
 }

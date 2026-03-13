@@ -6,6 +6,7 @@ interface SessionRecapCardProps {
   onCopy: (dataUrl: string) => Promise<void>;
   onSave: (dataUrl: string) => Promise<void>;
   onClose: () => void;
+  onRecalibrate: () => void;
 }
 
 function blinkRateLabel(rate: number): string {
@@ -14,7 +15,7 @@ function blinkRateLabel(rate: number): string {
   return 'fatigued';
 }
 
-export function SessionRecapCard({ recap, onCopy, onSave, onClose }: SessionRecapCardProps): JSX.Element {
+export function SessionRecapCard({ recap, onCopy, onSave, onClose, onRecalibrate }: SessionRecapCardProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dataUrlRef = useRef<string>('');
   const percentileLine = useMemo(
@@ -92,6 +93,9 @@ export function SessionRecapCard({ recap, onCopy, onSave, onClose }: SessionReca
         </button>
         <button className="btn btn-secondary" type="button" onClick={() => void onSave(dataUrl())}>
           Save PNG
+        </button>
+        <button className="btn btn-secondary" type="button" onClick={onRecalibrate}>
+          Recalibrate
         </button>
         <button className="btn btn-secondary" type="button" onClick={onClose}>
           Close
