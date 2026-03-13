@@ -91,3 +91,6 @@ typings/
 
 # Electron-Forge
 out/
+
+# Compiled helper binary
+src/main/gamma-helper
