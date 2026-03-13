@@ -63,8 +63,8 @@ function registerCleanupHandlers(): void {
 
   app.on('before-quit', cleanup);
   app.on('will-quit', cleanup);
-  process.on('SIGTERM', cleanup);
-  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', async () => { await cleanup(); process.exit(0); });
+  process.on('SIGINT', async () => { await cleanup(); process.exit(0); });
   process.on('uncaughtException', async (error) => {
     console.error('uncaughtException', error);
     await cleanup();
