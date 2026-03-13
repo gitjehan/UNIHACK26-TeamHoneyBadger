@@ -17,7 +17,8 @@
     "test:unit": "vitest run",
     "test:ambient": "tsx scripts/test-ambient.ts",
     "test:ipc": "tsx scripts/test-ipc.ts",
-    "test:e2e": "tsx scripts/test-e2e.ts",
+    "test:e2e": "tsx scripts/test-e2e-auto.ts",
+    "test:e2e:manual": "tsx scripts/test-e2e.ts",
     "verify": "npm run lint && npm run typecheck && npm run test:unit"
   },
   "keywords": [],
@@ -49,6 +50,7 @@
     "electron": "41.0.2",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
+    "playwright": "^1.58.2",
     "postcss": "^8.5.8",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

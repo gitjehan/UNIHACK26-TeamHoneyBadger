@@ -14,8 +14,10 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true 
 if (started) app.quit();
 
 let flushTimer: NodeJS.Timeout | null = null;
+const AUTO_TEST = process.env.KINETIC_AUTOTEST === '1';
 
 async function requestPermissions(): Promise<void> {
+  if (AUTO_TEST) return;
   if (process.platform !== 'darwin') return;
   try {
     await systemPreferences.askForMediaAccess('camera');
@@ -40,10 +42,13 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  const search = AUTO_TEST ? 'autotest=1' : undefined;
+
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    const suffix = search ? (MAIN_WINDOW_VITE_DEV_SERVER_URL.includes('?') ? `&${search}` : `?${search}`) : '';
+    mainWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}${suffix}`);
   } else {
-    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), search ? { search } : undefined);
   }
 
   return mainWindow;

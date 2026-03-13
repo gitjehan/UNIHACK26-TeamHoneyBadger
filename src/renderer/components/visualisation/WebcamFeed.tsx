@@ -49,7 +49,13 @@ export function WebcamFeed({
     <div className="card" style={{ display: 'grid', gap: 10 }}>
       <h3>Webcam Feed</h3>
       <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#0d1117' }}>
-        <video ref={videoRef} style={{ width: '100%', transform: 'scaleX(-1)', display: 'block' }} muted playsInline />
+        <video
+          ref={videoRef}
+          style={{ width: '100%', transform: 'scaleX(-1)', display: 'block' }}
+          muted
+          playsInline
+          autoPlay
+        />
         <canvas
           ref={overlayRef}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}

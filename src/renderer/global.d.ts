@@ -13,6 +13,7 @@ declare global {
       exportRecapPng: (dataUrl: string, filename: string) => Promise<{ ok: boolean; filePath?: string }>;
       copyRecapToClipboard: (dataUrl: string) => Promise<{ ok: boolean }>;
     };
+    __kineticDebug?: Record<string, unknown>;
   }
 }
 

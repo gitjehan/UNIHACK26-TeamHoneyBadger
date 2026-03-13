@@ -58,6 +58,7 @@ interface KeyValueStore {
 }
 
 const kvStore = store as unknown as KeyValueStore;
+const AUTO_TEST = process.env.KINETIC_AUTOTEST === '1';
 
 let lastAmbientUpdateAt = 0;
 
@@ -83,6 +84,7 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC.RECAP_CLIPBOARD, async (_, dataUrl: string) => {
+    if (AUTO_TEST) return { ok: true };
     try {
       const image = nativeImage.createFromDataURL(dataUrl);
       clipboard.writeImage(image);
@@ -94,6 +96,19 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC.RECAP_EXPORT, async (_, dataUrl: string, filename: string) => {
+    if (AUTO_TEST) {
+      try {
+        const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
+        const target = path.resolve(process.cwd(), 'out', 'kinetic-recap-autotest.png');
+        await fs.mkdir(path.dirname(target), { recursive: true });
+        await fs.writeFile(target, base64, { encoding: 'base64' });
+        return { ok: true, filePath: target };
+      } catch (error) {
+        console.warn('Failed to export autotest recap image', error);
+        return { ok: false };
+      }
+    }
+
     const { canceled, filePath } = await dialog.showSaveDialog({
       defaultPath: filename || 'kinetic-recap.png',
       filters: [{ name: 'PNG', extensions: ['png'] }],

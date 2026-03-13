@@ -8,6 +8,7 @@ import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import { ambientAudio } from '@renderer/lib/ambient-audio';
+import { createSyntheticFace, createSyntheticPose } from '@renderer/lib/synthetic-signals';
 import type { CalibrationData, LeaderboardEntry, PetState, SessionRecap } from '@renderer/lib/types';
 import { buildCalibration } from '@renderer/ml/calibration';
 import { FaceEngine } from '@renderer/ml/face-engine';
@@ -28,7 +29,11 @@ function sanitizePet(raw: unknown) {
 }
 
 export default function App(): JSX.Element {
-  const [stage, setStage] = useState<FlowStage>('welcome');
+  const autoMode =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('autotest') === '1';
+
+  const [stage, setStage] = useState<FlowStage>(autoMode ? 'ready' : 'welcome');
   const [secondsLeft, setSecondsLeft] = useState(3);
   const [nickname, setNickname] = useState('HoneyBadger');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -39,8 +44,13 @@ export default function App(): JSX.Element {
   const calibrationSamplesRef = useRef<CalibrationSample[]>([]);
   const poseEngineRef = useRef<PoseEngine | null>(null);
   const faceEngineRef = useRef<FaceEngine | null>(null);
+  const latestPoseLandmarksRef = useRef<import('@renderer/lib/types').Point[]>([]);
+  const latestPostureMetricsRef = useRef<{ neckAngle: number; shoulderSlant: number }>({
+    neckAngle: 175,
+    shoulderSlant: 1,
+  });
 
-  const enabled = stage !== 'welcome';
+  const enabled = !autoMode && stage !== 'welcome';
   const webcam = useWebcam(enabled);
   const state = useScores();
 
@@ -59,6 +69,7 @@ export default function App(): JSX.Element {
   );
 
   useEffect(() => {
+    if (autoMode) return;
     let mounted = true;
     const bootstrap = async () => {
       const [storedCalibration, storedPet, storedNick] = await Promise.all([
@@ -80,10 +91,13 @@ export default function App(): JSX.Element {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [autoMode]);
 
   useEffect(() => {
-    if (!webcam.ready || !webcam.videoRef.current) return;
+    if (autoMode) return;
+    if (!webcam.ready) return;
+    const sourceVideo = webcam.processingVideoRef.current ?? webcam.videoRef.current;
+    if (!sourceVideo) return;
     if (poseEngineRef.current || faceEngineRef.current) return;
 
     const pose = new PoseEngine();
@@ -111,8 +125,8 @@ export default function App(): JSX.Element {
       (status) => scoreEngine.setSystemStatus({ faceMesh: status, affectEngine: status }),
     );
 
-    pose.init(webcam.videoRef.current).catch((error) => console.warn('Pose engine init failed', error));
-    face.init(webcam.videoRef.current).catch((error) => console.warn('Face engine init failed', error));
+    pose.init(sourceVideo).catch((error) => console.warn('Pose engine init failed', error));
+    face.init(sourceVideo).catch((error) => console.warn('Face engine init failed', error));
 
     return () => {
       pose.stop();
@@ -120,7 +134,53 @@ export default function App(): JSX.Element {
       poseEngineRef.current = null;
       faceEngineRef.current = null;
     };
-  }, [webcam.ready, webcam.videoRef]);
+  }, [autoMode, webcam.ready, webcam.processingVideoRef, webcam.videoRef]);
+
+  useEffect(() => {
+    latestPoseLandmarksRef.current = state.poseLandmarks;
+    latestPostureMetricsRef.current = {
+      neckAngle: state.snapshot.posture.neckAngle,
+      shoulderSlant: state.snapshot.posture.shoulderSlant,
+    };
+  }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
+
+  useEffect(() => {
+    if (!autoMode) return;
+
+    const syntheticCalibration: CalibrationData = {
+      uprightNeckAngle: 175,
+      uprightShoulderSlant: 1,
+      uprightTrunkVector: [0, 0.22],
+      baselineBlinkRate: 17,
+      baselineEAR: 0.27,
+      timestamp: Date.now(),
+    };
+
+    scoreEngine.setCalibration(syntheticCalibration);
+    scoreEngine.startSession();
+    scoreEngine.setSystemStatus({
+      poseDetection: 'active',
+      faceMesh: 'active',
+      affectEngine: 'active',
+    });
+    setStage('ready');
+
+    let tick = 0;
+    const interval = setInterval(() => {
+      tick += 1;
+      const slouchPhase = tick % 140 >= 70;
+      const postureState = slouchPhase ? 'slouch' : 'upright';
+      const pose = createSyntheticPose(postureState, tick);
+      const face = createSyntheticFace(slouchPhase ? tick % 6 <= 4 : false);
+
+      scoreEngine.updatePoseFps(15);
+      scoreEngine.updatePosture(pose);
+      scoreEngine.updateFaceFps(5);
+      scoreEngine.updateFace(face, slouchPhase ? 'angry' : 'happy', slouchPhase ? 0.95 : 0.95);
+    }, 120);
+
+    return () => clearInterval(interval);
+  }, [autoMode]);
 
   useEffect(() => {
     if (stage === 'welcome') return;
@@ -199,17 +259,23 @@ export default function App(): JSX.Element {
   }, [stage, sessionEntry]);
 
   useEffect(() => {
+    if (autoMode) return;
     if (stage !== 'calibrating') return;
+    if (!webcam.ready) {
+      calibrationSamplesRef.current = [];
+      setSecondsLeft(3);
+      return;
+    }
     calibrationSamplesRef.current = [];
     setSecondsLeft(3);
 
     const sampleInterval = setInterval(() => {
-      const landmarks = state.poseLandmarks;
+      const landmarks = latestPoseLandmarksRef.current;
       if (!landmarks.length) return;
       calibrationSamplesRef.current.push({
         landmarks,
-        neckAngle: state.snapshot.posture.neckAngle,
-        shoulderSlant: state.snapshot.posture.shoulderSlant,
+        neckAngle: latestPostureMetricsRef.current.neckAngle,
+        shoulderSlant: latestPostureMetricsRef.current.shoulderSlant,
       });
     }, 70);
 
@@ -225,6 +291,17 @@ export default function App(): JSX.Element {
         const calibration = buildCalibration(samples);
         scoreEngine.setCalibration(calibration);
         await window.kinetic.storeSet('calibration', calibration);
+      } else {
+        const fallback: CalibrationData = {
+          uprightNeckAngle: latestPostureMetricsRef.current.neckAngle || 170,
+          uprightShoulderSlant: latestPostureMetricsRef.current.shoulderSlant || 2,
+          uprightTrunkVector: [0, 0.22],
+          baselineBlinkRate: 17,
+          baselineEAR: 0.27,
+          timestamp: Date.now(),
+        };
+        scoreEngine.setCalibration(fallback);
+        await window.kinetic.storeSet('calibration', fallback);
       }
       scoreEngine.startSession();
       setStage('ready');
@@ -235,7 +312,7 @@ export default function App(): JSX.Element {
       clearInterval(countdown);
       clearTimeout(done);
     };
-  }, [stage, state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
+  }, [autoMode, stage, webcam.ready]);
 
   const saveNickname = async () => {
     if (!nickname.trim()) return;
@@ -286,13 +363,34 @@ export default function App(): JSX.Element {
     scoreEngine.startSession();
   };
 
+  useEffect(() => {
+    (window as Window & { __kineticDebug?: Record<string, unknown> }).__kineticDebug = {
+      stage,
+      posture: state.snapshot.posture.score,
+      overall: state.snapshot.overall.score,
+      petHealth: state.pet.health,
+      timelinePoints: timeline.length,
+      recapVisible: Boolean(recap),
+      systems: state.systems,
+    };
+  }, [stage, state, timeline.length, recap]);
+
   const startCalibration = () => {
     ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));
     setStage('calibrating');
   };
 
   if (stage === 'welcome') return <WelcomeScreen onStart={startCalibration} />;
-  if (stage === 'calibrating') return <CalibrationScreen secondsLeft={secondsLeft} collecting={webcam.ready} />;
+  if (stage === 'calibrating') {
+    return (
+      <CalibrationScreen
+        secondsLeft={secondsLeft}
+        collecting={webcam.ready}
+        videoRef={webcam.videoRef}
+        error={webcam.error}
+      />
+    );
+  }
 
   return (
     <div className="app-shell">
