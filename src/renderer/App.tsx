@@ -85,6 +85,7 @@ export default function App(): JSX.Element {
 
       if (storedCalibration) {
         scoreEngine.setCalibration(storedCalibration as CalibrationData);
+        scoreEngine.startSession();
         setStage('ready');
       }
       const pet = sanitizePet(storedPet);
