@@ -47,6 +47,71 @@ Since Electron's renderer is Chromium, all browser ML libraries (MediaPipe, Huma
 | Local Storage | electron-store (persistent across sessions) |
 | Build Tool | Electron Forge + Vite |
 
+### Dependencies Checklist
+
+Everything that needs to be installed before development can begin.
+
+#### npm — Production Dependencies
+
+- [ ] `electron` — App shell, main + renderer process runtime
+- [ ] `react` — UI rendering in renderer process
+- [ ] `react-dom` — React DOM bindings
+- [ ] `tailwindcss` — Utility-first CSS framework for all styling
+- [ ] `@mediapipe/tasks-vision` — Pose Landmarker (33 body landmarks, 15fps posture loop)
+- [ ] `@vladmandic/human` — Face mesh (468 landmarks), emotion/affect detection, blink/EAR (5fps loop)
+- [ ] `three` — Bio-Pet 3D rendering (egg, creature, accessories, animations)
+- [ ] `@elastic/elasticsearch` — Bulk biometric event indexing + leaderboard queries (main process)
+- [ ] `electron-store` — Persistent local storage (calibration, pet state, preferences, sessions, recaps)
+- [ ] `recharts` — Session Timeline sparkline charts (Posture, Focus, Stress `AreaChart`)
+
+#### npm — Production Dependencies (Stretch / Tier 4)
+
+- [ ] `tone` — Ambient audio that shifts with wellness state (only if time permits)
+
+#### npm — Dev Dependencies
+
+- [ ] `@electron-forge/cli` — Electron Forge build orchestration
+- [ ] `@electron-forge/plugin-vite` — Vite bundler integration for Electron Forge
+- [ ] `vite` — Renderer process bundler
+- [ ] `typescript` — Type safety across entire codebase
+- [ ] `@types/react` — TypeScript types for React
+- [ ] `@types/react-dom` — TypeScript types for React DOM
+- [ ] `@types/three` — TypeScript types for Three.js
+- [ ] `postcss` — Required for Tailwind CSS processing pipeline
+- [ ] `autoprefixer` — PostCSS plugin for vendor prefixes (standard Tailwind setup)
+
+#### Homebrew — System Tools
+
+- [ ] `brightness` — macOS screen brightness control from CLI (`brew install brightness`)
+
+#### Xcode Command Line Tools (pre-installed on most Macs)
+
+- [ ] `swiftc` — Swift compiler, needed once to compile `gamma-helper.swift` into a binary (`swiftc gamma-helper.swift -o gamma-helper`)
+
+#### External Services (no install — sign up)
+
+- [ ] Elastic Cloud — Hosted Elasticsearch for biometric telemetry + leaderboard (free 14-day trial, no credit card)
+- [ ] Kibana — Comes bundled with Elastic Cloud, used for analytics dashboards
+
+#### Quick Start Commands
+
+```bash
+# 1. Scaffold the Electron app
+npm init electron-app@latest kinetic -- --template=vite-typescript
+
+# 2. Install production dependencies
+npm install react react-dom tailwindcss @mediapipe/tasks-vision @vladmandic/human three @elastic/elasticsearch electron-store recharts
+
+# 3. Install dev dependencies
+npm install -D @types/react @types/react-dom @types/three postcss autoprefixer
+
+# 4. Install brightness CLI
+brew install brightness
+
+# 5. Compile Swift gamma helper (run once)
+swiftc src/main/gamma-helper.swift -o src/main/gamma-helper
+```
+
 ### App Architecture: Main vs Renderer
 
 ```
