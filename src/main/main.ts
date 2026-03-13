@@ -68,6 +68,7 @@ function registerCleanupHandlers(): void {
   process.on('uncaughtException', async (error) => {
     console.error('uncaughtException', error);
     await cleanup();
+    process.exit(1);
   });
 }
 
