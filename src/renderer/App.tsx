@@ -8,7 +8,6 @@ import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import { ambientAudio } from '@renderer/lib/ambient-audio';
-import { createSyntheticFace, createSyntheticPose } from '@renderer/lib/synthetic-signals';
 import type {
   CalibrationData,
   LeaderboardEntry,
@@ -35,11 +34,7 @@ function sanitizePet(raw: unknown) {
 }
 
 export default function App(): JSX.Element {
-  const autoMode =
-    typeof window !== 'undefined' &&
-    new URLSearchParams(window.location.search).get('autotest') === '1';
-
-  const [stage, setStage] = useState<FlowStage>(autoMode ? 'ready' : 'welcome');
+  const [stage, setStage] = useState<FlowStage>('welcome');
   const [secondsLeft, setSecondsLeft] = useState(3);
   const [nickname, setNickname] = useState('HoneyBadger');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -60,7 +55,7 @@ export default function App(): JSX.Element {
     shoulderSlant: 1,
   });
 
-  const enabled = !autoMode && stage !== 'welcome';
+  const enabled = stage !== 'welcome';
   const webcam = useWebcam(enabled);
   const state = useScores();
 
@@ -79,7 +74,6 @@ export default function App(): JSX.Element {
   );
 
   useEffect(() => {
-    if (autoMode) return;
     let mounted = true;
     const bootstrap = async () => {
       const [storedCalibration, storedPet, storedNick] = await Promise.all([
@@ -101,10 +95,9 @@ export default function App(): JSX.Element {
     return () => {
       mounted = false;
     };
-  }, [autoMode]);
+  }, []);
 
   useEffect(() => {
-    if (autoMode) return;
     if (!webcam.ready) return;
     const sourceVideo = webcam.processingVideoRef.current ?? webcam.videoRef.current;
     if (!sourceVideo) return;
@@ -118,7 +111,9 @@ export default function App(): JSX.Element {
     pose.setCallbacks(
       (landmarks, fps) => {
         scoreEngine.updatePoseFps(fps);
-        scoreEngine.updatePosture(landmarks);
+        if (landmarks.length >= 25) {
+          scoreEngine.updatePosture(landmarks);
+        }
       },
       (status) => scoreEngine.setSystemStatus({ poseDetection: status }),
       (backend) =>
@@ -130,10 +125,13 @@ export default function App(): JSX.Element {
     face.setCallbacks(
       (landmarks, emotionState, emotionConfidence, fps) => {
         scoreEngine.updateFaceFps(fps);
-        scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
+        const hasFaceMesh = landmarks.length >= 390;
+        if (hasFaceMesh) {
+          scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
+        }
         scoreEngine.setSystemStatus({
-          faceMesh: landmarks.length ? 'active' : 'degraded',
-          affectEngine: emotionState ? 'active' : 'degraded',
+          faceMesh: hasFaceMesh ? 'active' : 'degraded',
+          affectEngine: hasFaceMesh && emotionState ? 'active' : 'degraded',
         });
       },
       (status) => scoreEngine.setSystemStatus({ faceMesh: status, affectEngine: status }),
@@ -152,7 +150,7 @@ export default function App(): JSX.Element {
       poseEngineRef.current = null;
       faceEngineRef.current = null;
     };
-  }, [autoMode, webcam.ready, webcam.processingVideoRef, webcam.videoRef]);
+  }, [webcam.ready, webcam.processingVideoRef, webcam.videoRef]);
 
   useEffect(() => {
     latestPoseLandmarksRef.current = state.poseLandmarks;
@@ -161,45 +159,6 @@ export default function App(): JSX.Element {
       shoulderSlant: state.snapshot.posture.shoulderSlant,
     };
   }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
-
-  useEffect(() => {
-    if (!autoMode) return;
-
-    const syntheticCalibration: CalibrationData = {
-      uprightNeckAngle: 175,
-      uprightShoulderSlant: 1,
-      uprightTrunkVector: [0, 0.22],
-      baselineBlinkRate: 17,
-      baselineEAR: 0.27,
-      timestamp: Date.now(),
-    };
-
-    scoreEngine.setCalibration(syntheticCalibration);
-    scoreEngine.startSession();
-    scoreEngine.setSystemStatus({
-      poseDetection: 'active',
-      faceMesh: 'active',
-      affectEngine: 'active',
-    });
-    setVisionBackend({ pose: 'synthetic', face: 'synthetic' });
-    setStage('ready');
-
-    let tick = 0;
-    const interval = setInterval(() => {
-      tick += 1;
-      const slouchPhase = tick % 140 >= 70;
-      const postureState = slouchPhase ? 'slouch' : 'upright';
-      const pose = createSyntheticPose(postureState, tick);
-      const face = createSyntheticFace(slouchPhase ? tick % 6 <= 4 : false);
-
-      scoreEngine.updatePoseFps(15);
-      scoreEngine.updatePosture(pose);
-      scoreEngine.updateFaceFps(5);
-      scoreEngine.updateFace(face, slouchPhase ? 'angry' : 'happy', slouchPhase ? 0.95 : 0.95);
-    }, 120);
-
-    return () => clearInterval(interval);
-  }, [autoMode]);
 
   useEffect(() => {
     if (stage === 'welcome') return;
@@ -278,7 +237,6 @@ export default function App(): JSX.Element {
   }, [stage, sessionEntry]);
 
   useEffect(() => {
-    if (autoMode) return;
     if (stage !== 'calibrating') return;
     if (!webcam.ready) {
       calibrationSamplesRef.current = [];
@@ -331,7 +289,7 @@ export default function App(): JSX.Element {
       clearInterval(countdown);
       clearTimeout(done);
     };
-  }, [autoMode, stage, webcam.ready]);
+  }, [stage, webcam.ready]);
 
   const endSession = async () => {
     const sessionRecap = scoreEngine.endSession(sessionIdRef.current);

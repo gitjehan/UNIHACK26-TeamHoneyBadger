@@ -15,7 +15,7 @@ function dotClass(status: SystemsState[keyof SystemsState]): string {
 function backendLabel(backend: VisionBackend): string {
   if (backend === 'human') return 'Human AI';
   if (backend === 'mediapipe') return 'MediaPipe AI';
-  if (backend === 'synthetic') return 'Simulated fallback';
+  if (backend === 'unavailable') return 'Unavailable';
   return 'Initializing';
 }
 

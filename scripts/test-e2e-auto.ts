@@ -32,89 +32,57 @@ async function run(): Promise<void> {
 
   try {
     const page = await electronApp.firstWindow();
-    await page.waitForFunction(() => {
-      const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-      return Boolean(debug);
-    }, null, { timeout: 20_000 });
-    await page.waitForFunction(() => {
-      const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-      return Number(debug?.timelinePoints ?? 0) > 8;
-    }, null, {
-      timeout: 20_000,
-    });
+    await page.waitForFunction(
+      () => Boolean((window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug),
+      null,
+      { timeout: 20_000 },
+    );
 
-    const postureSamples: number[] = await page.evaluate(async () => {
-      const values: number[] = [];
-      for (let i = 0; i < 90; i += 1) {
-        const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-        values.push(Number(debug?.posture ?? 0));
+    const startButton = page.getByRole('button', { name: /start calibration/i });
+    if (await startButton.count()) {
+      await startButton.click();
+      await page.waitForTimeout(4500);
+    }
+
+    const snapshots = await page.evaluate(async () => {
+      const rows: Array<{ stage: string; poseBackend: string; faceBackend: string }> = [];
+      for (let i = 0; i < 50; i += 1) {
+        const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug ?? {};
+        const backend = (debug.backend as Record<string, unknown> | undefined) ?? {};
+        rows.push({
+          stage: String(debug.stage ?? 'unknown'),
+          poseBackend: String(backend.pose ?? 'unknown'),
+          faceBackend: String(backend.face ?? 'unknown'),
+        });
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
-      return values;
+      return rows;
     });
 
-    const minPosture = Math.min(...postureSamples);
-    const maxPosture = Math.max(...postureSamples);
+    const poseBackends = new Set(snapshots.map((row) => row.poseBackend));
+    const faceBackends = new Set(snapshots.map((row) => row.faceBackend));
+    const stages = new Set(snapshots.map((row) => row.stage));
 
-    if (maxPosture < 70) {
-      throw new Error(`Expected upright posture >= 70, got max ${maxPosture}`);
-    }
-    if (minPosture > 50) {
-      throw new Error(`Expected slouch posture <= 50, got min ${minPosture}`);
+    if (poseBackends.has('synthetic') || faceBackends.has('synthetic')) {
+      throw new Error('Synthetic fallback backend detected in runtime');
     }
 
-    const healthStates: string[] = await page.evaluate(async () => {
-      const seen = new Set<string>();
-      for (let i = 0; i < 80; i += 1) {
-        const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-        const health = debug?.petHealth;
-        if (typeof health === 'string') seen.add(health);
-        await new Promise((resolve) => setTimeout(resolve, 120));
-      }
-      return [...seen];
-    });
-
-    const distinctHealthStates = new Set(healthStates);
-    if (distinctHealthStates.size < 2) {
-      throw new Error(`Expected at least two pet health states, saw: ${healthStates.join(', ')}`);
-    }
-    if (!healthStates.includes('Thriving') && !healthStates.includes('Wilting')) {
-      throw new Error(`Expected edge pet state (Thriving or Wilting), saw: ${healthStates.join(', ')}`);
+    if (![...poseBackends].some((value) => ['human', 'mediapipe', 'unavailable', 'starting'].includes(value))) {
+      throw new Error(`Unexpected pose backend values: ${[...poseBackends].join(', ')}`);
     }
 
-    const timelinePoints = await page.evaluate(() => {
-      const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-      return Number(debug?.timelinePoints ?? 0);
-    });
-    if (timelinePoints < 20) {
-      throw new Error(`Expected session timeline accumulation >= 20 points, got ${timelinePoints}`);
+    if (![...faceBackends].some((value) => ['human', 'unavailable', 'starting'].includes(value))) {
+      throw new Error(`Unexpected face backend values: ${[...faceBackends].join(', ')}`);
     }
 
-    await page.getByRole('button', { name: 'End Session' }).click();
-    await page.waitForFunction(() => {
-      const debug = (window as unknown as { __kineticDebug?: Record<string, unknown> }).__kineticDebug;
-      return Boolean(debug?.recapVisible);
-    }, null, {
-      timeout: 10_000,
-    });
-
-    await page.getByRole('button', { name: 'Copy' }).click();
-    await page.getByRole('button', { name: 'Save PNG' }).click();
-    await page.waitForTimeout(600);
-
-    const recapPath = path.resolve(process.cwd(), 'out', 'kinetic-recap-autotest.png');
-    if (!fs.existsSync(recapPath)) {
-      throw new Error('Expected recap file at out/kinetic-recap-autotest.png');
-    }
-    const stats = fs.statSync(recapPath);
-    if (stats.size <= 0) {
-      throw new Error('Autotest recap file is empty');
+    if (![...stages].some((value) => ['welcome', 'calibrating', 'ready'].includes(value))) {
+      throw new Error(`Unexpected stage values: ${[...stages].join(', ')}`);
     }
 
-    console.log('PASS autonomous E2E flow');
-    console.log(`Posture range ${minPosture}..${maxPosture}`);
-    console.log(`Health states: ${healthStates.join(', ')}`);
-    console.log(`Timeline points: ${timelinePoints}`);
+    console.log('PASS autonomous runtime smoke');
+    console.log(`Stages observed: ${[...stages].join(', ')}`);
+    console.log(`Pose backends observed: ${[...poseBackends].join(', ')}`);
+    console.log(`Face backends observed: ${[...faceBackends].join(', ')}`);
   } finally {
     await electronApp.close();
   }

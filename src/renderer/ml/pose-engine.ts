@@ -1,4 +1,4 @@
-import { FACE_LOOP_INTERVAL, LANDMARKS, POSE_LOOP_INTERVAL } from '@renderer/lib/constants';
+import { LANDMARKS, POSE_LOOP_INTERVAL } from '@renderer/lib/constants';
 import type { Point, VisionBackend } from '@renderer/lib/types';
 
 type PoseCallback = (landmarks: Point[], fps: number) => void;
@@ -106,8 +106,6 @@ export class PoseEngine {
 
   private mediapipeInitTried = false;
 
-  private fallbackPhase = 0;
-
   private runtimeStatus: 'active' | 'degraded' | 'inactive' = 'inactive';
 
   private runtimeBackend: VisionBackend = 'starting';
@@ -145,7 +143,7 @@ export class PoseEngine {
 
     if (!initialized) {
       this.setStatus('degraded');
-      this.setBackend('synthetic');
+      this.setBackend('unavailable');
     }
 
     const tick = async (now: number) => {
@@ -218,7 +216,9 @@ export class PoseEngine {
 
   private async detectPose(video: HTMLVideoElement): Promise<Point[]> {
     if (!video.videoWidth || !video.videoHeight) {
-      return this.degradedSynthetic();
+      this.setStatus('degraded');
+      this.setBackend('unavailable');
+      return [];
     }
 
     const humanLandmarks = await this.detectWithHuman(video);
@@ -243,7 +243,9 @@ export class PoseEngine {
       return mediapipeLandmarks;
     }
 
-    return this.degradedSynthetic();
+    this.setStatus('degraded');
+    this.setBackend('unavailable');
+    return [];
   }
 
   private async detectWithHuman(video: HTMLVideoElement): Promise<Point[] | null> {
@@ -286,12 +288,6 @@ export class PoseEngine {
       const visibility = points[index]?.visibility ?? 0;
       return visibility > 0.15;
     });
-  }
-
-  private degradedSynthetic(): Point[] {
-    this.setStatus('degraded');
-    this.setBackend('synthetic');
-    return this.syntheticPose();
   }
 
   private setStatus(status: 'active' | 'degraded' | 'inactive'): void {
@@ -340,31 +336,4 @@ export class PoseEngine {
     return keypoints.map(normalizePoint);
   }
 
-  private syntheticPose(): Point[] {
-    // Fallback keeps the app interactive when ML models fail to load.
-    this.fallbackPhase += FACE_LOOP_INTERVAL / 1000;
-    const sway = Math.sin(this.fallbackPhase) * 0.02;
-    const base = new Array(33).fill(0).map(() => ({
-      x: 0.5 + sway,
-      y: 0.5,
-      visibility: 1,
-    }));
-
-    base[LANDMARKS.NOSE] = { x: 0.5 + sway, y: 0.33, visibility: 1 };
-    base[LANDMARKS.LEFT_EAR] = { x: 0.45 + sway, y: 0.34, visibility: 1 };
-    base[LANDMARKS.RIGHT_EAR] = { x: 0.55 + sway, y: 0.34, visibility: 1 };
-    base[LANDMARKS.LEFT_SHOULDER] = { x: 0.43 + sway, y: 0.43, visibility: 1 };
-    base[LANDMARKS.RIGHT_SHOULDER] = { x: 0.57 + sway, y: 0.43, visibility: 1 };
-    base[LANDMARKS.LEFT_HIP] = { x: 0.45 + sway, y: 0.62, visibility: 1 };
-    base[LANDMARKS.RIGHT_HIP] = { x: 0.55 + sway, y: 0.62, visibility: 1 };
-    base[LANDMARKS.LEFT_ELBOW] = { x: 0.39 + sway, y: 0.53, visibility: 1 };
-    base[LANDMARKS.RIGHT_ELBOW] = { x: 0.61 + sway, y: 0.53, visibility: 1 };
-    base[LANDMARKS.LEFT_WRIST] = { x: 0.35 + sway, y: 0.62, visibility: 1 };
-    base[LANDMARKS.RIGHT_WRIST] = { x: 0.65 + sway, y: 0.62, visibility: 1 };
-    base[LANDMARKS.LEFT_KNEE] = { x: 0.46 + sway, y: 0.78, visibility: 1 };
-    base[LANDMARKS.RIGHT_KNEE] = { x: 0.54 + sway, y: 0.78, visibility: 1 };
-    base[LANDMARKS.LEFT_ANKLE] = { x: 0.45 + sway, y: 0.92, visibility: 1 };
-    base[LANDMARKS.RIGHT_ANKLE] = { x: 0.55 + sway, y: 0.92, visibility: 1 };
-    return base;
-  }
 }

@@ -15,11 +15,18 @@ export interface BlinkFrame extends BlinkData {
 }
 
 function eyeAspectRatio(landmarks: Point[], eye: typeof LEFT_EYE): number {
+  const safeDist = (aIdx: number, bIdx: number): number => {
+    const a = landmarks[aIdx];
+    const b = landmarks[bIdx];
+    if (!a || !b) return 0;
+    return euclideanDist(a, b);
+  };
+
   const verticalDists = eye.top.map((topIdx, index) =>
-    euclideanDist(landmarks[topIdx], landmarks[eye.bottom[index]]),
+    safeDist(topIdx, eye.bottom[index]),
   );
   const avgVertical = verticalDists.reduce((acc, distance) => acc + distance, 0) / verticalDists.length;
-  const horizontal = euclideanDist(landmarks[eye.left], landmarks[eye.right]);
+  const horizontal = safeDist(eye.left, eye.right);
   if (!horizontal) return 0;
   return avgVertical / horizontal;
 }

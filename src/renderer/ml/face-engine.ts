@@ -59,9 +59,9 @@ export class FaceEngine {
       this.setStatus('active');
       this.setBackend('human');
     } catch (error) {
-      console.error('Face model init failed, using fallback face stream', error);
+      console.error('Face model init failed', error);
       this.setStatus('degraded');
-      this.setBackend('synthetic');
+      this.setBackend('unavailable');
     }
 
     const tick = async (now: number) => {
@@ -115,8 +115,8 @@ export class FaceEngine {
   ): Promise<{ landmarks: Point[]; emotionState: string; emotionConfidence: number }> {
     if (!this.human || !video.videoWidth || !video.videoHeight) {
       this.setStatus('degraded');
-      this.setBackend('synthetic');
-      return this.syntheticFace();
+      this.setBackend('unavailable');
+      return { landmarks: [], emotionState: 'neutral', emotionConfidence: 0 };
     }
 
     try {
@@ -127,8 +127,8 @@ export class FaceEngine {
 
       if (!rawMesh?.length) {
         this.setStatus('degraded');
-        this.setBackend('synthetic');
-        return this.syntheticFace();
+        this.setBackend('unavailable');
+        return { landmarks: [], emotionState: 'neutral', emotionConfidence: 0 };
       }
       const [dominant] = [...emotions].sort((a, b) => b.score - a.score);
       this.setStatus('active');
@@ -144,10 +144,10 @@ export class FaceEngine {
         emotionConfidence: dominant?.score ?? 0.4,
       };
     } catch (error) {
-      console.warn('Face detect failed, using synthetic fallback', error);
+      console.warn('Face detect failed', error);
       this.setStatus('degraded');
-      this.setBackend('synthetic');
-      return this.syntheticFace();
+      this.setBackend('unavailable');
+      return { landmarks: [], emotionState: 'neutral', emotionConfidence: 0 };
     }
   }
 
@@ -161,21 +161,5 @@ export class FaceEngine {
     if (this.runtimeBackend === backend) return;
     this.runtimeBackend = backend;
     this.onBackend?.(backend);
-  }
-
-  private syntheticFace(): { landmarks: Point[]; emotionState: string; emotionConfidence: number } {
-    const points: Point[] = new Array(478).fill(0).map((_, index) => {
-      const theta = (Math.PI * 2 * index) / 478;
-      return {
-        x: 0.5 + Math.cos(theta) * 0.08,
-        y: 0.42 + Math.sin(theta) * 0.1,
-        visibility: 1,
-      };
-    });
-    return {
-      landmarks: points,
-      emotionState: 'neutral',
-      emotionConfidence: 0.5,
-    };
   }
 }
