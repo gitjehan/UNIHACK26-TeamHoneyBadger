@@ -85,6 +85,8 @@ export class PoseEngine {
 
   private running = false;
 
+  private detecting = false;
+
   private lastLoop = 0;
 
   private fpsWindowStart = performance.now();
@@ -143,15 +145,21 @@ export class PoseEngine {
       if (!this.running) return;
       requestAnimationFrame(tick);
       if (now - this.lastLoop < POSE_LOOP_INTERVAL) return;
+      if (this.detecting) return;
       this.lastLoop = now;
-      const landmarks = await this.detectPose(video);
-      this.fpsFrames += 1;
-      if (now - this.fpsWindowStart >= 1000) {
-        this.fps = this.fpsFrames;
-        this.fpsFrames = 0;
-        this.fpsWindowStart = now;
+      this.detecting = true;
+      try {
+        const landmarks = await this.detectPose(video);
+        this.fpsFrames += 1;
+        if (now - this.fpsWindowStart >= 1000) {
+          this.fps = this.fpsFrames;
+          this.fpsFrames = 0;
+          this.fpsWindowStart = now;
+        }
+        this.onPose?.(landmarks, this.fps);
+      } finally {
+        this.detecting = false;
       }
-      this.onPose?.(landmarks, this.fps);
     };
 
     requestAnimationFrame(tick);

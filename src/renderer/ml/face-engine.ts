@@ -30,6 +30,8 @@ export class FaceEngine {
 
   private running = false;
 
+  private detecting = false;
+
   private lastLoop = 0;
 
   private fpsFrames = 0;
@@ -68,17 +70,21 @@ export class FaceEngine {
       if (!this.running) return;
       requestAnimationFrame(tick);
       if (now - this.lastLoop < FACE_LOOP_INTERVAL) return;
+      if (this.detecting) return;
       this.lastLoop = now;
-
-      const { landmarks, emotionState, emotionConfidence } = await this.detectFace(video);
-      this.fpsFrames += 1;
-      if (now - this.fpsWindowStart >= 1000) {
-        this.fps = this.fpsFrames;
-        this.fpsFrames = 0;
-        this.fpsWindowStart = now;
+      this.detecting = true;
+      try {
+        const { landmarks, emotionState, emotionConfidence } = await this.detectFace(video);
+        this.fpsFrames += 1;
+        if (now - this.fpsWindowStart >= 1000) {
+          this.fps = this.fpsFrames;
+          this.fpsFrames = 0;
+          this.fpsWindowStart = now;
+        }
+        this.onFace?.(landmarks, emotionState, emotionConfidence, this.fps);
+      } finally {
+        this.detecting = false;
       }
-
-      this.onFace?.(landmarks, emotionState, emotionConfidence, this.fps);
     };
 
     requestAnimationFrame(tick);
