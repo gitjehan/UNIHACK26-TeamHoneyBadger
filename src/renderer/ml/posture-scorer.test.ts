@@ -15,17 +15,26 @@ function createLandmarks(): Point[] {
 }
 
 describe('posture scorer', () => {
+  const calibration: CalibrationData = {
+    uprightNeckAngle: 175,
+    uprightShoulderSlant: 1,
+    uprightTrunkVector: [0, 0.14],
+    baselineBlinkRate: 17,
+    baselineEAR: 0.27,
+    timestamp: Date.now(),
+  };
+
   it('computes high score for upright landmarks', () => {
-    const calibration: CalibrationData = {
-      uprightNeckAngle: 175,
-      uprightShoulderSlant: 1,
-      uprightTrunkVector: [0, 0.22],
-      baselineBlinkRate: 17,
-      baselineEAR: 0.27,
-      timestamp: Date.now(),
-    };
     const score = scorePosture(createLandmarks(), calibration);
     expect(score.score).toBeGreaterThan(70);
+  });
+
+  it('stays stable when hip landmarks are missing', () => {
+    const points = createLandmarks();
+    points[LANDMARKS.LEFT_HIP] = { x: 0.46, y: 0.64, visibility: 0 };
+    points[LANDMARKS.RIGHT_HIP] = { x: 0.54, y: 0.64, visibility: 0 };
+    const score = scorePosture(points, calibration);
+    expect(score.score).toBeGreaterThan(65);
   });
 
   it('composite score scales correctly', () => {

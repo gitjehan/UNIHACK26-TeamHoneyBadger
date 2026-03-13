@@ -272,7 +272,7 @@ export default function App(): JSX.Element {
         const fallback: CalibrationData = {
           uprightNeckAngle: latestPostureMetricsRef.current.neckAngle || 170,
           uprightShoulderSlant: latestPostureMetricsRef.current.shoulderSlant || 2,
-          uprightTrunkVector: [0, 0.22],
+          uprightTrunkVector: [0, 0.14],
           baselineBlinkRate: 17,
           baselineEAR: 0.27,
           timestamp: Date.now(),

@@ -1,5 +1,5 @@
 import { LANDMARKS, POSTURE_WEIGHTS, SHOULDER_SLANT_MAX, SLOUCH_THRESHOLD } from '@renderer/lib/constants';
-import { calculateAngle, clamp, cosineSimilarity, euclideanDist } from '@renderer/lib/math';
+import { calculateAngle, clamp, cosineSimilarity } from '@renderer/lib/math';
 import type { CalibrationData, Point, PostureData } from '@renderer/lib/types';
 
 function isUsable(point: Point | undefined, minVisibility = 0.04): point is Point {
@@ -24,30 +24,27 @@ function getShoulder(landmarks: Point[]): Point {
   return averageAvailable([left, right], { x: 0.5, y: 0.45 });
 }
 
-function getEar(landmarks: Point[], shoulder: Point): Point {
+function getHead(landmarks: Point[], shoulder: Point): Point {
   const leftEar = isUsable(landmarks[LANDMARKS.LEFT_EAR], 0.01) ? landmarks[LANDMARKS.LEFT_EAR] : undefined;
   const rightEar = isUsable(landmarks[LANDMARKS.RIGHT_EAR], 0.01) ? landmarks[LANDMARKS.RIGHT_EAR] : undefined;
   const nose = isUsable(landmarks[LANDMARKS.NOSE], 0.01) ? landmarks[LANDMARKS.NOSE] : undefined;
-  return averageAvailable([leftEar, rightEar, nose], shoulder);
+  const earOnly = [leftEar, rightEar].filter((point): point is Point => Boolean(point));
+  if (earOnly.length >= 2) {
+    return averageAvailable(earOnly, { x: shoulder.x, y: Math.max(0, shoulder.y - 0.14) });
+  }
+  return averageAvailable([leftEar, rightEar, nose], { x: shoulder.x, y: Math.max(0, shoulder.y - 0.14) });
 }
 
-function getHip(landmarks: Point[], shoulder: Point, calibration: CalibrationData | null): Point {
-  const leftHip = isUsable(landmarks[LANDMARKS.LEFT_HIP], 0.01) ? landmarks[LANDMARKS.LEFT_HIP] : undefined;
-  const rightHip = isUsable(landmarks[LANDMARKS.RIGHT_HIP], 0.01) ? landmarks[LANDMARKS.RIGHT_HIP] : undefined;
-  const fromLandmarks = averageAvailable([leftHip, rightHip], { x: NaN, y: NaN });
-  if (Number.isFinite(fromLandmarks.x) && Number.isFinite(fromLandmarks.y)) return fromLandmarks;
-
+function getTorsoReferenceVector(head: Point, shoulder: Point, calibration: CalibrationData | null): [number, number] {
   if (calibration) {
-    return {
-      x: shoulder.x + calibration.uprightTrunkVector[0],
-      y: shoulder.y + calibration.uprightTrunkVector[1],
-    };
+    const [x, y] = calibration.uprightTrunkVector;
+    if (Number.isFinite(x) && Number.isFinite(y) && Math.hypot(x, y) > 0.01) {
+      return [x, y];
+    }
   }
-
-  return {
-    x: shoulder.x,
-    y: Math.min(0.98, shoulder.y + 0.22),
-  };
+  const inferred: [number, number] = [shoulder.x - head.x, shoulder.y - head.y];
+  if (Math.hypot(inferred[0], inferred[1]) > 0.01) return inferred;
+  return [0, 0.22];
 }
 
 export function calculatePostureMetrics(
@@ -55,10 +52,14 @@ export function calculatePostureMetrics(
   calibration: CalibrationData | null,
 ): Omit<PostureData, 'score'> {
   const shoulder = getShoulder(landmarks);
-  const ear = getEar(landmarks, shoulder);
-  const hip = getHip(landmarks, shoulder, calibration);
+  const head = getHead(landmarks, shoulder);
+  const torsoReference = getTorsoReferenceVector(head, shoulder, calibration);
+  const torsoAnchor = {
+    x: shoulder.x + torsoReference[0],
+    y: shoulder.y + torsoReference[1],
+  };
 
-  const rawNeckAngle = calculateAngle(ear, shoulder, hip);
+  const rawNeckAngle = calculateAngle(head, shoulder, torsoAnchor);
   const neckAngle = Number.isFinite(rawNeckAngle) ? rawNeckAngle : 170;
 
   const leftShoulder = landmarks[LANDMARKS.LEFT_SHOULDER];
@@ -71,19 +72,20 @@ export function calculatePostureMetrics(
       : 0,
   );
 
-  const currentVec: [number, number] = [hip.x - shoulder.x, hip.y - shoulder.y];
+  const currentVec: [number, number] = [shoulder.x - head.x, shoulder.y - head.y];
   let trunkSimilarity = 1;
   if (calibration) {
-    const angularSimilarity = cosineSimilarity(currentVec, calibration.uprightTrunkVector);
-    const currentMagnitude = euclideanDist(shoulder, hip);
+    const angularSimilarity = cosineSimilarity(currentVec, torsoReference);
+    const currentMagnitude = Math.hypot(currentVec[0], currentVec[1]);
     const baselineMagnitude = Math.max(
       0.0001,
-      Math.sqrt(
-        calibration.uprightTrunkVector[0] ** 2 + calibration.uprightTrunkVector[1] ** 2,
-      ),
+      Math.hypot(torsoReference[0], torsoReference[1]),
     );
-    const magnitudeRatio = clamp(currentMagnitude / baselineMagnitude, 0.7, 1.2);
-    trunkSimilarity = clamp(angularSimilarity * magnitudeRatio, 0, 1);
+    const magnitudeRatio = clamp(currentMagnitude / baselineMagnitude, 0.6, 1.4);
+    const magnitudeSimilarity = clamp(1 - Math.abs(1 - magnitudeRatio), 0, 1);
+    trunkSimilarity = clamp(angularSimilarity * 0.75 + magnitudeSimilarity * 0.25, 0, 1);
+  } else {
+    trunkSimilarity = clamp(cosineSimilarity(currentVec, torsoReference), 0, 1);
   }
 
   return {
