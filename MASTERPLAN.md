@@ -728,17 +728,154 @@ Shows status indicators (green/amber/red dots) for:
 #### Session Timeline
 Three mini sparkline charts showing Posture, Focus, and Stress over the current session. Each with current value label.
 
-### 8. Bio-Pet States
+### 8. Bio-Pet — Lifecycle System
 
-Based on the mockup, the pet has 3 primary states (not 5 — simpler for implementation):
+The pet is what makes people actually care about their posture. Not because a health app guilt-trips them, but because they don't want their creature to get sick. The emotional attachment IS the product.
+
+#### Lifecycle: Egg → Creature → Evolution
+
+Your pet starts as an **egg**. Good posture hatches it. Sustained focus levels it up. Slouching makes it sick.
+
+| Stage | Name | Unlock Condition | Visual |
+|-------|------|-----------------|--------|
+| 0 | **Egg** | Default start state | Resting egg, subtle glow pulse, cracks appear as upright time accumulates |
+| 1 | **Hatchling** | 10 min cumulative upright time | Tiny creature emerges from egg shell, wobbly idle animation |
+| 2 | **Fledgling** | 30 min cumulative | Slightly bigger, steadier, gains a small accessory (scarf/hat) |
+| 3 | **Companion** | 120 min cumulative | Full-sized, smooth animations, glowing aura, second accessory |
+| 4 | **Guardian** | 300 min cumulative | Larger, particle effects, wings or crown, confident posture |
+| 5 | **Ascended** | 600 min cumulative | Full glow, trailing particles, halo, all accessories equipped |
+
+- "Cumulative upright time" = total minutes with Overall score ≥ 65 across ALL sessions
+- Stored in electron-store, persists across app restarts
+- Evolution is permanent — you never de-evolve. But your pet CAN get sick.
+
+#### Health States (Real-Time, Driven by Overall Score)
+
+Within any evolution stage, the pet has 3 health states:
 
 | State | Overall Score | Visual | Description |
 |-------|--------------|--------|-------------|
-| **Thriving** | ≥65 | Glowing, happy face, green tones | "Upright posture, steady blink rate, low stress. Your pet glows and blooms with energy." |
-| **Fading** | 30–64 | Neutral/sad face, amber tones, dimmer | "Shoulders rounding, blink rate dropping. Your pet loses petals and its glow dims." |
-| **Wilting** | <30 | Distressed face, red tones, curled in | "Deep slouch, eye fatigue, high cognitive load. Your pet curls inward, urging a reset." |
+| **Thriving** | ≥65 | Glowing, happy face, green tones, bouncy | "Upright posture, steady blink rate, low stress. Your pet glows and blooms with energy." |
+| **Fading** | 30–64 | Neutral/concerned, amber tones, dimmer glow | "Shoulders rounding, blink rate dropping. Your pet loses petals and its glow dims." |
+| **Wilting** | <30 | Sad/sick, red tones, drooping, shaking | "Deep slouch, eye fatigue, high cognitive load. Your pet curls inward, urging a reset." |
+
+**Wilting is the "sick" state.** The pet visually droops, shivers, and loses color. At higher evolution levels, the contrast is more dramatic — a Stage 4 Guardian going sick looks *wrong* in a way that a Hatchling doesn't. This creates stronger emotional pressure to fix your posture as the pet gets more impressive.
+
+#### Accessories & Cosmetics
+
+Accessories are unlocked by session milestones and serve as visual trophies:
+
+| Accessory | Unlock Condition |
+|-----------|-----------------|
+| Scarf | First session > 30 min with avg overall ≥ 60 |
+| Hat | 3 sessions completed |
+| Glasses | Best streak > 45 min |
+| Cape | Reach Stage 3 (Companion) |
+| Wings | Reach Stage 4 (Guardian) |
+| Halo | Reach Stage 5 (Ascended) |
+| Crown | Land #1 on the Lock In Board |
+
+- Accessories persist in electron-store
+- Shown on the pet AND on the leaderboard avatar
+- Unlocking an accessory triggers a celebration animation + a toast notification
 
 Each pet state card shows: Posture score, Focus score, Stress score.
+
+### 9. Session Recap Card — "Wrapped-Style" Daily Summary
+
+At the end of each session (or when the user clicks "End Session"), KINETIC generates a shareable recap card. Think Spotify Wrapped but for your posture. Something people screenshot and post.
+
+#### What the Card Shows
+
+```
+┌──────────────────────────────────────┐
+│         🌿 KINETIC RECAP             │
+│         March 13, 2026               │
+│                                      │
+│    ┌──────────────────────────┐      │
+│    │     [Pet at current      │      │
+│    │      evolution stage]    │      │
+│    │       Stage 3            │      │
+│    │      Companion           │      │
+│    └──────────────────────────┘      │
+│                                      │
+│  You sat upright for                 │
+│       3.2 hours                      │
+│                                      │
+│  Neck angle better than              │
+│       78% of users                   │
+│                                      │
+│  Best streak: 47 min                 │
+│  Avg posture: 74 / 100              │
+│  Blink rate: 17 bpm (healthy)       │
+│                                      │
+│  Pet evolved to Stage 3! 🎉         │
+│  Unlocked: Cape accessory            │
+│                                      │
+│  ──────────────────────────          │
+│  kinetic.app        [Share] [Save]   │
+└──────────────────────────────────────┘
+```
+
+#### Key Stats on the Card
+- **Upright duration**: Total time with Overall ≥ 65, formatted as hours
+- **Percentile rank**: "Neck angle better than X% of users" — computed from Elasticsearch leaderboard data. If Elasticsearch is unavailable, skip this line.
+- **Best streak**: Longest consecutive run of Overall ≥ 65
+- **Average posture score** for the session
+- **Blink rate** with a qualitative label (healthy / strained / fatigued)
+- **Pet milestone** if one happened this session (evolution, accessory unlock)
+- **Pet visual** rendered at its current stage with equipped accessories
+
+#### Implementation
+
+```typescript
+interface SessionRecap {
+  date: string;
+  uprightMinutes: number;
+  totalMinutes: number;
+  avgPosture: number;
+  avgFocus: number;
+  avgStress: number;
+  avgOverall: number;
+  bestStreak: number;            // minutes
+  avgBlinkRate: number;
+  percentileRank: number | null; // null if Elasticsearch unavailable
+  petLevel: number;
+  petTitle: string;
+  newAccessories: string[];      // accessories unlocked this session
+  evolved: boolean;              // did pet evolve this session?
+  previousLevel: number | null;  // if evolved, what was the old level?
+}
+```
+
+#### Rendering the Card
+- The card is a React component (`SessionRecapCard.tsx`) that renders onto a `<canvas>` for easy export
+- **Share button**: Uses `navigator.clipboard` to copy the canvas as a PNG image (Electron supports this via `nativeImage`)
+- **Save button**: Uses Electron's `dialog.showSaveDialog` to save as PNG
+- **Auto-generate**: Card is generated on session end and shown as a modal overlay
+
+#### Percentile Calculation
+```typescript
+// Query Elasticsearch for all users' avg posture scores
+// Count how many are below the current user's score
+// percentile = (usersBelow / totalUsers) * 100
+
+async function calculatePercentile(userAvgPosture: number): Promise<number | null> {
+  const leaderboard = await window.kinetic.getLeaderboard();
+  if (leaderboard.length < 3) return null; // not enough data
+  const below = leaderboard.filter(e => e.avgOverallScore < userAvgPosture).length;
+  return Math.round((below / leaderboard.length) * 100);
+}
+```
+
+#### Blink Rate Label
+```typescript
+function blinkRateLabel(rate: number): string {
+  if (rate >= 12 && rate <= 22) return 'healthy';
+  if (rate >= 8 && rate <= 28) return 'slightly strained';
+  return 'fatigued';
+}
+```
 
 ---
 
@@ -756,23 +893,28 @@ Each pet state card shows: Posture score, Focus score, Stress score.
 7. Stress estimation (affect engine + posture variance + blink deviation)
 8. Focus score (composite of posture stability + inverse fatigue + inverse stress)
 9. Session timeline sparkline charts (Posture, Focus, Stress over time)
-10. **Bio-Pet**: Three.js creature with 3 states (Thriving / Fading / Wilting), posture mirroring
+10. **Bio-Pet lifecycle**: Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting). Posture mirroring. Slouch = pet gets sick.
 11. Multi-signal ambient response (posture + fatigue both drive brightness/warmth)
 12. Systems status panel + Ambient Response panel
 
-### Tier 3: NICE TO HAVE — Extras
-13. Streak counter + pet evolution (electron-store persistence across sessions)
-14. **Lock In Board** — competitive leaderboard (Elasticsearch-backed, nickname entry, pet avatars)
-15. Elasticsearch data pipeline: biometric events indexed every 5s
-16. Elasticsearch analytics dashboard (session history, trends)
-17. Kibana visualization
-18. Ambient audio shifting with wellness state
+### Tier 3: HIGH IMPACT — Shareability & Retention
+13. **Session Recap Card** — Spotify Wrapped-style end-of-session summary. Shareable PNG. Pet visual, stats, percentile rank, milestones.
+14. Streak counter + pet accessories (unlocked by milestones, visible on pet and leaderboard)
+15. **Lock In Board** — competitive leaderboard (Elasticsearch-backed, nickname entry, pet at current evolution + accessories)
+16. Elasticsearch data pipeline: biometric events indexed every 5s
+
+### Tier 4: NICE TO HAVE — Extras
+17. Elasticsearch analytics dashboard (session history, trends)
+18. Kibana visualization
+19. Ambient audio shifting with wellness state
+20. Percentile rank on recap card (requires Elasticsearch leaderboard data)
 
 ### What to CUT if behind:
-- Cut bottom-up (18 → 12)
+- Cut bottom-up (20 → 12)
 - **NEVER cut**: Posture detection, digital twin, real brightness/gamma ambient response, dashboard — these ARE the product
-- If pet takes too long, ship a simple glowing orb that breathes and changes color
-- If Elasticsearch isn't ready, the entire app works without it — it's all local
+- If pet takes too long, ship a simple glowing orb that breathes and changes color — but keep the egg → hatch lifecycle, it's one of the most demo-able moments
+- If Elasticsearch isn't ready, the entire app works without it — recap card works locally, leaderboard falls back to local data
+- The recap card is high-priority because it's what gets screenshotted and shared — a built-in growth loop
 
 ---
 
@@ -890,36 +1032,43 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All 4 metric cards live. Overall gauge accurate. Ambient responds to multiple signals. Dashboard fully functional.
 
-### Phase 5: Bio-Pet (Hour 24–34)
-**Goal**: A Three.js creature that mirrors your state and evolves over time.
+### Phase 5: Bio-Pet Lifecycle (Hour 24–34)
+**Goal**: A creature that starts as an egg, hatches from good posture, gets sick when you slouch, and evolves the more you use KINETIC. People sit up straight because they care about the creature.
 
-- [ ] **Basic pet rendering** (Hour 24–27): Render a simple creature in a designated area of the dashboard using Three.js. Start simple:
-  - Option A: Low-poly geometric creature (sphere body, smaller sphere head, dot eyes) — buildable from Three.js primitives in a few hours
-  - Option B: Free GLTF model from Sketchfab/Poly Pizza — looks better but integration takes longer
-  - Must have: idle breathing animation (smooth scale oscillation on Y axis)
-  - Nice to have: eyes that follow mouse or head position from webcam
-- [ ] **Pet 3-state system** (Hour 27–30): Driven by Overall score (matching mockup):
-  - **Thriving** (overall ≥ 65): Happy face, glowing, green tones, bouncy idle. "Your pet glows and blooms with energy."
-  - **Fading** (overall 30–64): Neutral/concerned face, amber tones, dimmer glow, slower animation. "Your pet loses petals and its glow dims."
-  - **Wilting** (overall < 30): Distressed face, red tones, curled in, shaking. "Your pet curls inward, urging a reset."
-  - Each state shows: Posture score, Focus score, Stress score beneath the pet (as in mockup)
-  - Transitions between states: gradual (lerp colors/scale over 3–5 seconds)
-- [ ] **Posture mirroring** (Hour 30–31): Pet's body tilt matches your posture. If you lean left, pet leans left. If you slouch forward, pet droops forward. Subtle but noticeable. Driven by the same shoulder slant angle displayed in the Digital Twin.
-- [ ] **Streak system** (Hour 31–33):
-  - Streak: consecutive minutes with Overall score ≥ 65 (Thriving state)
-  - 30-second grace period (score can dip below 65 briefly without breaking streak)
-  - Pet reacts to milestones: bounce at 10 min, little celebration at 30 min, special animation at 60 min
-  - Display streak prominently: **"Locked in for 47 min"**
-- [ ] **Pet evolution** (Hour 33–34): 5 levels stored in electron-store:
-  - Level 1: Hatchling (0 cumulative locked-in min)
-  - Level 2: Fledgling (30 min)
-  - Level 3: Companion (120 min)
-  - Level 4: Guardian (300 min)
-  - Level 5: Ascended (600 min)
-  - Each level changes the pet's appearance (size increase, color shift, added features like wings/glow/crown)
-  - Evolution persists across app restarts via electron-store
+- [ ] **Egg state** (Hour 24–26): First thing the user sees in the pet panel.
+  - Three.js scene: an egg shape (ellipsoid geometry or simple GLTF)
+  - Subtle glow pulse animation (emissive material oscillation)
+  - As the user accumulates upright minutes (Overall ≥ 65), cracks appear on the egg (texture swap or progressive line overlays at 25%, 50%, 75% progress toward 10 min)
+  - At 10 cumulative upright minutes → **hatch animation**: egg cracks open, creature emerges. Celebration particles. This is the first "wow" moment.
+  - If user closes app before hatching, progress is saved in electron-store. Egg resumes with cracks.
+- [ ] **Base creature** (Hour 26–28): Post-hatch creature (Stage 1: Hatchling).
+  - Start simple: low-poly blob/orb with dot eyes, built from Three.js primitives (SphereGeometry body + smaller sphere head + circle eyes)
+  - Idle breathing animation (smooth Y-axis scale oscillation)
+  - Eyes follow mouse or head position from webcam landmarks (driven by nose landmark relative position)
+  - At higher evolution stages: creature gets bigger, gains accessories, colors intensify
+- [ ] **Health states** (Hour 28–30): Real-time health driven by Overall score:
+  - **Thriving** (≥ 65): Happy face, bouncy idle, green glow, particles. "Your pet glows and blooms with energy."
+  - **Fading** (30–64): Neutral/concerned face, amber tones, slower animation. "Your pet loses petals and its glow dims."
+  - **Wilting** (< 30): **Sick state**. Drooping, shivering, red tones, eyes half-closed. "Your pet curls inward, urging a reset."
+  - The sick state is the key emotional lever — at higher evolution stages, a Guardian going sick looks *wrong* and creates urgent motivation to fix posture
+  - Transitions between states: lerp colors/scale/position over 3–5 seconds
+  - Each state shows: Posture score, Focus score, Stress score beneath the pet
+- [ ] **Posture mirroring** (Hour 30–31): Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
+- [ ] **Streak system + evolution** (Hour 31–33):
+  - Streak: consecutive minutes with Overall ≥ 65
+  - 30-second grace period before streak breaks
+  - Pet reacts to milestones: bounce at 10 min, celebration at 30 min, special animation at 60 min
+  - Display: **"Locked in for 47 min"**
+  - Evolution stages: Egg (0) → Hatchling (10 min) → Fledgling (30 min) → Companion (120 min) → Guardian (300 min) → Ascended (600 min)
+  - Each evolution: size increase, color shift, added visual features
+  - Evolution triggers a big celebration animation + accessory unlock
+- [ ] **Accessories** (Hour 33–34): Visual trophies unlocked by milestones:
+  - Scarf (first session > 30 min), Hat (3 sessions), Glasses (streak > 45 min), Cape (Stage 3), Wings (Stage 4), Halo (Stage 5), Crown (#1 on leaderboard)
+  - Rendered as additional Three.js meshes attached to the creature
+  - Persist in electron-store. Shown on pet and on leaderboard avatar.
+  - Unlock triggers toast notification + celebration
 
-**Output**: A living pet in the dashboard's bottom-left panel that reacts to how you're sitting, has 3 visible states, and evolves the more you use KINETIC.
+**Output**: An egg that hatches into a creature that gets sick when you slouch, evolves over days of use, and accumulates visual trophies. The emotional attachment drives posture improvement better than any notification ever could.
 
 ### Phase 6: Elasticsearch + Leaderboard (Hour 34–40)
 **Goal**: Biometric data pipeline + competitive leaderboard. Easiest to bolt on last.
@@ -950,31 +1099,55 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All biometric data flowing to Elasticsearch. Functional leaderboard. Kibana analytics dashboard.
 
-### Phase 7: Polish & Demo Prep (Hour 40–48)
+### Phase 7: Session Recap Card (Hour 40–44)
+**Goal**: A Spotify Wrapped-style shareable card generated at end of each session.
+
+- [ ] **Session data collection** (Hour 40–41): Track session-level aggregates in memory throughout the session:
+  - Total session duration
+  - Total upright minutes (Overall ≥ 65)
+  - Average posture, focus, stress, overall scores
+  - Best streak length
+  - Average blink rate
+  - Pet milestones this session (evolution? new accessory?)
+  - Store the previous pet level at session start so we can detect evolution
+- [ ] **Recap card component** (Hour 41–43): `SessionRecapCard.tsx`
+  - Styled card (480×640px) matching the earth-tone design system
+  - Content: date, pet visual (rendered from current Three.js scene → snapshot to canvas), upright hours, percentile rank (if Elasticsearch available), best streak, avg posture, blink rate label, pet milestones
+  - Render onto an offscreen `<canvas>` for image export
+  - Shown as a modal overlay when user clicks "End Session" or after a configurable session duration
+- [ ] **Share / Save buttons** (Hour 43–44):
+  - **Copy to clipboard**: `nativeImage.createFromDataURL(canvas.toDataURL())` → `clipboard.writeImage()`
+  - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'kinetic-recap.png' })` → write buffer to file
+  - Both exposed via IPC from main process
+- [ ] **Percentile calculation** (Hour 44): If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
+
+**Output**: At end of session, a beautiful shareable card pops up. User can copy it to clipboard or save as PNG. It shows their pet, their stats, and any milestones. Designed to be screenshotted and posted.
+
+### Phase 8: Polish & Demo Prep (Hour 44–48)
 **Goal**: Make it demo-ready and beautiful.
 
-- [ ] **UI polish** (Hour 40–44):
+- [ ] **UI polish** (Hour 44–45):
   - Landing / onboarding screen explaining KINETIC on first launch
-  - Smooth transitions and animations everywhere
   - Loading states for webcam/ML initialization (progress bar while models load)
   - Error handling: webcam denied, ML failed to load, Elasticsearch unreachable (graceful degradation — app works without Elastic)
   - App icon, window title, menu bar cleanup
   - Dark theme (ambient brightness effects look much better on dark UI)
-  - Tray icon with quick stats (stretch goal)
-- [ ] **Gamma reset safety** (Hour 44): Double-check that gamma always resets to default on:
+- [ ] **Gamma reset safety** (Hour 45): Double-check that gamma always resets to default on:
   - Normal app quit
   - Force quit / crash (register signal handlers)
   - This is critical — you don't want to demo and have the screen stuck amber
-- [ ] **Demo script** (Hour 44–46): Plan the exact demo flow:
-  1. Launch KINETIC, show onboarding (5 sec)
+- [ ] **Demo script** (Hour 45–47): Plan the exact demo flow:
+  1. Launch KINETIC, show onboarding — egg is visible in pet panel (5 sec)
   2. Grant webcam, run calibration (10 sec)
-  3. Sit up straight — show good score, happy pet, screen at normal brightness (15 sec)
-  4. Slouch — actual screen dims and warms to amber, pet droops, score drops (15 sec)
-  5. Sit back up — screen recovers, pet perks up (10 sec)
-  6. Show the dashboard with real-time charts (10 sec)
-  7. Show the leaderboard (10 sec)
-  8. Show Kibana analytics (5 sec)
-- [ ] **Bug fixes & edge cases** (Hour 46–47): Test with different lighting, different people, different postures. Make sure gamma resets work.
+  3. Sit up straight — score goes green, egg starts cracking, screen at normal brightness (10 sec)
+  4. Show the egg hatching into the creature (pre-load cumulative time so it hatches during demo) (10 sec)
+  5. Slouch — screen dims and warms to amber, pet gets **sick** (droops, shivers, red), score drops (15 sec)
+  6. Sit back up — screen recovers, pet recovers, score climbs (10 sec)
+  7. Show the dashboard with all 4 metrics live + session timeline (10 sec)
+  8. Trigger session end — show the Wrapped-style recap card with stats + pet (10 sec)
+  9. Show the leaderboard with pet avatars (5 sec)
+- [ ] **Demo prep**: Pre-seed electron-store so the pet is at Stage 2+ with an accessory, and pre-seed 3–4 leaderboard entries. This makes the demo richer without needing hours of real usage.
+- [ ] **Bug fixes & edge cases** (Hour 47): Test with different lighting, different people, different postures.
 - [ ] **Presentation slides** (Hour 47–48): 3–5 slides max. Problem → Solution → Demo → Tech.
 
 ---
@@ -988,7 +1161,7 @@ Not everything is sequential. Here's how to split work across 4 team members:
 |--------|------|
 | **Dev 1 (ML Lead)** | Phase 0 scaffold → Phase 1: ML spike (posture algorithm: neck angle, shoulder slant, trunk cosine similarity + calibration + Digital Twin canvas) |
 | **Dev 2 (Systems)** | Phase 0 help → Phase 2: brightness CLI + gamma Swift helper (compile, test, IPC wiring, smoothing) |
-| **Dev 3 (Creative)** | Research Three.js pet approaches, build basic pet with breathing animation + 3-state system (Thriving/Fading/Wilting) using mock scores |
+| **Dev 3 (Creative)** | Research Three.js pet approaches, build egg with glow pulse + crack progression, hatch animation, base creature with breathing + 3 health states using mock scores |
 | **Dev 4 (Frontend)** | Build full dashboard layout from mockup: 4 metric cards, overall gauge, systems panel, ambient response panel, session timeline — all with mock data |
 
 ### Hour 12–24 (Core Features)
@@ -996,7 +1169,7 @@ Not everything is sequential. Here's how to split work across 4 team members:
 |--------|------|
 | **Dev 1** | Phase 4: Face mesh → EAR blink detection → stress estimation → focus score → wire all 4 metrics live |
 | **Dev 2** | Phase 2 finish (feel tuning) → wire multi-signal ambient (posture + fatigue → brightness/warmth) |
-| **Dev 3** | Phase 5: Pet posture mirroring + state transitions driven by overall score |
+| **Dev 3** | Phase 5: Pet posture mirroring + sick state visual + state transitions driven by overall score |
 | **Dev 4** | Phase 3: Wire live ML data into dashboard, state tabs (Upright/Slouching/Fatigued), session timeline charts |
 
 ### Hour 24–40 (Integration & Polish)
@@ -1004,16 +1177,16 @@ Not everything is sequential. Here's how to split work across 4 team members:
 |--------|------|
 | **Dev 1** | Phase 6: Elasticsearch setup + biometric data pipeline |
 | **Dev 2** | Phase 6: Leaderboard UI + IPC handlers |
-| **Dev 3** | Phase 5: Pet evolution + streak system + electron-store persistence |
+| **Dev 3** | Phase 5: Pet evolution stages + accessories + streak system + electron-store persistence |
 | **Dev 4** | Dashboard polish: webcam overlay with FPS/landmark count, overall UI refinement |
 
 ### Hour 40–48 (Final Polish)
 | Person | Task |
 |--------|------|
-| **Dev 1** | Kibana dashboard + Elasticsearch analytics |
+| **Dev 1** | Kibana dashboard + Elasticsearch analytics + percentile calculation for recap card |
 | **Dev 2** | Gamma reset safety, error handling, edge cases |
-| **Dev 3** | Pet polish, onboarding/calibration screen |
-| **Dev 4** | Demo script, presentation slides, rehearsal coordination |
+| **Dev 3** | Phase 7: Session Recap Card (component, canvas rendering, share/save buttons) |
+| **Dev 4** | Demo script, demo data seeding, presentation slides, rehearsal coordination |
 
 ---
 
@@ -1250,19 +1423,32 @@ export const RIGHT_EYE = {
   left: 362, right: 263,
 };
 
-// --- Pet ---
-export const PET_STATES = {
+// --- Pet Health States (real-time) ---
+export const PET_HEALTH = {
   THRIVING: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
   FADING:   { minScore: 30, color: '#C4962C', label: 'Fading' },
-  WILTING:  { minScore: 0,  color: '#C0392B', label: 'Wilting' },
+  WILTING:  { minScore: 0,  color: '#C0392B', label: 'Wilting' },  // "sick" state
 };
 
+// --- Pet Evolution Stages (permanent, cumulative) ---
 export const PET_EVOLUTION = [
-  { level: 1, title: 'Hatchling',  minMinutes: 0 },
-  { level: 2, title: 'Fledgling',  minMinutes: 30 },
-  { level: 3, title: 'Companion',  minMinutes: 120 },
-  { level: 4, title: 'Guardian',   minMinutes: 300 },
-  { level: 5, title: 'Ascended',   minMinutes: 600 },
+  { stage: 0, title: 'Egg',        minMinutes: 0,   description: 'Resting. Good posture will hatch it.' },
+  { stage: 1, title: 'Hatchling',  minMinutes: 10,  description: 'Just born! Wobbly but curious.' },
+  { stage: 2, title: 'Fledgling',  minMinutes: 30,  description: 'Growing steadier. Gained a scarf!' },
+  { stage: 3, title: 'Companion',  minMinutes: 120, description: 'Full-sized. Loyal and glowing.' },
+  { stage: 4, title: 'Guardian',   minMinutes: 300, description: 'Powerful. Wings unfurled.' },
+  { stage: 5, title: 'Ascended',   minMinutes: 600, description: 'Transcendent. Full radiance.' },
+];
+
+// --- Pet Accessories (unlocked by milestones) ---
+export const PET_ACCESSORIES = [
+  { id: 'scarf',   label: 'Scarf',   condition: 'First session > 30 min with avg overall ≥ 60' },
+  { id: 'hat',     label: 'Hat',     condition: '3 sessions completed' },
+  { id: 'glasses', label: 'Glasses', condition: 'Best streak > 45 min' },
+  { id: 'cape',    label: 'Cape',    condition: 'Reach Stage 3 (Companion)' },
+  { id: 'wings',   label: 'Wings',   condition: 'Reach Stage 4 (Guardian)' },
+  { id: 'halo',    label: 'Halo',    condition: 'Reach Stage 5 (Ascended)' },
+  { id: 'crown',   label: 'Crown',   condition: '#1 on the Lock In Board' },
 ];
 
 // --- Elasticsearch ---
