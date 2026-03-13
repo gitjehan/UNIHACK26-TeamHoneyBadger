@@ -353,7 +353,7 @@ export function WebcamFeed({
   const facePoints = faceLandmarks.length;
 
   return (
-    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: 10, minHeight: 0, overflow: 'hidden' }}>
+    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto auto auto', gap: 10 }}>
       <h3>Webcam Feed</h3>
       <div
         style={{
@@ -362,7 +362,7 @@ export function WebcamFeed({
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
-          minHeight: 0,
+          aspectRatio: '16 / 9',
         }}
       >
         <video
@@ -382,7 +382,6 @@ export function WebcamFeed({
             width: '100%',
             height: '100%',
             pointerEvents: 'none',
-            transform: 'scaleX(-1)',
           }}
         />
       </div>

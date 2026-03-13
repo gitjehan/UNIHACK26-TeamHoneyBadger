@@ -457,6 +457,12 @@ class ScoreEngine {
       return;
     }
 
+    if (this.emitTimer) {
+      clearTimeout(this.emitTimer);
+      this.emitTimer = null;
+      this.emitScheduled = false;
+    }
+
     this.lastEmitTime = now;
     const current = this.state;
     this.listeners.forEach((listener) => listener(current));
