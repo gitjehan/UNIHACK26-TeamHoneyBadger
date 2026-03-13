@@ -2,38 +2,73 @@ import { LANDMARKS, POSTURE_WEIGHTS, SHOULDER_SLANT_MAX, SLOUCH_THRESHOLD } from
 import { calculateAngle, clamp, cosineSimilarity, euclideanDist } from '@renderer/lib/math';
 import type { CalibrationData, Point, PostureData } from '@renderer/lib/types';
 
-function averagePoint(a: Point, b: Point): Point {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+function isUsable(point: Point | undefined, minVisibility = 0.04): point is Point {
+  if (!point) return false;
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+  return (point.visibility ?? 1) >= minVisibility;
 }
 
-function getEar(landmarks: Point[]): Point {
-  return averagePoint(landmarks[LANDMARKS.LEFT_EAR], landmarks[LANDMARKS.RIGHT_EAR]);
+function averageAvailable(points: Array<Point | undefined>, fallback: Point): Point {
+  const valid = points.filter((point): point is Point => Boolean(point));
+  if (!valid.length) return fallback;
+  const sum = valid.reduce(
+    (acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }),
+    { x: 0, y: 0 },
+  );
+  return { x: sum.x / valid.length, y: sum.y / valid.length };
 }
 
 function getShoulder(landmarks: Point[]): Point {
-  return averagePoint(landmarks[LANDMARKS.LEFT_SHOULDER], landmarks[LANDMARKS.RIGHT_SHOULDER]);
+  const left = isUsable(landmarks[LANDMARKS.LEFT_SHOULDER]) ? landmarks[LANDMARKS.LEFT_SHOULDER] : undefined;
+  const right = isUsable(landmarks[LANDMARKS.RIGHT_SHOULDER]) ? landmarks[LANDMARKS.RIGHT_SHOULDER] : undefined;
+  return averageAvailable([left, right], { x: 0.5, y: 0.45 });
 }
 
-function getHip(landmarks: Point[]): Point {
-  return averagePoint(landmarks[LANDMARKS.LEFT_HIP], landmarks[LANDMARKS.RIGHT_HIP]);
+function getEar(landmarks: Point[], shoulder: Point): Point {
+  const leftEar = isUsable(landmarks[LANDMARKS.LEFT_EAR], 0.01) ? landmarks[LANDMARKS.LEFT_EAR] : undefined;
+  const rightEar = isUsable(landmarks[LANDMARKS.RIGHT_EAR], 0.01) ? landmarks[LANDMARKS.RIGHT_EAR] : undefined;
+  const nose = isUsable(landmarks[LANDMARKS.NOSE], 0.01) ? landmarks[LANDMARKS.NOSE] : undefined;
+  return averageAvailable([leftEar, rightEar, nose], shoulder);
+}
+
+function getHip(landmarks: Point[], shoulder: Point, calibration: CalibrationData | null): Point {
+  const leftHip = isUsable(landmarks[LANDMARKS.LEFT_HIP], 0.01) ? landmarks[LANDMARKS.LEFT_HIP] : undefined;
+  const rightHip = isUsable(landmarks[LANDMARKS.RIGHT_HIP], 0.01) ? landmarks[LANDMARKS.RIGHT_HIP] : undefined;
+  const fromLandmarks = averageAvailable([leftHip, rightHip], { x: NaN, y: NaN });
+  if (Number.isFinite(fromLandmarks.x) && Number.isFinite(fromLandmarks.y)) return fromLandmarks;
+
+  if (calibration) {
+    return {
+      x: shoulder.x + calibration.uprightTrunkVector[0],
+      y: shoulder.y + calibration.uprightTrunkVector[1],
+    };
+  }
+
+  return {
+    x: shoulder.x,
+    y: Math.min(0.98, shoulder.y + 0.22),
+  };
 }
 
 export function calculatePostureMetrics(
   landmarks: Point[],
   calibration: CalibrationData | null,
 ): Omit<PostureData, 'score'> {
-  const ear = getEar(landmarks);
   const shoulder = getShoulder(landmarks);
-  const hip = getHip(landmarks);
+  const ear = getEar(landmarks, shoulder);
+  const hip = getHip(landmarks, shoulder, calibration);
 
-  const neckAngle = calculateAngle(ear, shoulder, hip);
+  const rawNeckAngle = calculateAngle(ear, shoulder, hip);
+  const neckAngle = Number.isFinite(rawNeckAngle) ? rawNeckAngle : 170;
+
+  const leftShoulder = landmarks[LANDMARKS.LEFT_SHOULDER];
+  const rightShoulder = landmarks[LANDMARKS.RIGHT_SHOULDER];
+  const shouldersUsable = isUsable(leftShoulder) && isUsable(rightShoulder);
 
   const shoulderSlant = Math.abs(
-    Math.atan2(
-      landmarks[LANDMARKS.RIGHT_SHOULDER].y - landmarks[LANDMARKS.LEFT_SHOULDER].y,
-      landmarks[LANDMARKS.RIGHT_SHOULDER].x - landmarks[LANDMARKS.LEFT_SHOULDER].x,
-    ) *
-      (180 / Math.PI),
+    shouldersUsable
+      ? Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x) * (180 / Math.PI)
+      : 0,
   );
 
   const currentVec: [number, number] = [hip.x - shoulder.x, hip.y - shoulder.y];

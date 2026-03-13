@@ -15,6 +15,10 @@ function scoreColor(score: number): string {
   return '#C0392B';
 }
 
+function isVisible(point: Point): boolean {
+  return (point.visibility ?? 1) > 0.05;
+}
+
 export function WebcamFeed({
   videoRef,
   landmarks,
@@ -37,13 +41,14 @@ export function WebcamFeed({
 
     ctx.fillStyle = scoreColor(postureScore);
     landmarks.forEach((point) => {
+      if (!isVisible(point)) return;
       ctx.beginPath();
       ctx.arc(point.x * canvas.width, point.y * canvas.height, 2.2, 0, Math.PI * 2);
       ctx.fill();
     });
   }, [videoRef, landmarks, postureScore]);
 
-  const points = landmarks.length;
+  const points = landmarks.filter(isVisible).length;
 
   return (
     <div className="card" style={{ display: 'grid', gap: 10 }}>

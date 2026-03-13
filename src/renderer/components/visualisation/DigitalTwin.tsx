@@ -14,6 +14,11 @@ function scoreColor(score: number): string {
   return '#C0392B';
 }
 
+function isVisible(point: Point | undefined): point is Point {
+  if (!point) return false;
+  return (point.visibility ?? 1) > 0.05;
+}
+
 export function DigitalTwin({ landmarks, postureScore, shoulderSlant }: DigitalTwinProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -36,9 +41,11 @@ export function DigitalTwin({ landmarks, postureScore, shoulderSlant }: DigitalT
     });
 
     for (const [a, b] of POSE_CONNECTIONS) {
-      if (!landmarks[a] || !landmarks[b]) continue;
-      const p1 = mapPoint(landmarks[a]);
-      const p2 = mapPoint(landmarks[b]);
+      const aPoint = landmarks[a];
+      const bPoint = landmarks[b];
+      if (!isVisible(aPoint) || !isVisible(bPoint)) continue;
+      const p1 = mapPoint(aPoint);
+      const p2 = mapPoint(bPoint);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
@@ -46,6 +53,7 @@ export function DigitalTwin({ landmarks, postureScore, shoulderSlant }: DigitalT
     }
 
     landmarks.forEach((point) => {
+      if (!isVisible(point)) return;
       const mapped = mapPoint(point);
       ctx.beginPath();
       ctx.arc(mapped.x, mapped.y, 3, 0, Math.PI * 2);

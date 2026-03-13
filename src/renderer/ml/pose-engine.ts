@@ -57,15 +57,8 @@ interface PoseLandmarkerFactory {
   ) => Promise<MediaPipePoseLandmarkerAdapter>;
 }
 
-const REQUIRED_INDICES = [
-  LANDMARKS.NOSE,
-  LANDMARKS.LEFT_EAR,
-  LANDMARKS.RIGHT_EAR,
-  LANDMARKS.LEFT_SHOULDER,
-  LANDMARKS.RIGHT_SHOULDER,
-  LANDMARKS.LEFT_HIP,
-  LANDMARKS.RIGHT_HIP,
-];
+const SHOULDER_INDICES = [LANDMARKS.LEFT_SHOULDER, LANDMARKS.RIGHT_SHOULDER];
+const HEAD_INDICES = [LANDMARKS.NOSE, LANDMARKS.LEFT_EAR, LANDMARKS.RIGHT_EAR];
 
 const COCO_TO_MEDIAPIPE_INDEX: Array<[number, number]> = [
   [0, LANDMARKS.NOSE],
@@ -284,10 +277,17 @@ export class PoseEngine {
 
   private hasRequiredLandmarks(points: Point[]): boolean {
     if (!points.length) return false;
-    return REQUIRED_INDICES.every((index) => {
+    const hasShoulders = SHOULDER_INDICES.every((index) => {
       const visibility = points[index]?.visibility ?? 0;
-      return visibility > 0.15;
+      return visibility > 0.08;
     });
+    if (!hasShoulders) return false;
+
+    const hasHead = HEAD_INDICES.some((index) => {
+      const visibility = points[index]?.visibility ?? 0;
+      return visibility > 0.03;
+    });
+    return hasHead;
   }
 
   private setStatus(status: 'active' | 'degraded' | 'inactive'): void {
