@@ -23,9 +23,9 @@ export function LeaderBoard({
           placeholder="Nickname"
           style={{
             flex: 1,
-            background: '#101720',
+            background: '#ffffff',
             color: 'var(--text-primary)',
-            border: '1px solid #253040',
+            border: '1px solid var(--border-card)',
             borderRadius: 8,
             padding: '8px 10px',
           }}

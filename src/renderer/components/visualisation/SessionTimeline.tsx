@@ -21,12 +21,12 @@ export function SessionTimeline({ data }: SessionTimelineProps): JSX.Element {
             <XAxis hide dataKey="timestamp" />
             <YAxis hide domain={[0, 100]} />
             <Tooltip
-              contentStyle={{ background: '#11161f', border: '1px solid #253040', borderRadius: 10 }}
+              contentStyle={{ background: '#fffdf8', border: '1px solid #e6e0d5', borderRadius: 10 }}
               labelFormatter={(value) => new Date(Number(value)).toLocaleTimeString()}
             />
             <Area type="monotone" dataKey="posture" stroke="#4A7C59" fill="#4A7C5922" isAnimationActive={false} />
-            <Area type="monotone" dataKey="focus" stroke="#8CD3B0" fill="#8CD3B022" isAnimationActive={false} />
-            <Area type="monotone" dataKey="stress" stroke="#C0392B" fill="#C0392B22" isAnimationActive={false} />
+            <Area type="monotone" dataKey="focus" stroke="#5f8c77" fill="#5f8c7720" isAnimationActive={false} />
+            <Area type="monotone" dataKey="stress" stroke="#B85A4D" fill="#B85A4D20" isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>
       </div>

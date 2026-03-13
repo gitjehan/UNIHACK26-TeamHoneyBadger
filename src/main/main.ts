@@ -32,7 +32,7 @@ function createWindow(): BrowserWindow {
     height: 800,
     minWidth: 1024,
     minHeight: 700,
-    backgroundColor: '#111318',
+    backgroundColor: '#f6f2ea',
     title: 'KINETIC',
     titleBarStyle: 'hiddenInset',
     webPreferences: {

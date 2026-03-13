@@ -18,7 +18,7 @@ export function OverallGauge({ value }: OverallGaugeProps): JSX.Element {
     <div className="card">
       <h3>Overall</h3>
       <svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Overall score gauge">
-        <circle cx="90" cy="90" r={radius} stroke="#273445" strokeWidth="14" fill="none" />
+        <circle cx="90" cy="90" r={radius} stroke="#ddd6c8" strokeWidth="14" fill="none" />
         <circle
           cx="90"
           cy="90"

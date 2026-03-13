@@ -48,7 +48,15 @@ export function WebcamFeed({
   return (
     <div className="card" style={{ display: 'grid', gap: 10 }}>
       <h3>Webcam Feed</h3>
-      <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', background: '#0d1117' }}>
+      <div
+        style={{
+          position: 'relative',
+          borderRadius: 12,
+          overflow: 'hidden',
+          background: 'var(--bg-card-muted)',
+          border: '1px solid var(--border-card)',
+        }}
+      >
         <video
           ref={videoRef}
           style={{ width: '100%', transform: 'scaleX(-1)', display: 'block' }}

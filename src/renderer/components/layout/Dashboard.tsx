@@ -1,35 +1,27 @@
 import type { RefObject } from 'react';
-import { LeaderBoard } from '@renderer/components/leaderboard/LeaderBoard';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
-import { AnalyticsPanel } from '@renderer/components/panels/AnalyticsPanel';
 import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
 import { WebcamFeed } from '@renderer/components/visualisation/WebcamFeed';
-import type { LeaderboardEntry } from '@renderer/lib/types';
+import type { VisionBackend } from '@renderer/lib/types';
 import type { EngineState } from '@renderer/ml/score-engine';
 
 interface DashboardProps {
   state: EngineState;
   videoRef: RefObject<HTMLVideoElement | null>;
   timeline: Array<{ timestamp: number; posture: number; focus: number; stress: number }>;
-  nickname: string;
-  leaderboard: LeaderboardEntry[];
-  onNicknameChange: (value: string) => void;
-  onSaveNickname: () => Promise<void>;
+  visionBackend: { pose: VisionBackend; face: VisionBackend };
 }
 
 export function Dashboard({
   state,
   videoRef,
   timeline,
-  nickname,
-  leaderboard,
-  onNicknameChange,
-  onSaveNickname,
+  visionBackend,
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
 
@@ -67,20 +59,17 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto auto auto 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto auto' }}>
         <OverallGauge value={snapshot.overall.score} />
-        <SystemsPanel systems={state.systems} />
+        <SystemsPanel
+          systems={state.systems}
+          poseBackend={visionBackend.pose}
+          faceBackend={visionBackend.face}
+        />
         <AmbientPanel
           brightness={state.ambient.brightness}
           warmth={state.ambient.warmth}
           overallScore={snapshot.overall.score}
-        />
-        <AnalyticsPanel />
-        <LeaderBoard
-          nickname={nickname}
-          entries={leaderboard}
-          onNicknameChange={onNicknameChange}
-          onSaveNickname={onSaveNickname}
         />
       </div>
     </div>

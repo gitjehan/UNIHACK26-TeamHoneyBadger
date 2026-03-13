@@ -34,7 +34,7 @@ export function BioPet({
     const mount = mountRef.current;
     if (!mount) return;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x101720);
+    scene.background = new THREE.Color(0xf5f0e6);
 
     const camera = new THREE.PerspectiveCamera(45, mount.clientWidth / 220, 0.1, 100);
     camera.position.set(0, 1.4, 4.8);
@@ -52,7 +52,7 @@ export function BioPet({
 
     const floor = new THREE.Mesh(
       new THREE.CircleGeometry(1.8, 32),
-      new THREE.MeshStandardMaterial({ color: 0x1a212b }),
+      new THREE.MeshStandardMaterial({ color: 0xe6dfd2 }),
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.6;

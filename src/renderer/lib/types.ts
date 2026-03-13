@@ -70,6 +70,7 @@ export interface LeaderboardEntry {
 }
 
 export type SystemStatus = 'active' | 'degraded' | 'inactive';
+export type VisionBackend = 'human' | 'mediapipe' | 'synthetic' | 'starting';
 
 export interface SystemsState {
   poseDetection: SystemStatus;

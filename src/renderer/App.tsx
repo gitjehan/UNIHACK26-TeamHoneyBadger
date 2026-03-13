@@ -9,7 +9,13 @@ import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import { ambientAudio } from '@renderer/lib/ambient-audio';
 import { createSyntheticFace, createSyntheticPose } from '@renderer/lib/synthetic-signals';
-import type { CalibrationData, LeaderboardEntry, PetState, SessionRecap } from '@renderer/lib/types';
+import type {
+  CalibrationData,
+  LeaderboardEntry,
+  PetState,
+  SessionRecap,
+  VisionBackend,
+} from '@renderer/lib/types';
 import { buildCalibration } from '@renderer/ml/calibration';
 import { FaceEngine } from '@renderer/ml/face-engine';
 import { PoseEngine } from '@renderer/ml/pose-engine';
@@ -39,6 +45,10 @@ export default function App(): JSX.Element {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeline, setTimeline] = useState<Array<{ timestamp: number; posture: number; focus: number; stress: number }>>([]);
   const [recap, setRecap] = useState<SessionRecap | null>(null);
+  const [visionBackend, setVisionBackend] = useState<{ pose: VisionBackend; face: VisionBackend }>({
+    pose: 'starting',
+    face: 'starting',
+  });
 
   const sessionIdRef = useRef(uuidv4());
   const calibrationSamplesRef = useRef<CalibrationSample[]>([]);
@@ -111,6 +121,10 @@ export default function App(): JSX.Element {
         scoreEngine.updatePosture(landmarks);
       },
       (status) => scoreEngine.setSystemStatus({ poseDetection: status }),
+      (backend) =>
+        setVisionBackend((current) =>
+          current.pose === backend ? current : { ...current, pose: backend },
+        ),
     );
 
     face.setCallbacks(
@@ -123,6 +137,10 @@ export default function App(): JSX.Element {
         });
       },
       (status) => scoreEngine.setSystemStatus({ faceMesh: status, affectEngine: status }),
+      (backend) =>
+        setVisionBackend((current) =>
+          current.face === backend ? current : { ...current, face: backend },
+        ),
     );
 
     pose.init(sourceVideo).catch((error) => console.warn('Pose engine init failed', error));
@@ -163,6 +181,7 @@ export default function App(): JSX.Element {
       faceMesh: 'active',
       affectEngine: 'active',
     });
+    setVisionBackend({ pose: 'synthetic', face: 'synthetic' });
     setStage('ready');
 
     let tick = 0;
@@ -314,15 +333,6 @@ export default function App(): JSX.Element {
     };
   }, [autoMode, stage, webcam.ready]);
 
-  const saveNickname = async () => {
-    if (!nickname.trim()) return;
-    await window.kinetic.storeSet('nickname', nickname.trim());
-    setNickname(nickname.trim());
-    await window.kinetic.upsertLeaderboard({ ...sessionEntry, nickname: nickname.trim() });
-    const board = await window.kinetic.getLeaderboard();
-    setLeaderboard(board);
-  };
-
   const endSession = async () => {
     const sessionRecap = scoreEngine.endSession(sessionIdRef.current);
     if (leaderboard.length >= 3) {
@@ -372,8 +382,9 @@ export default function App(): JSX.Element {
       timelinePoints: timeline.length,
       recapVisible: Boolean(recap),
       systems: state.systems,
+      backend: visionBackend,
     };
-  }, [stage, state, timeline.length, recap]);
+  }, [stage, state, timeline.length, recap, visionBackend]);
 
   const startCalibration = () => {
     ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));
@@ -410,10 +421,7 @@ export default function App(): JSX.Element {
           state={state}
           videoRef={webcam.videoRef}
           timeline={timeline}
-          nickname={nickname}
-          leaderboard={leaderboard}
-          onNicknameChange={setNickname}
-          onSaveNickname={saveNickname}
+          visionBackend={visionBackend}
         />
       )}
       <RecapOverlay recap={recap} onClose={() => setRecap(null)} />

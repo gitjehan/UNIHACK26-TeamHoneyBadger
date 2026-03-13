@@ -1,19 +1,20 @@
 :root {
-  --bg-primary: #0f1319;
-  --bg-card: #1a212b;
-  --bg-card-muted: #151b23;
-  --text-primary: #eef2f6;
-  --text-secondary: #a7b1bc;
-  --text-tertiary: #7d8794;
-  --green-primary: #4a7c59;
-  --green-bg: #1d3225;
-  --amber-primary: #c4962c;
-  --amber-bg: #312712;
-  --red-primary: #c0392b;
-  --red-bg: #3a1c1a;
-  --border-card: #253040;
-  --accent: #8cd3b0;
-  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.22);
+  color-scheme: light;
+  --bg-primary: #f6f2ea;
+  --bg-card: #ffffff;
+  --bg-card-muted: #f2ede3;
+  --text-primary: #2f3c36;
+  --text-secondary: #687670;
+  --text-tertiary: #9aa39d;
+  --green-primary: #4e7a62;
+  --green-bg: #eaf4eb;
+  --amber-primary: #b78f46;
+  --amber-bg: #f7efd9;
+  --red-primary: #b85a4d;
+  --red-bg: #fae9e5;
+  --border-card: #e4dfd5;
+  --accent: #4e7a62;
+  --shadow-card: 0 1px 4px rgba(36, 43, 38, 0.08);
   --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'SF Mono', Menlo, Monaco, monospace;
 }
@@ -52,7 +53,8 @@ button {
 
 .top-header {
   border-bottom: 1px solid var(--border-card);
-  padding: 14px 18px;
+  background: #f7f3ec;
+  padding: 16px 22px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -67,8 +69,9 @@ button {
 
 .brand h1 {
   margin: 0;
-  font-size: 20px;
-  letter-spacing: 0.8px;
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .brand span {
@@ -81,8 +84,8 @@ button {
   height: 100%;
   display: grid;
   grid-template-columns: 320px 1fr 300px;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 16px;
 }
 
 .column {
@@ -93,18 +96,18 @@ button {
 
 .card {
   border: 1px solid var(--border-card);
-  border-radius: 14px;
+  border-radius: 16px;
   background: var(--bg-card);
   box-shadow: var(--shadow-card);
-  padding: 14px;
+  padding: 16px;
   min-height: 0;
 }
 
 .card h3 {
   margin: 0 0 10px;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: var(--text-tertiary);
 }
 
@@ -115,9 +118,10 @@ button {
 }
 
 .metric-value {
-  font-size: 26px;
-  font-weight: 700;
-  margin-top: 8px;
+  font-size: 36px;
+  font-weight: 500;
+  margin-top: 6px;
+  line-height: 1.1;
 }
 
 .status-badge {
@@ -125,29 +129,29 @@ button {
   align-items: center;
   border-radius: 999px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   margin-top: 8px;
 }
 
 .status-good {
   background: var(--green-bg);
-  color: #98d7ad;
+  color: var(--green-primary);
 }
 
 .status-fair {
   background: var(--amber-bg);
-  color: #edc66f;
+  color: var(--amber-primary);
 }
 
 .status-poor {
   background: var(--red-bg);
-  color: #f2a39b;
+  color: var(--red-primary);
 }
 
 .systems-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .systems-row {
@@ -156,6 +160,23 @@ button {
   justify-content: space-between;
   color: var(--text-secondary);
   font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ece8df;
+}
+
+.systems-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.systems-row > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.systems-meta {
+  color: var(--text-tertiary);
+  font-size: 11px;
 }
 
 .systems-dot {
@@ -165,15 +186,15 @@ button {
 }
 
 .dot-active {
-  background: #5fd18f;
+  background: var(--green-primary);
 }
 
 .dot-degraded {
-  background: #e9b45f;
+  background: var(--amber-primary);
 }
 
 .dot-inactive {
-  background: #777;
+  background: #c4c6c2;
 }
 
 .state-tabs {
@@ -181,21 +202,22 @@ button {
   gap: 8px;
   background: var(--bg-card-muted);
   border: 1px solid var(--border-card);
-  border-radius: 999px;
-  padding: 6px;
+  border-radius: 12px;
+  padding: 4px;
 }
 
 .state-tab {
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 999px;
-  padding: 5px 10px;
+  border-radius: 8px;
+  padding: 6px 11px;
   font-size: 12px;
 }
 
 .state-tab.active {
-  background: #273547;
+  border-color: var(--border-card);
+  background: #ffffff;
   color: var(--text-primary);
 }
 
@@ -242,12 +264,13 @@ button {
 
 .btn-primary {
   background: var(--accent);
-  color: #0b1116;
+  color: #ffffff;
 }
 
 .btn-secondary {
-  background: #253040;
-  color: #d8e2eb;
+  background: #f1ece2;
+  color: var(--text-primary);
+  border: 1px solid var(--border-card);
 }
 
 .timeline {
@@ -273,14 +296,14 @@ button {
 .leaderboard-table th,
 .leaderboard-table td {
   padding: 8px 4px;
-  border-bottom: 1px solid #253040;
+  border-bottom: 1px solid #ede7db;
   text-align: left;
 }
 
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(53, 58, 56, 0.2);
   display: grid;
   place-items: center;
   z-index: 9999;

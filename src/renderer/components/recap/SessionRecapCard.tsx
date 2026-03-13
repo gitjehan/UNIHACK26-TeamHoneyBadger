@@ -84,7 +84,7 @@ export function SessionRecapCard({ recap, onCopy, onSave, onClose }: SessionReca
         ref={canvasRef}
         width={480}
         height={640}
-        style={{ width: '100%', borderRadius: 10, border: '1px solid #253040', background: '#f8f4ed' }}
+        style={{ width: '100%', borderRadius: 10, border: '1px solid var(--border-card)', background: '#f8f4ed' }}
       />
       <div className="actions">
         <button className="btn btn-primary" type="button" onClick={() => void onCopy(dataUrl())}>

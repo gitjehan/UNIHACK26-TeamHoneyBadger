@@ -56,7 +56,17 @@ export function DigitalTwin({ landmarks, postureScore, shoulderSlant }: DigitalT
   return (
     <div className="card" style={{ display: 'grid', gap: 10 }}>
       <h3>Digital Twin</h3>
-      <canvas ref={canvasRef} width={290} height={280} style={{ width: '100%', borderRadius: 10, background: '#101720' }} />
+      <canvas
+        ref={canvasRef}
+        width={290}
+        height={280}
+        style={{
+          width: '100%',
+          borderRadius: 10,
+          background: 'var(--bg-card-muted)',
+          border: '1px solid var(--border-card)',
+        }}
+      />
       <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)', fontSize: 13 }}>
         <span>{shoulderSlant.toFixed(1)}° tilt</span>
         <strong style={{ color: scoreColor(postureScore) }}>{postureScore} /100</strong>

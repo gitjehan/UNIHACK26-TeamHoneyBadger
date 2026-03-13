@@ -1,5 +1,5 @@
 import { FACE_LOOP_INTERVAL } from '@renderer/lib/constants';
-import type { Point } from '@renderer/lib/types';
+import type { Point, VisionBackend } from '@renderer/lib/types';
 
 type FaceCallback = (
   landmarks: Point[],
@@ -8,6 +8,7 @@ type FaceCallback = (
   fps: number,
 ) => void;
 type StatusCallback = (status: 'active' | 'degraded' | 'inactive') => void;
+type BackendCallback = (backend: VisionBackend) => void;
 
 interface EmotionResult {
   emotion: string;
@@ -39,19 +40,28 @@ export class FaceEngine {
 
   private human: HumanAdapter | null = null;
 
-  setCallbacks(onFace: FaceCallback, onStatus: StatusCallback): void {
+  private runtimeStatus: 'active' | 'degraded' | 'inactive' = 'inactive';
+
+  private runtimeBackend: VisionBackend = 'starting';
+
+  private onBackend: BackendCallback | null = null;
+
+  setCallbacks(onFace: FaceCallback, onStatus: StatusCallback, onBackend?: BackendCallback): void {
     this.onFace = onFace;
     this.onStatus = onStatus;
+    this.onBackend = onBackend ?? null;
   }
 
   async init(video: HTMLVideoElement): Promise<void> {
     this.running = true;
     try {
       await this.initHuman();
-      this.onStatus?.('active');
+      this.setStatus('active');
+      this.setBackend('human');
     } catch (error) {
       console.error('Face model init failed, using fallback face stream', error);
-      this.onStatus?.('degraded');
+      this.setStatus('degraded');
+      this.setBackend('synthetic');
     }
 
     const tick = async (now: number) => {
@@ -76,7 +86,8 @@ export class FaceEngine {
 
   stop(): void {
     this.running = false;
-    this.onStatus?.('inactive');
+    this.setStatus('inactive');
+    this.setBackend('starting');
   }
 
   private async initHuman(): Promise<void> {
@@ -103,6 +114,8 @@ export class FaceEngine {
     video: HTMLVideoElement,
   ): Promise<{ landmarks: Point[]; emotionState: string; emotionConfidence: number }> {
     if (!this.human || !video.videoWidth || !video.videoHeight) {
+      this.setStatus('degraded');
+      this.setBackend('synthetic');
       return this.syntheticFace();
     }
 
@@ -112,8 +125,14 @@ export class FaceEngine {
       const rawMesh: number[][] | undefined = face?.mesh;
       const emotions: EmotionResult[] = face?.emotion ?? [];
 
-      if (!rawMesh?.length) return this.syntheticFace();
+      if (!rawMesh?.length) {
+        this.setStatus('degraded');
+        this.setBackend('synthetic');
+        return this.syntheticFace();
+      }
       const [dominant] = [...emotions].sort((a, b) => b.score - a.score);
+      this.setStatus('active');
+      this.setBackend('human');
       return {
         landmarks: rawMesh.map((point) => ({
           x: point[0] / video.videoWidth,
@@ -126,8 +145,22 @@ export class FaceEngine {
       };
     } catch (error) {
       console.warn('Face detect failed, using synthetic fallback', error);
+      this.setStatus('degraded');
+      this.setBackend('synthetic');
       return this.syntheticFace();
     }
+  }
+
+  private setStatus(status: 'active' | 'degraded' | 'inactive'): void {
+    if (this.runtimeStatus === status) return;
+    this.runtimeStatus = status;
+    this.onStatus?.(status);
+  }
+
+  private setBackend(backend: VisionBackend): void {
+    if (this.runtimeBackend === backend) return;
+    this.runtimeBackend = backend;
+    this.onBackend?.(backend);
   }
 
   private syntheticFace(): { landmarks: Point[]; emotionState: string; emotionConfidence: number } {

@@ -24,8 +24,8 @@ export function CalibrationScreen({
             marginTop: 14,
             borderRadius: 12,
             overflow: 'hidden',
-            border: '1px solid #253040',
-            background: '#0d1117',
+            border: '1px solid var(--border-card)',
+            background: 'var(--bg-card-muted)',
           }}
         >
           <video
@@ -40,7 +40,7 @@ export function CalibrationScreen({
         <div style={{ color: 'var(--text-secondary)', marginTop: 8 }}>
           {collecting ? 'Collecting calibration samples...' : 'Preparing camera...'}
         </div>
-        {error ? <div style={{ marginTop: 8, color: '#f2a39b' }}>{error}</div> : null}
+        {error ? <div style={{ marginTop: 8, color: 'var(--red-primary)' }}>{error}</div> : null}
       </div>
     </div>
   );

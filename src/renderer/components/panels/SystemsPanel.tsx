@@ -1,7 +1,9 @@
-import type { SystemsState } from '@renderer/lib/types';
+import type { SystemsState, VisionBackend } from '@renderer/lib/types';
 
 interface SystemsPanelProps {
   systems: SystemsState;
+  poseBackend: VisionBackend;
+  faceBackend: VisionBackend;
 }
 
 function dotClass(status: SystemsState[keyof SystemsState]): string {
@@ -10,17 +12,30 @@ function dotClass(status: SystemsState[keyof SystemsState]): string {
   return 'systems-dot dot-inactive';
 }
 
-export function SystemsPanel({ systems }: SystemsPanelProps): JSX.Element {
+function backendLabel(backend: VisionBackend): string {
+  if (backend === 'human') return 'Human AI';
+  if (backend === 'mediapipe') return 'MediaPipe AI';
+  if (backend === 'synthetic') return 'Simulated fallback';
+  return 'Initializing';
+}
+
+export function SystemsPanel({ systems, poseBackend, faceBackend }: SystemsPanelProps): JSX.Element {
   return (
     <div className="card">
       <h3>Systems</h3>
       <div className="systems-list">
         <div className="systems-row">
-          <span>Pose Detection</span>
+          <div>
+            <span>Pose Detection</span>
+            <div className="systems-meta">{backendLabel(poseBackend)}</div>
+          </div>
           <span className={dotClass(systems.poseDetection)} />
         </div>
         <div className="systems-row">
-          <span>Face Mesh</span>
+          <div>
+            <span>Face Mesh</span>
+            <div className="systems-meta">{backendLabel(faceBackend)}</div>
+          </div>
           <span className={dotClass(systems.faceMesh)} />
         </div>
         <div className="systems-row">

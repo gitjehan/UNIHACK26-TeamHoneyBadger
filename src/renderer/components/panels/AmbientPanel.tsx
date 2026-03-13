@@ -21,7 +21,7 @@ export function AmbientPanel({ brightness, warmth, overallScore }: AmbientPanelP
           <span>calm</span>
           <span>elevated</span>
         </div>
-        <div style={{ height: 10, background: '#233142', borderRadius: 999, overflow: 'hidden' }}>
+        <div style={{ height: 10, background: '#e8e2d6', borderRadius: 999, overflow: 'hidden' }}>
           <div
             style={{
               height: '100%',

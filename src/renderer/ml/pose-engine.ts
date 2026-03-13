@@ -1,8 +1,9 @@
 import { FACE_LOOP_INTERVAL, LANDMARKS, POSE_LOOP_INTERVAL } from '@renderer/lib/constants';
-import type { Point } from '@renderer/lib/types';
+import type { Point, VisionBackend } from '@renderer/lib/types';
 
 type PoseCallback = (landmarks: Point[], fps: number) => void;
 type StatusCallback = (status: 'active' | 'degraded' | 'inactive') => void;
+type BackendCallback = (backend: VisionBackend) => void;
 
 interface HumanBodyKeypoint {
   position?: [number, number, number?];
@@ -20,6 +21,40 @@ interface HumanAdapter {
   load: () => Promise<void>;
   warmup: () => Promise<void>;
   detect: (video: HTMLVideoElement) => Promise<{ body?: HumanBodyResult[] }>;
+}
+
+interface MediaPipeLandmark {
+  x: number;
+  y: number;
+  z?: number;
+  visibility?: number;
+}
+
+interface MediaPipePoseResult {
+  landmarks?: MediaPipeLandmark[][];
+}
+
+interface MediaPipePoseLandmarkerAdapter {
+  detectForVideo: (videoFrame: HTMLVideoElement, timestamp: number) => MediaPipePoseResult;
+  close?: () => void;
+}
+
+interface FilesetResolverAdapter {
+  forVisionTasks: (basePath?: string) => Promise<unknown>;
+}
+
+interface PoseLandmarkerFactory {
+  createFromOptions: (
+    wasmFileset: unknown,
+    options: {
+      baseOptions: { modelAssetPath: string };
+      runningMode: 'VIDEO';
+      numPoses: number;
+      minPoseDetectionConfidence: number;
+      minPosePresenceConfidence: number;
+      minTrackingConfidence: number;
+    },
+  ) => Promise<MediaPipePoseLandmarkerAdapter>;
 }
 
 const REQUIRED_INDICES = [
@@ -67,24 +102,50 @@ export class PoseEngine {
 
   private human: HumanAdapter | null = null;
 
+  private mediapipe: MediaPipePoseLandmarkerAdapter | null = null;
+
+  private mediapipeInitTried = false;
+
   private fallbackPhase = 0;
 
   private runtimeStatus: 'active' | 'degraded' | 'inactive' = 'inactive';
 
-  setCallbacks(onPose: PoseCallback, onStatus: StatusCallback): void {
+  private runtimeBackend: VisionBackend = 'starting';
+
+  private onBackend: BackendCallback | null = null;
+
+  setCallbacks(onPose: PoseCallback, onStatus: StatusCallback, onBackend?: BackendCallback): void {
     this.onPose = onPose;
     this.onStatus = onStatus;
+    this.onBackend = onBackend ?? null;
   }
 
   async init(video: HTMLVideoElement): Promise<void> {
     this.running = true;
+    let initialized = false;
     try {
       await this.initHuman();
+      initialized = true;
       this.setStatus('active');
+      this.setBackend('human');
     } catch (error) {
-      // Keep app functional even if model init fails.
-      console.error('Pose model init failed, using fallback landmarks', error);
+      console.warn('Pose Human backend init failed', error);
+    }
+
+    if (!initialized) {
+      try {
+        await this.initMediaPipe();
+        initialized = true;
+        this.setStatus('active');
+        this.setBackend('mediapipe');
+      } catch (error) {
+        console.warn('Pose MediaPipe backend init failed', error);
+      }
+    }
+
+    if (!initialized) {
       this.setStatus('degraded');
+      this.setBackend('synthetic');
     }
 
     const tick = async (now: number) => {
@@ -108,6 +169,8 @@ export class PoseEngine {
   stop(): void {
     this.running = false;
     this.setStatus('inactive');
+    this.setBackend('starting');
+    this.mediapipe?.close?.();
   }
 
   private async initHuman(): Promise<void> {
@@ -128,38 +191,119 @@ export class PoseEngine {
     await this.human.warmup();
   }
 
+  private async initMediaPipe(): Promise<void> {
+    this.mediapipeInitTried = true;
+    const visionModule = await import('@mediapipe/tasks-vision');
+    const filesetResolver = (visionModule as unknown as { FilesetResolver: FilesetResolverAdapter })
+      .FilesetResolver;
+    const poseLandmarker = (visionModule as unknown as { PoseLandmarker: PoseLandmarkerFactory })
+      .PoseLandmarker;
+
+    const wasmFileset = await filesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.32/wasm',
+    );
+
+    this.mediapipe = await poseLandmarker.createFromOptions(wasmFileset, {
+      baseOptions: {
+        modelAssetPath:
+          'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task',
+      },
+      runningMode: 'VIDEO',
+      numPoses: 1,
+      minPoseDetectionConfidence: 0.45,
+      minPosePresenceConfidence: 0.45,
+      minTrackingConfidence: 0.45,
+    });
+  }
+
   private async detectPose(video: HTMLVideoElement): Promise<Point[]> {
-    if (!this.human || !video.videoWidth || !video.videoHeight) {
-      this.setStatus('degraded');
-      return this.syntheticPose();
+    if (!video.videoWidth || !video.videoHeight) {
+      return this.degradedSynthetic();
     }
 
+    const humanLandmarks = await this.detectWithHuman(video);
+    if (humanLandmarks) {
+      this.setStatus('active');
+      this.setBackend('human');
+      return humanLandmarks;
+    }
+
+    if (!this.mediapipe && !this.mediapipeInitTried) {
+      try {
+        await this.initMediaPipe();
+      } catch (error) {
+        console.warn('Pose MediaPipe lazy init failed', error);
+      }
+    }
+
+    const mediapipeLandmarks = this.detectWithMediaPipe(video);
+    if (mediapipeLandmarks) {
+      this.setStatus('active');
+      this.setBackend('mediapipe');
+      return mediapipeLandmarks;
+    }
+
+    return this.degradedSynthetic();
+  }
+
+  private async detectWithHuman(video: HTMLVideoElement): Promise<Point[] | null> {
+    if (!this.human) return null;
     try {
       const result = await this.human.detect(video);
       const body: HumanBodyResult | undefined = result?.body?.[0];
       const points = this.toNormalizedLandmarks(body?.keypoints ?? [], video.videoWidth, video.videoHeight);
-      const hasRequired = REQUIRED_INDICES.every((index) => {
-        const visibility = points[index]?.visibility ?? 0;
-        return visibility > 0.15;
-      });
-
-      if (!points.length || !hasRequired) {
-        this.setStatus('degraded');
-        return this.syntheticPose();
-      }
-      this.setStatus('active');
+      if (!this.hasRequiredLandmarks(points)) return null;
       return points;
     } catch (error) {
-      console.warn('Pose detect failed, using synthetic landmarks', error);
-      this.setStatus('degraded');
-      return this.syntheticPose();
+      console.warn('Pose Human detect failed', error);
+      return null;
     }
+  }
+
+  private detectWithMediaPipe(video: HTMLVideoElement): Point[] | null {
+    if (!this.mediapipe) return null;
+    try {
+      const result = this.mediapipe.detectForVideo(video, performance.now());
+      const landmarks = result.landmarks?.[0];
+      if (!landmarks?.length) return null;
+      const points = landmarks.slice(0, 33).map((landmark) => ({
+        x: Math.max(0, Math.min(1, landmark.x)),
+        y: Math.max(0, Math.min(1, landmark.y)),
+        z: landmark.z,
+        visibility: landmark.visibility ?? 1,
+      }));
+      if (!this.hasRequiredLandmarks(points)) return null;
+      return points;
+    } catch (error) {
+      console.warn('Pose MediaPipe detect failed', error);
+      return null;
+    }
+  }
+
+  private hasRequiredLandmarks(points: Point[]): boolean {
+    if (!points.length) return false;
+    return REQUIRED_INDICES.every((index) => {
+      const visibility = points[index]?.visibility ?? 0;
+      return visibility > 0.15;
+    });
+  }
+
+  private degradedSynthetic(): Point[] {
+    this.setStatus('degraded');
+    this.setBackend('synthetic');
+    return this.syntheticPose();
   }
 
   private setStatus(status: 'active' | 'degraded' | 'inactive'): void {
     if (this.runtimeStatus === status) return;
     this.runtimeStatus = status;
     this.onStatus?.(status);
+  }
+
+  private setBackend(backend: VisionBackend): void {
+    if (this.runtimeBackend === backend) return;
+    this.runtimeBackend = backend;
+    this.onBackend?.(backend);
   }
 
   private toNormalizedLandmarks(
