@@ -31,16 +31,6 @@
   filter: saturate(1.08) contrast(1.03);
 }
 
-.leaderboard-map-west-cut {
-  pointer-events: none;
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 45%;
-  background: linear-gradient(90deg, rgba(7, 10, 15, 0.66) 0%, rgba(7, 10, 15, 0.46) 62%, rgba(7, 10, 15, 0) 100%);
-  clip-path: polygon(0% 0%, 88% 0%, 72% 100%, 0% 100%);
-  z-index: 1;
-}
-
 .leaderboard-map-vignette {
   pointer-events: none;
   position: absolute;

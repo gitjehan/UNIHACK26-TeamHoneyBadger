@@ -16,11 +16,31 @@ type MaplibreWithWorker = typeof maplibregl & {
 (maplibregl as MaplibreWithWorker).workerClass = MaplibreWorker;
 
 const MAP_CENTER: [number, number] = [151.19, -33.865];
-const MAP_ZOOM = 10.35;
+const MAP_ZOOM = 10.6;
 const MAP_PITCH = 0;
 const MAP_BEARING = 0;
-const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
-const MAP_BOUNDS: maplibregl.LngLatBoundsLike = [[150.95, -34.08], [151.36, -33.7]];
+const MAP_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm-raster',
+      type: 'raster',
+      source: 'osm',
+      minzoom: 0,
+      maxzoom: 22,
+    },
+  ],
+};
+const MAP_BOUNDS: maplibregl.LngLatBoundsLike = [[150.96, -34.09], [151.36, -33.69]];
 
 const SYDNEY_POSITIONS: Array<{ lng: number; lat: number; name: string }> = [
   { lng: 151.2093, lat: -33.8688, name: 'CBD' },
@@ -40,7 +60,7 @@ const RANK_SPRITE_POSES = [
   { row: 3, col: 2, flip: false },
 ] as const;
 
-const SYDNEY_FOCUS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+const SYDNEY_ISOLATION_MASK_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
   type: 'FeatureCollection',
   features: [
     {
@@ -48,63 +68,30 @@ const SYDNEY_FOCUS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
       properties: {},
       geometry: {
         type: 'Polygon',
-        coordinates: [[
-          [151.03, -33.98],
-          [151.06, -33.95],
-          [151.11, -33.93],
-          [151.16, -33.9],
-          [151.22, -33.88],
-          [151.27, -33.85],
-          [151.31, -33.81],
-          [151.33, -33.77],
-          [151.28, -33.74],
-          [151.19, -33.74],
-          [151.11, -33.78],
-          [151.06, -33.83],
-          [151.03, -33.9],
-          [151.03, -33.98],
-        ]],
-      },
-    },
-  ],
-};
-
-const SYDNEY_WEST_MASK_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [150.55, -34.3],
-          [151.04, -34.3],
-          [151.04, -33.5],
-          [150.55, -33.5],
-          [150.55, -34.3],
-        ]],
-      },
-    },
-  ],
-};
-
-const SYDNEY_HARBOUR_LINE_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
         coordinates: [
-          [151.146, -33.864],
-          [151.174, -33.86],
-          [151.198, -33.857],
-          [151.214, -33.852],
-          [151.231, -33.848],
-          [151.248, -33.85],
-          [151.27, -33.846],
+          [
+            [-180, -85],
+            [180, -85],
+            [180, 85],
+            [-180, 85],
+            [-180, -85],
+          ],
+          [
+            [150.99, -34.02],
+            [151.04, -33.97],
+            [151.1, -33.94],
+            [151.16, -33.91],
+            [151.23, -33.88],
+            [151.29, -33.84],
+            [151.33, -33.8],
+            [151.34, -33.74],
+            [151.3, -33.71],
+            [151.21, -33.71],
+            [151.11, -33.74],
+            [151.04, -33.79],
+            [151, -33.87],
+            [150.99, -34.02],
+          ],
         ],
       },
     },
@@ -112,14 +99,8 @@ const SYDNEY_HARBOUR_LINE_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.LineString>
 };
 
 const MAP_LAYER_IDS = {
-  westMaskSource: 'sydney-west-mask-source',
-  westMaskLayer: 'sydney-west-mask-layer',
-  focusSource: 'sydney-focus-source',
-  focusFillLayer: 'sydney-focus-fill-layer',
-  focusLineLayer: 'sydney-focus-line-layer',
-  focusGlowLayer: 'sydney-focus-glow-layer',
-  harbourSource: 'sydney-harbour-line-source',
-  harbourLayer: 'sydney-harbour-line-layer',
+  isolationSource: 'sydney-isolation-mask-source',
+  isolationLayer: 'sydney-isolation-mask-layer',
 } as const;
 
 function rankToScale(targetPx: number): number {
@@ -135,77 +116,22 @@ function formatScore(score: number): string {
   return String(Math.round(score));
 }
 
-function addSydneyContextLayers(map: maplibregl.Map): void {
-  if (!map.getSource(MAP_LAYER_IDS.westMaskSource)) {
-    map.addSource(MAP_LAYER_IDS.westMaskSource, {
-      type: 'geojson',
-      data: SYDNEY_WEST_MASK_GEOJSON,
-    });
-    map.addLayer({
-      id: MAP_LAYER_IDS.westMaskLayer,
-      type: 'fill',
-      source: MAP_LAYER_IDS.westMaskSource,
-      paint: {
-        'fill-color': '#070b12',
-        'fill-opacity': 0.56,
-      },
-    });
-  }
+function addSydneyIsolationLayer(map: maplibregl.Map): void {
+  if (map.getSource(MAP_LAYER_IDS.isolationSource)) return;
 
-  if (!map.getSource(MAP_LAYER_IDS.focusSource)) {
-    map.addSource(MAP_LAYER_IDS.focusSource, {
-      type: 'geojson',
-      data: SYDNEY_FOCUS_GEOJSON,
-    });
-    map.addLayer({
-      id: MAP_LAYER_IDS.focusFillLayer,
-      type: 'fill',
-      source: MAP_LAYER_IDS.focusSource,
-      paint: {
-        'fill-color': '#4fd1ff',
-        'fill-opacity': 0.09,
-      },
-    });
-    map.addLayer({
-      id: MAP_LAYER_IDS.focusLineLayer,
-      type: 'line',
-      source: MAP_LAYER_IDS.focusSource,
-      paint: {
-        'line-color': '#8be7ff',
-        'line-width': 2.1,
-        'line-opacity': 0.9,
-        'line-dasharray': [1.1, 1.3],
-      },
-    });
-    map.addLayer({
-      id: MAP_LAYER_IDS.focusGlowLayer,
-      type: 'line',
-      source: MAP_LAYER_IDS.focusSource,
-      paint: {
-        'line-color': '#8be7ff',
-        'line-width': 4.8,
-        'line-opacity': 0.28,
-        'line-blur': 1.4,
-      },
-    });
-  }
-
-  if (!map.getSource(MAP_LAYER_IDS.harbourSource)) {
-    map.addSource(MAP_LAYER_IDS.harbourSource, {
-      type: 'geojson',
-      data: SYDNEY_HARBOUR_LINE_GEOJSON,
-    });
-    map.addLayer({
-      id: MAP_LAYER_IDS.harbourLayer,
-      type: 'line',
-      source: MAP_LAYER_IDS.harbourSource,
-      paint: {
-        'line-color': '#74f2ff',
-        'line-width': 2.4,
-        'line-opacity': 0.9,
-      },
-    });
-  }
+  map.addSource(MAP_LAYER_IDS.isolationSource, {
+    type: 'geojson',
+    data: SYDNEY_ISOLATION_MASK_GEOJSON,
+  });
+  map.addLayer({
+    id: MAP_LAYER_IDS.isolationLayer,
+    type: 'fill',
+    source: MAP_LAYER_IDS.isolationSource,
+    paint: {
+      'fill-color': '#04070d',
+      'fill-opacity': 0.82,
+    },
+  });
 }
 
 interface LeaderboardMapScreenProps {
@@ -244,29 +170,12 @@ export function LeaderboardMapScreen({
 
     const roots: Root[] = [];
     const markers: maplibregl.Marker[] = [];
-    let outlinePulseHandle: ReturnType<typeof setInterval> | null = null;
 
     const mountMapMarkers = () => {
-      const enableOutlinePulse = () => {
-        if (outlinePulseHandle !== null) return;
-        let phase = 0;
-        outlinePulseHandle = setInterval(() => {
-          if (!map.getLayer(MAP_LAYER_IDS.focusGlowLayer)) return;
-          phase += 0.16;
-          const pulse = (Math.sin(phase) + 1) / 2;
-          map.setPaintProperty(MAP_LAYER_IDS.focusGlowLayer, 'line-width', 4.4 + pulse * 3.2);
-          map.setPaintProperty(MAP_LAYER_IDS.focusGlowLayer, 'line-opacity', 0.18 + pulse * 0.4);
-        }, 120);
-      };
-
       if (map.loaded()) {
-        addSydneyContextLayers(map);
-        enableOutlinePulse();
+        addSydneyIsolationLayer(map);
       } else {
-        map.once('load', () => {
-          addSydneyContextLayers(map);
-          enableOutlinePulse();
-        });
+        map.once('load', () => addSydneyIsolationLayer(map));
       }
 
       top4.forEach((entry, i) => {
@@ -335,7 +244,6 @@ export function LeaderboardMapScreen({
 
     return () => {
       window.removeEventListener('keydown', handleEscape);
-      if (outlinePulseHandle !== null) clearInterval(outlinePulseHandle);
       markers.forEach((marker) => marker.remove());
       roots.forEach((root) => root.unmount());
       map.remove();
@@ -353,9 +261,8 @@ export function LeaderboardMapScreen({
       <div className="leaderboard-map-shell" style={{ animation: 'slideUp 0.3s ease-out' }} onClick={(event) => event.stopPropagation()}>
         <section className="leaderboard-map-card">
           <div ref={mapContainerRef} className="leaderboard-map-canvas" />
-          <div className="leaderboard-map-west-cut" />
           <div className="leaderboard-map-vignette" />
-          <div className="leaderboard-map-location">SYDNEY HARBOUR BASIN - NSW</div>
+          <div className="leaderboard-map-location">GREATER SYDNEY REGION</div>
 
           <aside className="leaderboard-map-hud" aria-label="Top four leaderboard list">
             <div className="leaderboard-map-hud__title">SYDNEY LOCK IN BOARD</div>
