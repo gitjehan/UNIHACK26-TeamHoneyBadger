@@ -36,9 +36,11 @@ function Sparkline({
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
       <span
         style={{
-          fontSize: 12,
-          color: '#6b6158',
-          fontFamily: "'Lora', 'Georgia', serif",
+          fontSize: 10,
+          fontWeight: 600,
+          color: '#A89B8C',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase' as const,
           whiteSpace: 'nowrap',
           flexShrink: 0,
         }}
@@ -71,11 +73,12 @@ function Sparkline({
 
       <span
         style={{
-          fontSize: 14,
-          fontWeight: 600,
+          fontSize: 18,
+          fontWeight: 500,
           color,
-          fontFamily: "'Lora', 'Georgia', serif",
+          fontFamily: 'var(--font-display)',
           fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.02em',
           whiteSpace: 'nowrap',
           flexShrink: 0,
           minWidth: 24,

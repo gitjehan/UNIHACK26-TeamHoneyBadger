@@ -272,8 +272,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: #6B5D4F;
+  font-size: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-card);
 }
@@ -289,8 +289,8 @@ button {
 }
 
 .systems-meta {
-  color: var(--text-tertiary);
-  font-size: 11px;
+  color: #A89B8C;
+  font-size: 10px;
 }
 
 .systems-dot {
