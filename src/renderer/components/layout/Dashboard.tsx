@@ -1,4 +1,4 @@
-import { memo, type RefObject, useMemo, useState } from 'react';
+import { memo, type RefObject, useEffect, useMemo, useState } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
@@ -17,6 +17,25 @@ interface DashboardProps {
   visionBackend: { pose: VisionBackend; face: VisionBackend };
 }
 
+interface LayoutMode {
+  compact: boolean;
+  stacked: boolean;
+  short: boolean;
+}
+
+function resolveLayoutMode(): LayoutMode {
+  if (typeof window === 'undefined') {
+    return { compact: false, stacked: false, short: false };
+  }
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  return {
+    compact: width < 1220 || height < 780,
+    stacked: width < 980,
+    short: height < 720,
+  };
+}
+
 export const Dashboard = memo(function Dashboard({
   state,
   videoRef,
@@ -24,25 +43,59 @@ export const Dashboard = memo(function Dashboard({
   visionBackend,
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
+  const initialLayout = resolveLayoutMode();
   const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
-  const [webcamCollapsed, setWebcamCollapsed] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(initialLayout);
+  const [webcamCollapsed, setWebcamCollapsed] = useState(
+    () => initialLayout.compact || initialLayout.short,
+  );
+  const [insightsCollapsed, setInsightsCollapsed] = useState(() => initialLayout.compact);
 
   const blinkValue = useMemo(
     () => (snapshot.blink.warmedUp === false ? null : snapshot.blink.rate),
     [snapshot.blink.warmedUp, snapshot.blink.rate],
   );
 
+  useEffect(() => {
+    const onResize = () => setLayoutMode(resolveLayoutMode());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (layoutMode.compact) {
+      setWebcamCollapsed(true);
+      setInsightsCollapsed(true);
+      return;
+    }
+    setInsightsCollapsed(false);
+    if (layoutMode.short) {
+      setWebcamCollapsed(true);
+      return;
+    }
+    setWebcamCollapsed(false);
+  }, [layoutMode.compact, layoutMode.short]);
+
+  const dashboardClassName = [
+    'dashboard-grid',
+    layoutMode.compact ? 'dashboard-grid--compact' : '',
+    layoutMode.stacked ? 'dashboard-grid--stacked' : '',
+    layoutMode.short ? 'dashboard-grid--short' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className="dashboard-grid">
+    <div className={dashboardClassName}>
       {enginesInitializing && (
-        <div className="init-banner" style={{ gridColumn: '1 / -1' }}>
+        <div className="init-banner dashboard-banner">
           <div className="init-spinner" />
           Initializing vision engines — metrics will appear shortly
         </div>
       )}
 
       {/* Metric pills — full-width horizontal row, first thing to scan */}
-      <div className="metric-grid" style={{ gridColumn: '1 / -1' }}>
+      <div className="metric-grid dashboard-metrics">
         <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
         <MetricCard
           label="Blink Rate"
@@ -54,7 +107,7 @@ export const Dashboard = memo(function Dashboard({
         <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
+      <div className="dashboard-column dashboard-column--left">
         <DigitalTwin
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}
@@ -62,36 +115,51 @@ export const Dashboard = memo(function Dashboard({
         />
         <BioPet
           pet={state.pet}
-          postureTilt={snapshot.posture.shoulderSlant}
           postureScore={snapshot.posture.score}
           focusScore={snapshot.focus.score}
           stressScore={snapshot.stress.score}
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: webcamCollapsed ? 'auto 1fr' : '1fr auto' }}>
+      <div
+        className={`dashboard-column dashboard-column--center ${
+          webcamCollapsed ? 'dashboard-column--center-collapsed' : ''
+        }`}
+      >
         <WebcamFeed
           videoRef={videoRef}
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}
           collapsed={webcamCollapsed}
-          onToggle={() => setWebcamCollapsed(c => !c)}
+          onToggle={() => setWebcamCollapsed((current) => !current)}
         />
-        <SessionTimeline data={timeline} expanded={webcamCollapsed} />
+        <SessionTimeline data={timeline} expanded={webcamCollapsed || layoutMode.short} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto auto', alignContent: 'start' }}>
+      <div className="dashboard-column dashboard-column--right">
         <OverallGauge value={snapshot.overall.score} />
-        <SystemsPanel
-          systems={state.systems}
-          poseBackend={visionBackend.pose}
-          faceBackend={visionBackend.face}
-        />
-        <AmbientPanel
-          brightness={state.ambient.brightness}
-          warmth={state.ambient.warmth}
-          overallScore={snapshot.overall.score}
-        />
+        <button
+          type="button"
+          className="dashboard-collapse-toggle"
+          onClick={() => setInsightsCollapsed((current) => !current)}
+          aria-expanded={!insightsCollapsed}
+        >
+          {insightsCollapsed ? 'Show system details' : 'Hide system details'}
+        </button>
+        {!insightsCollapsed && (
+          <>
+            <SystemsPanel
+              systems={state.systems}
+              poseBackend={visionBackend.pose}
+              faceBackend={visionBackend.face}
+            />
+            <AmbientPanel
+              brightness={state.ambient.brightness}
+              warmth={state.ambient.warmth}
+              overallScore={snapshot.overall.score}
+            />
+          </>
+        )}
       </div>
     </div>
   );

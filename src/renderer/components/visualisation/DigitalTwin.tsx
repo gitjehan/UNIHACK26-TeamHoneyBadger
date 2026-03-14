@@ -219,15 +219,13 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
   const color = scoreColor(postureScore);
 
   return (
-    <div className="card" style={{ display: 'grid', gap: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#A89B8C' }}>
-          Digital Twin
-        </h3>
-        <span style={{ fontSize: 10, fontWeight: 500, color: live ? '#4A7C59' : '#A89B8C', display: 'flex', alignItems: 'center', gap: 5 }}>
+    <div className="card digital-twin-card">
+      <div className="digital-twin-header">
+        <h3 className="digital-twin-title">Digital Twin</h3>
+        <span className="digital-twin-live" style={{ color: live ? '#4A7C59' : '#A89B8C' }}>
           <span
+            className="digital-twin-live-dot"
             style={{
-              width: 6, height: 6, borderRadius: '50%',
               background: live ? '#4A7C59' : '#bbb',
             }}
           />
@@ -237,27 +235,21 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
 
       <canvas
         ref={canvasRef}
-        style={{
-          width: '100%',
-          aspectRatio: '4 / 3',
-          borderRadius: 10,
-          background: 'var(--bg-card-muted)',
-          border: '1px solid var(--border-card)',
-        }}
+        className="digital-twin-canvas"
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '2px 0' }}>
-        <span style={{ fontSize: 11, color: '#A89B8C' }}>
+      <div className="digital-twin-footer">
+        <span className="digital-twin-tilt">
           {shoulderSlant.toFixed(1)}° tilt
         </span>
-        <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
-          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#A89B8C' }}>
+        <div className="digital-twin-score-wrap">
+          <div className="digital-twin-score-label">
             Alignment
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 500, color, letterSpacing: '-0.02em' }}>
+          <span className="digital-twin-score" style={{ color }}>
             {postureScore}
           </span>
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500, color: '#A89B8C', marginLeft: 2 }}>/100</span>
+          <span className="digital-twin-score-unit">/100</span>
         </div>
       </div>
     </div>

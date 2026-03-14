@@ -1,5 +1,5 @@
 import React from 'react';
-import { PixelHeart, PixelSweat } from './PixelSprite';
+import { PixelHeart } from './PixelSprite';
 import './pet-animations.css';
 
 /**
@@ -32,17 +32,6 @@ export function SleepZzz(): JSX.Element {
       <span className="pet-z pet-z-1">z</span>
       <span className="pet-z pet-z-2">z</span>
       <span className="pet-z pet-z-3">z</span>
-    </div>
-  );
-}
-
-/**
- * Sweat drop for worried/fading state
- */
-export function SweatDrop(): JSX.Element {
-  return (
-    <div className="pet-sweat-drop">
-      <PixelSweat size={8} />
     </div>
   );
 }
