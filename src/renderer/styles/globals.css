@@ -590,6 +590,7 @@ button {
   gap: 12px;
   flex: 1;
   justify-content: space-evenly;
+  align-items: stretch;
 }
 
 .timeline-row {
@@ -882,7 +883,7 @@ button {
   gap: 6px;
 }
 
-.ambient-stats span {
+.ambient-stats > span {
   color: #A89B8C;
   font-size: 10px;
   font-weight: 500;
@@ -890,7 +891,7 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.ambient-stats span:last-child {
+.ambient-stats > span:last-child {
   text-align: right;
 }
 
