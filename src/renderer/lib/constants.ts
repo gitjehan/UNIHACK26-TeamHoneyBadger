@@ -29,7 +29,7 @@ export const FOCUS_WEIGHTS = {
   stability: 0.25,
 };
 export const OVERALL_WEIGHTS = { posture: 0.4, focus: 0.35, inverseStress: 0.25 };
-export const STATE_THRESHOLDS = { upright: 65, slouching: 30 };
+export const STATE_THRESHOLDS = { upright: 65, slouching: 30, petProgress: 40 };
 
 export const STATUS_THRESHOLDS = {
   posture: { good: 70, fair: 40 },
