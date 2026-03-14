@@ -59,7 +59,7 @@ export function PetHealthEffect({
     case 'Thriving':
       return <FloatingHearts />;
     case 'Fading':
-      return <SweatDrop />;
+      return null;
     case 'Wilting':
       return <SleepZzz />;
     default:
