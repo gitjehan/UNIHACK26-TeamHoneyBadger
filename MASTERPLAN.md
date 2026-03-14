@@ -41,6 +41,12 @@ This plan covers technical architecture, execution order, and build phases.
 
 ### Recent Optimizations (Phase 8)
 
+- **Header alignment**: Moved Kinetic branding (logo + "BIO-RESPONSIVE WORKSPACE") far left; reduced `padding-left` from 72px to 24px for a cleaner, left-aligned look
+- **Pomodoro timer UX (tab switching)**:
+  - Clicking Focus/Short Break/Long Break tabs while the timer is **running** no longer stops or resets it — tabs are disabled during an active session
+  - Mode switch only occurs when the timer is paused or stopped
+- **Pomodoro timer — time preservation**: Each mode (Focus, Short Break, Long Break) retains its own remaining time when switching tabs. Switching Focus → Short Break → Focus no longer resets Focus to 25:00; progress is preserved via `timeByMode` state
+- **Pomodoro timer — persistence**: Timer state (mode, time per mode, completed rounds) persists to `localStorage` (`kinetic-pomodoro-state`) so it survives component remounts and app reloads
 - Refactored dashboard responsiveness: replaced fragile nth-child layout rules with explicit column classes + adaptive grid modes (compact/stacked/short)
 - Added compact-window behavior that auto-collapses non-critical panels (webcam + systems/ambient details) while preserving manual expansion
 - Simplified app scroll model to a single main content scroller (`app-content`) to prevent nested-column scroll conflicts on resize
@@ -80,6 +86,13 @@ This plan covers technical architecture, execution order, and build phases.
 - Posture score is passed into the timer — a nudge appears during active Focus sessions when posture drops below 40
 - Timer supports: Focus (25 min), Short Break (5 min), Long Break (15 min); round counter; Start/Pause/Reset controls; round dot progress indicator
 
+### Session Updates (Phase 8 UX Polish)
+
+- [x] **Header alignment**: Kinetic branding (logo + "BIO-RESPONSIVE WORKSPACE") moved far left — reduced `padding-left` from 72px to 24px for stronger left alignment
+- [x] **Pomodoro — tab switching**: Clicking Short Break or Long Break while the timer is **running** no longer stops or switches mode; tabs only respond when the timer is paused (prevents accidental disruption)
+- [x] **Pomodoro — time preservation**: Each mode (Focus, Short Break, Long Break) preserves its own remaining time when switching tabs; switching back to Focus no longer resets to 25:00
+- [x] **Pomodoro — persistence**: Timer state (mode, time per mode, completed rounds) saved to `localStorage` (`kinetic-pomodoro-state`) so progress survives component remounts and page reloads
+
 ### Remaining (Phase 8 — Polish & Demo Prep)
 
 - [ ] Demo data seeding (pre-seed pet at Stage 2+ with accessory, pre-seed leaderboard entries)
@@ -89,6 +102,19 @@ This plan covers technical architecture, execution order, and build phases.
 - [ ] Kibana dashboard setup (stretch)
 - [ ] Edge case testing (webcam denied, ML fail, Elasticsearch unreachable)
 - [ ] App icon + window title cleanup
+
+### MVP Completion Assessment (UNIHACK 2026)
+
+| Area | Status | Weight | Done |
+|------|--------|--------|------|
+| **Core product** (Phases 0–7) | All phases complete | 70% | 100% |
+| **Phase 8 polish** | Header alignment, Pomodoro UX (tab behaviour, time preservation, persistence), responsiveness, gamma safety | 15% | ~85% |
+| **Demo prep** | Slides, script, data seeding, rehearsal | 10% | 0% |
+| **Pre-demo fixes** | Posture tuning, pet accessories, ambient smoothing | 5% | ~25% |
+
+**Overall MVP progress: ~90%**
+
+The core product is feature-complete: posture/blink/stress/focus detection, ambient screen control, Bio-Pet lifecycle, Session Recap, leaderboard, and Elasticsearch pipeline all ship. Phase 8 UX polish is largely complete: header left alignment, Pomodoro tab switching (tabs don't interrupt a running timer), per-mode time preservation when switching Focus/Short Break/Long Break, and localStorage persistence for the timer. Remaining work is demo preparation (slides, script, rehearsal), pre-seeding demo data, edge-case testing, and optional tuning (posture thresholds, ambient transitions, pet accessories).
 
 ---
 
