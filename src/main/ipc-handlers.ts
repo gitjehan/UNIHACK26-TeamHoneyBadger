@@ -65,6 +65,7 @@ export function registerIpcHandlers(): void {
     const now = Date.now();
     if (now - lastAmbientUpdateAt < 1000) return;
     lastAmbientUpdateAt = now;
+    console.log('[IPC] ambient:update →', payload);
     ambientController.setTarget(payload.brightness, payload.warmth);
   });
 
