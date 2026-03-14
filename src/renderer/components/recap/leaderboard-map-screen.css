@@ -1,9 +1,18 @@
 .leaderboard-map-overlay {
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.leaderboard-map-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(circle at 20% 18%, rgba(255, 185, 89, 0.18), transparent 48%),
     radial-gradient(circle at 80% 82%, rgba(97, 166, 255, 0.2), transparent 52%),
     rgba(17, 21, 26, 0.56);
   backdrop-filter: blur(12px);
+  z-index: -1;
 }
 
 .leaderboard-map-shell {

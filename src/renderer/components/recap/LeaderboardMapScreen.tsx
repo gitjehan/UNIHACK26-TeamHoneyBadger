@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type * as GeoJSON from 'geojson';
 import type { LeaderboardEntry } from '@renderer/lib/types';
 import { AnimatedCat, CatSprite } from '@renderer/components/pet/CatSprite';
 import './leaderboard-map-screen.css';
@@ -69,48 +68,7 @@ const RANK_SPRITE_POSES = [
   { row: 3, col: 2, flip: false },
 ] as const;
 
-const SYDNEY_ISOLATION_MASK_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [-180, -85],
-            [180, -85],
-            [180, 85],
-            [-180, 85],
-            [-180, -85],
-          ],
-          [
-            [150.99, -34.02],
-            [151.04, -33.97],
-            [151.1, -33.94],
-            [151.16, -33.91],
-            [151.23, -33.88],
-            [151.29, -33.84],
-            [151.33, -33.8],
-            [151.34, -33.74],
-            [151.3, -33.71],
-            [151.21, -33.71],
-            [151.11, -33.74],
-            [151.04, -33.79],
-            [151, -33.87],
-            [150.99, -34.02],
-          ],
-        ],
-      },
-    },
-  ],
-};
 
-const MAP_LAYER_IDS = {
-  isolationSource: 'sydney-isolation-mask-source',
-  isolationLayer: 'sydney-isolation-mask-layer',
-} as const;
 const MIN_MARKER_SIZE_PX = 34;
 const MAX_MARKER_SIZE_PX = 86;
 
@@ -141,23 +99,6 @@ function resolveMarkerPosition(entry: LeaderboardEntry, index: number): { lng: n
   return SYDNEY_POSITIONS[index] ?? null;
 }
 
-function addSydneyIsolationLayer(map: maplibregl.Map): void {
-  if (map.getSource(MAP_LAYER_IDS.isolationSource)) return;
-
-  map.addSource(MAP_LAYER_IDS.isolationSource, {
-    type: 'geojson',
-    data: SYDNEY_ISOLATION_MASK_GEOJSON,
-  });
-  map.addLayer({
-    id: MAP_LAYER_IDS.isolationLayer,
-    type: 'fill',
-    source: MAP_LAYER_IDS.isolationSource,
-    paint: {
-      'fill-color': '#04070d',
-      'fill-opacity': 0.82,
-    },
-  });
-}
 
 interface LeaderboardMapScreenProps {
   entries: LeaderboardEntry[];
@@ -211,12 +152,6 @@ export function LeaderboardMapScreen({
     const markers: maplibregl.Marker[] = [];
 
     const mountMapMarkers = () => {
-      if (map.loaded()) {
-        addSydneyIsolationLayer(map);
-      } else {
-        map.once('load', () => addSydneyIsolationLayer(map));
-      }
-
       top4.forEach((entry, i) => {
         const pos = resolveMarkerPosition(entry, i);
         if (!pos) return;
