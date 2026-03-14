@@ -11,7 +11,7 @@ type MaplibreWithWorker = typeof maplibregl & {
   workerClass?: new () => Worker;
 };
 
-// Set a CSP-safe worker before creating any map instances.
+// Set a CSP-safe worker class before creating any map instances.
 (maplibregl as MaplibreWithWorker).workerClass = MaplibreWorker;
 
 const MAP_CENTER: [number, number] = [151.15, -33.87];
