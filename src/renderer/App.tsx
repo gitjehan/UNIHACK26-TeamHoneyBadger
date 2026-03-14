@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Dashboard } from '@renderer/components/layout/Dashboard';
 import { Header } from '@renderer/components/layout/Header';
 import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
+import { LeaderboardMapScreen } from '@renderer/components/recap/LeaderboardMapScreen';
 import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
@@ -29,6 +30,7 @@ export default function App(): JSX.Element {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeline, setTimeline] = useState<Array<{ timestamp: number; posture: number; focus: number; stress: number }>>([]);
   const [recap, setRecap] = useState<SessionRecap | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [visionBackend, setVisionBackend] = useState<{ pose: VisionBackend; face: VisionBackend }>({
     pose: 'starting',
     face: 'starting',
@@ -228,7 +230,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     if (stage !== 'ready') return;
     const interval = setInterval(() => {
-      window.kinetic.storeSet('pet', stateRef.current.pet).catch(() => {});
+      window.kinetic.storeSet('pet', stateRef.current.pet).catch(() => undefined);
     }, 15_000);
     return () => clearInterval(interval);
   }, [stage]);
@@ -281,6 +283,7 @@ export default function App(): JSX.Element {
       levelTitle: state.pet.stageName,
     });
 
+    setShowLeaderboard(true);
     sessionIdRef.current = uuidv4();
     scoreEngine.startSession();
   };
@@ -293,11 +296,12 @@ export default function App(): JSX.Element {
       overall: s.snapshot.overall.score,
       petHealth: s.pet.health,
       timelinePoints: timeline.length,
-      recapVisible: Boolean(recap),
+      recapVisible: Boolean(recap) && !showLeaderboard,
+      leaderboardVisible: showLeaderboard,
       systems: s.systems,
       backend: visionBackend,
     };
-  }, [stage, timeline.length, recap, visionBackend]);
+  }, [stage, timeline.length, recap, showLeaderboard, visionBackend]);
 
   const startSession = () => {
     scoreEngine.startSession();
@@ -332,10 +336,14 @@ export default function App(): JSX.Element {
           />
         )}
       </main>
-      <RecapOverlay
-        recap={recap}
-        onClose={() => setRecap(null)}
-      />
+      {showLeaderboard && (
+        <LeaderboardMapScreen
+          entries={leaderboard}
+          currentUserNickname={nickname}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
+      <RecapOverlay recap={showLeaderboard ? null : recap} onClose={() => setRecap(null)} />
     </div>
   );
 }
