@@ -6,7 +6,6 @@ import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { PomodoroTimer } from '@renderer/components/pomodoro/PomodoroTimer';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
-import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
 import { WebcamFeed } from '@renderer/components/visualisation/WebcamFeed';
 import type { VisionBackend } from '@renderer/lib/types';
 import type { EngineState } from '@renderer/ml/score-engine';
@@ -110,11 +109,6 @@ export const Dashboard = memo(function Dashboard({
 
       <div className="dashboard-column dashboard-column--left">
         <PomodoroTimer postureScore={snapshot.posture.score} />
-        <DigitalTwin
-          landmarks={state.poseLandmarks}
-          postureScore={snapshot.posture.score}
-          shoulderSlant={snapshot.posture.shoulderSlant}
-        />
         <BioPet
           pet={state.pet}
           postureScore={snapshot.posture.score}
