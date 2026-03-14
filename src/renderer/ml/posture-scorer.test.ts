@@ -29,8 +29,8 @@ describe('posture scorer', () => {
   });
 
   it('composite score scales correctly', () => {
-    const high = calculatePostureScore(176, 1, 0.98);
-    const low = calculatePostureScore(142, 9, 0.85);
+    const high = calculatePostureScore(176, 1);
+    const low = calculatePostureScore(142, 9);
     expect(high).toBeGreaterThan(low);
     expect(high).toBeGreaterThan(70);
     expect(low).toBeLessThan(40);

@@ -68,7 +68,6 @@ function initialSnapshot(): ScoreSnapshot {
       score: 80,
       neckAngle: 175,
       shoulderSlant: 1,
-      trunkSimilarity: 0.98,
       slumpSeverity: 0,
     },
     blink: {
