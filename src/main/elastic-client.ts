@@ -6,7 +6,7 @@ const LEADERBOARD_INDEX = 'kinetic-leaderboard';
 
 const seededLeaderboard: LeaderboardEntry[] = [
   {
-    nickname: 'ZenTiger',
+    nickname: 'Anubhav',
     sessionId: 'seed-1',
     avgOverallScore: 88,
     bestStreak: 56,
@@ -16,7 +16,7 @@ const seededLeaderboard: LeaderboardEntry[] = [
     timestamp: new Date().toISOString(),
   },
   {
-    nickname: 'CalmCoder',
+    nickname: 'Auslee The Pido',
     sessionId: 'seed-2',
     avgOverallScore: 82,
     bestStreak: 43,
@@ -26,7 +26,7 @@ const seededLeaderboard: LeaderboardEntry[] = [
     timestamp: new Date().toISOString(),
   },
   {
-    nickname: 'PosturePal',
+    nickname: 'Eshaan',
     sessionId: 'seed-3',
     avgOverallScore: 74,
     bestStreak: 32,
