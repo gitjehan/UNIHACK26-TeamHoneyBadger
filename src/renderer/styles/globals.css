@@ -1888,3 +1888,100 @@ input:focus-visible {
   color: var(--text-secondary);
   min-height: 16px;
 }
+
+/* ── Break Reminder ─────────────────────────────────────── */
+
+.break-reminder-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(45, 43, 40, 0);
+  backdrop-filter: blur(0px);
+  transition: background 0.4s ease, backdrop-filter 0.4s ease;
+  pointer-events: none;
+}
+
+.break-reminder-backdrop--visible {
+  background: rgba(45, 43, 40, 0.15);
+  backdrop-filter: blur(3px);
+  pointer-events: auto;
+}
+
+.break-reminder-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 16px;
+  padding: 32px 36px;
+  width: 300px;
+  text-align: center;
+  box-shadow: var(--shadow-card-hover);
+  opacity: 0;
+  transform: translateY(10px) scale(0.97);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.break-reminder-card--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.break-reminder-icon {
+  color: var(--amber-primary);
+  margin-bottom: 4px;
+  opacity: 0.85;
+}
+
+.break-reminder-title {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.break-reminder-sub {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+
+.break-reminder-btn {
+  margin-top: 4px;
+  width: 100%;
+  padding: 8px 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--green-primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.break-reminder-btn:hover {
+  opacity: 0.88;
+}
+
+/* ── Bio Pet – Sleepy State ──────────────────────────────── */
+
+.bio-pet--sleepy {
+  animation: sleepy-sway 3s ease-in-out infinite;
+  filter: saturate(0.7);
+}
+
+@keyframes sleepy-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-2deg); }
+  75% { transform: rotate(2deg); }
+}
