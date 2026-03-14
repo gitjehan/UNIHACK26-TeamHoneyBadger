@@ -296,12 +296,10 @@ export function BioPet({
     camera.lookAt(0, 0.3, 0);
     cameraRef.current = camera;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Renderer — shadows disabled and pixel ratio capped to save GPU memory
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.setSize(mount.clientWidth, 220);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -309,7 +307,6 @@ export function BioPet({
     const ambient = new THREE.AmbientLight(0xffffff, 0.9);
     const key = new THREE.DirectionalLight(0xffffff, 0.6);
     key.position.set(3, 4, 2);
-    key.castShadow = true;
     const fill = new THREE.DirectionalLight(0xffe4c4, 0.25);
     fill.position.set(-2, 2, 3);
     scene.add(ambient, key, fill);
@@ -321,7 +318,6 @@ export function BioPet({
     );
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -0.7;
-    floor.receiveShadow = true;
     scene.add(floor);
 
     // Pet group
