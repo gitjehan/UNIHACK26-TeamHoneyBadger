@@ -126,6 +126,7 @@ export const Dashboard = memo(function Dashboard({
           videoRef={videoRef}
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}
+          personDetected={state.personDetected}
           collapsed={webcamCollapsed}
           onToggle={() => setWebcamCollapsed((current) => !current)}
         />

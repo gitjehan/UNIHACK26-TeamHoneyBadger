@@ -7,7 +7,7 @@ interface LeaderBoardProps {
   onSaveNickname: () => Promise<void>;
 }
 
-const RANK_MEDALS = ['\u{1F947}', '\u{1F948}', '\u{1F949}']; // gold, silver, bronze
+const RANK_COLORS = ['#B8860B', '#9e9e9e', '#8B5E3C']; // gold, silver, bronze
 
 export function LeaderBoard({
   nickname,
@@ -76,8 +76,8 @@ export function LeaderBoard({
                     transition: 'background 0.15s ease',
                   }}
                 >
-                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>
-                    {index < 3 ? RANK_MEDALS[index] : index + 1}
+                  <td style={{ fontVariantNumeric: 'tabular-nums', fontWeight: index < 3 ? 700 : undefined, color: index < 3 ? RANK_COLORS[index] : undefined }}>
+                    {index + 1}
                   </td>
                   <td>
                     {entry.nickname}

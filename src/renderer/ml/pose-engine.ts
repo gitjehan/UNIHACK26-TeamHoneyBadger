@@ -274,17 +274,27 @@ export class PoseEngine {
 
   private hasRequiredLandmarks(points: Point[]): boolean {
     if (!points.length) return false;
+
     const hasShoulders = SHOULDER_INDICES.every((index) => {
-      const visibility = points[index]?.visibility ?? 0;
-      return visibility > 0.3;
+      const p = points[index];
+      if (!p || (p.visibility ?? 0) < 0.5) return false;
+      return p.x > 0.05 && p.x < 0.95 && p.y > 0.05 && p.y < 0.95;
     });
     if (!hasShoulders) return false;
 
     const hasHead = HEAD_INDICES.some((index) => {
-      const visibility = points[index]?.visibility ?? 0;
-      return visibility > 0.2;
+      const p = points[index];
+      if (!p || (p.visibility ?? 0) < 0.4) return false;
+      return p.x > 0.05 && p.x < 0.95 && p.y > 0.02 && p.y < 0.9;
     });
-    return hasHead;
+    if (!hasHead) return false;
+
+    const lS = points[LANDMARKS.LEFT_SHOULDER];
+    const rS = points[LANDMARKS.RIGHT_SHOULDER];
+    const shoulderDist = Math.abs(rS.x - lS.x);
+    if (shoulderDist < 0.04) return false;
+
+    return true;
   }
 
   private setStatus(status: 'active' | 'degraded' | 'inactive'): void {

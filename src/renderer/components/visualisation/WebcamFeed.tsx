@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 import { LANDMARKS } from '@renderer/lib/constants';
 import type { Point } from '@renderer/lib/types';
 
@@ -193,6 +193,7 @@ interface WebcamFeedProps {
   videoRef: RefObject<HTMLVideoElement | null>;
   landmarks?: Point[];
   postureScore?: number;
+  personDetected: boolean;
   collapsed: boolean;
   onToggle: () => void;
 }
@@ -218,46 +219,15 @@ function PositionPrompt(): JSX.Element {
           <path d="M18 54c0-8 6.3-14 14-14s14 6 14 14" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <p className="webcam-no-person__text">
-          Position yourself directly in front of the camera for Kinetic to work
+          Position yourself in front of the camera for Kinetic to work
         </p>
       </div>
     </div>
   );
 }
 
-const LOST_DELAY_MS = 1500;
-const INITIAL_GRACE_MS = 5000;
-
-export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
-  const [personDetected, setPersonDetected] = useState(true);
-  const lostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasEverDetected = useRef(false);
-
+export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, personDetected, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
   const hasLandmarks = landmarks.length > 0;
-
-  useEffect(() => {
-    if (hasLandmarks) {
-      hasEverDetected.current = true;
-      if (lostTimerRef.current) {
-        clearTimeout(lostTimerRef.current);
-        lostTimerRef.current = null;
-      }
-      setPersonDetected(true);
-    } else if (!lostTimerRef.current) {
-      const delay = hasEverDetected.current ? LOST_DELAY_MS : INITIAL_GRACE_MS;
-      lostTimerRef.current = setTimeout(() => {
-        setPersonDetected(false);
-        lostTimerRef.current = null;
-      }, delay);
-    }
-  }, [hasLandmarks]);
-
-  useEffect(() => {
-    return () => {
-      if (lostTimerRef.current) clearTimeout(lostTimerRef.current);
-    };
-  }, []);
-
   const showPrompt = !personDetected && !collapsed;
 
   return (

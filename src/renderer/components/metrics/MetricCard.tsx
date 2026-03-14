@@ -10,12 +10,22 @@ interface MetricCardProps {
   kind: MetricKind;
 }
 
-const KIND_ICON: Record<MetricKind, string> = {
-  posture: '\u{1F9CD}',
-  blinkRate: '\u{1F441}',
-  focus: '\u{1F3AF}',
-  stress: '\u{1F9E0}',
-};
+function KindIcon({ kind }: { kind: MetricKind }): JSX.Element {
+  const props = { width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (kind === 'posture') return (
+    <svg {...props}><circle cx="12" cy="5" r="2"/><path d="M12 7v6M9 13l-2 4M15 13l2 4M10 10H8M14 10h2"/></svg>
+  );
+  if (kind === 'blinkRate') return (
+    <svg {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+  );
+  if (kind === 'focus') return (
+    <svg {...props}><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/></svg>
+  );
+  // stress
+  return (
+    <svg {...props}><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/><circle cx="12" cy="12" r="10"/></svg>
+  );
+}
 
 function resolveStatus(kind: MetricKind, value: number | null): 'good' | 'fair' | 'poor' {
   if (value === null) return 'fair';
@@ -104,7 +114,7 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
           <div className="metric-pill-body">
             <div className="metric-pill-left">
               <h3>
-                <span style={{ marginRight: 4, fontSize: 12, lineHeight: 1 }}>{KIND_ICON[kind]}</span>
+                <span style={{ marginRight: 4, lineHeight: 1, verticalAlign: 'middle', display: 'inline-flex', color: '#a89b8c' }}><KindIcon kind={kind} /></span>
                 {label}
               </h3>
               <div

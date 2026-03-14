@@ -1,8 +1,8 @@
-import { exec, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 function clamp(value: number, min: number, max: number): number {
@@ -14,71 +14,49 @@ function lerp(start: number, end: number, t: number): number {
 }
 
 export class AmbientController {
-  private currentBrightness = 1;
-
   private currentWarmth = 0;
-
-  private targetBrightness = 1;
-
   private targetWarmth = 0;
-
   private timer: NodeJS.Timeout | null = null;
-
   private busy = false;
-
   private step = 0;
-
-  private totalSteps = 60;
-
-  private startBrightness = 1;
-
+  private totalSteps = 40;
   private startWarmth = 0;
+  private helperPath: string | null = null;
+  private helperResolved = false;
+  private lastAppliedWarmth = -1;
 
-  private gammaHelperPath = path.resolve(process.cwd(), 'src/main/gamma-helper');
-
-  setTarget(brightness: number, warmth: number): void {
-    const newBrightness = clamp(brightness, 0.2, 1);
+  setTarget(_brightness: number, warmth: number): void {
     const newWarmth = clamp(warmth, 0, 1);
 
-    // Dead zone: ignore tiny target changes to prevent constant restarts
-    if (
-      Math.abs(newBrightness - this.targetBrightness) < 0.02 &&
-      Math.abs(newWarmth - this.targetWarmth) < 0.02
-    ) return;
+    if (Math.abs(newWarmth - this.targetWarmth) < 0.01) return;
 
-    this.targetBrightness = newBrightness;
     this.targetWarmth = newWarmth;
+    this.startWarmth = this.currentWarmth;
+    this.step = 0;
 
-    // If no transition is running, start one; otherwise let the ongoing
-    // transition retarget smoothly without resetting from scratch.
     if (!this.timer) {
-      this.restartTransition();
+      this.startTransition();
     }
   }
 
   async reset(): Promise<void> {
     this.clearTimer();
-    this.currentBrightness = 1;
     this.currentWarmth = 0;
-    await this.applyBrightness(1);
-    await this.applyGamma(0);
+    this.targetWarmth = 0;
+    this.lastAppliedWarmth = -1;
+    await this.applyWarmth(0);
   }
 
-  private restartTransition(): void {
+  private startTransition(): void {
     this.clearTimer();
-    this.step = 0;
-    this.startBrightness = this.currentBrightness;
-    this.startWarmth = this.currentWarmth;
     this.timer = setInterval(async () => {
       if (this.busy) return;
       this.busy = true;
       try {
         this.step += 1;
         const t = clamp(this.step / this.totalSteps, 0, 1);
-        this.currentBrightness = lerp(this.startBrightness, this.targetBrightness, t);
         this.currentWarmth = lerp(this.startWarmth, this.targetWarmth, t);
-        await this.applyBrightness(this.currentBrightness);
-        await this.applyGamma(this.currentWarmth);
+        await this.applyWarmth(this.currentWarmth);
         if (t >= 1) this.clearTimer();
       } finally {
         this.busy = false;
@@ -93,36 +71,45 @@ export class AmbientController {
     }
   }
 
-  private async applyBrightness(level: number): Promise<void> {
-    const safe = clamp(level, 0.2, 1);
-    try {
-      await execAsync(`brightness ${safe.toFixed(2)}`);
-      return;
-    } catch (error) {
-      // On unsupported displays we keep running without system dimming.
-      console.warn('brightness CLI unavailable on this display, skipping applyBrightness', error);
-      return;
-    }
-  }
+  private resolveHelper(): string | null {
+    if (this.helperResolved) return this.helperPath;
+    this.helperResolved = true;
 
-  private async applyGamma(warmth: number): Promise<void> {
-    const safeWarmth = clamp(warmth, 0, 1);
-    const red = 1.0;
-    const green = clamp(1.0 - safeWarmth * 0.3, 0.5, 1.0);
-    const blue = clamp(1.0 - safeWarmth * 0.4, 0.4, 1.0);
-    const helperPaths = [
-      this.gammaHelperPath,
-      path.resolve(process.cwd(), 'src/main/gamma-helper'),
-      path.resolve(__dirname, 'gamma-helper'),
+    const candidates = [
+      path.resolve(process.cwd(), 'src', 'main', 'gamma-cg'),
+      path.resolve(__dirname, 'gamma-cg'),
+      path.resolve(__dirname, '..', 'main', 'gamma-cg'),
+      path.resolve(__dirname, '..', '..', 'src', 'main', 'gamma-cg'),
     ];
 
-    for (const helperPath of helperPaths) {
+    for (const candidate of candidates) {
       try {
-        await execFileAsync(helperPath, [red.toFixed(3), green.toFixed(3), blue.toFixed(3)]);
-        return;
+        const stat = fs.statSync(candidate);
+        if (stat.isFile()) {
+          this.helperPath = candidate;
+          console.log('[Ambient] gamma-cg (Night Shift) found at:', candidate);
+          return candidate;
+        }
       } catch {
-        // Keep trying candidate paths.
+        // not at this path
       }
+    }
+    console.warn('[Ambient] gamma-cg binary not found. Searched:', candidates);
+    return null;
+  }
+
+  private async applyWarmth(warmth: number): Promise<void> {
+    const rounded = Math.round(warmth * 100) / 100;
+    if (rounded === this.lastAppliedWarmth) return;
+    this.lastAppliedWarmth = rounded;
+
+    const helper = this.resolveHelper();
+    if (!helper) return;
+
+    try {
+      await execFileAsync(helper, [rounded.toFixed(2)]);
+    } catch (error) {
+      console.warn('[Ambient] gamma-cg exec failed:', error);
     }
   }
 }

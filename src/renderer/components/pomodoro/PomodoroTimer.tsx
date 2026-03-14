@@ -24,12 +24,65 @@ interface PomodoroTimerProps {
   postureScore: number;
 }
 
+const initialTimeByMode: Record<TimerMode, number> = {
+  focus: MODE_DURATIONS.focus,
+  shortBreak: MODE_DURATIONS.shortBreak,
+  longBreak: MODE_DURATIONS.longBreak,
+};
+
+const POMODORO_STORAGE_KEY = 'kinetic-pomodoro-state';
+
+function loadPomodoroState(): {
+  mode: TimerMode;
+  timeByMode: Record<TimerMode, number>;
+  completedRounds: number;
+} | null {
+  try {
+    const raw = localStorage.getItem(POMODORO_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { mode?: string; timeByMode?: Record<string, number>; completedRounds?: number };
+    if (!parsed || typeof parsed.mode !== 'string' || !parsed.timeByMode || typeof parsed.completedRounds !== 'number')
+      return null;
+    const mode = ['focus', 'shortBreak', 'longBreak'].includes(parsed.mode) ? (parsed.mode as TimerMode) : 'focus';
+    const clamp = (val: unknown, max: number): number => {
+      const n = Number(val);
+      return Number.isFinite(n) && n >= 0 ? Math.min(max, n) : max;
+    };
+    const timeByMode = {
+      focus: clamp(parsed.timeByMode.focus, MODE_DURATIONS.focus),
+      shortBreak: clamp(parsed.timeByMode.shortBreak, MODE_DURATIONS.shortBreak),
+      longBreak: clamp(parsed.timeByMode.longBreak, MODE_DURATIONS.longBreak),
+    };
+    return { mode, timeByMode, completedRounds: Math.max(0, Math.min(4, parsed.completedRounds)) };
+  } catch {
+    return null;
+  }
+}
+
+function savePomodoroState(mode: TimerMode, timeByMode: Record<TimerMode, number>, completedRounds: number) {
+  try {
+    localStorage.setItem(POMODORO_STORAGE_KEY, JSON.stringify({ mode, timeByMode, completedRounds }));
+  } catch {
+    /* ignore */
+  }
+}
+
 export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: PomodoroTimerProps) {
-  const [mode, setMode] = useState<TimerMode>('focus');
-  const [timeRemaining, setTimeRemaining] = useState(MODE_DURATIONS.focus);
+  const [saved] = useState(loadPomodoroState);
+  const [mode, setMode] = useState<TimerMode>(() => saved?.mode ?? 'focus');
+  const [timeByMode, setTimeByMode] = useState<Record<TimerMode, number>>(
+    () => saved?.timeByMode ?? { ...initialTimeByMode },
+  );
   const [isRunning, setIsRunning] = useState(false);
-  const [completedRounds, setCompletedRounds] = useState(0);
+  const [completedRounds, setCompletedRounds] = useState(() => saved?.completedRounds ?? 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const timeRemaining = timeByMode[mode];
+
+  // Persist state so switching views / remounts don't lose progress
+  useEffect(() => {
+    savePomodoroState(mode, timeByMode, completedRounds);
+  }, [mode, timeByMode, completedRounds]);
 
   // Clear interval helper
   const clearTimer = useCallback(() => {
@@ -39,15 +92,15 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
     }
   }, []);
 
-  // Switch mode and reset
+  // Switch mode only — preserve each mode's time when switching tabs
   const switchMode = useCallback(
     (newMode: TimerMode) => {
       clearTimer();
       setIsRunning(false);
+      setTimeByMode((prev) => ({ ...prev, [mode]: timeRemaining }));
       setMode(newMode);
-      setTimeRemaining(MODE_DURATIONS[newMode]);
     },
-    [clearTimer],
+    [clearTimer, mode, timeRemaining],
   );
 
   // Timer tick effect
@@ -58,8 +111,9 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
     }
 
     intervalRef.current = setInterval(() => {
-      setTimeRemaining(prev => {
-        if (prev <= 1) {
+      setTimeByMode(prev => {
+        const current = prev[mode];
+        if (current <= 1) {
           // Timer finished
           clearTimer();
           setIsRunning(false);
@@ -70,18 +124,18 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
             if (mode === 'focus') {
               const nextBreak = newRounds >= 4 ? 'longBreak' : 'shortBreak';
               setMode(nextBreak);
-              setTimeRemaining(MODE_DURATIONS[nextBreak]);
+              setTimeByMode(t => ({ ...t, [nextBreak]: MODE_DURATIONS[nextBreak] }));
               return newRounds;
             } else {
               setMode('focus');
-              setTimeRemaining(MODE_DURATIONS.focus);
+              setTimeByMode(t => ({ ...t, focus: MODE_DURATIONS.focus }));
               return mode === 'longBreak' ? 0 : rounds;
             }
           });
 
-          return 0;
+          return { ...prev, [mode]: 0 };
         }
-        return prev - 1;
+        return { ...prev, [mode]: current - 1 };
       });
     }, 1000);
 
@@ -92,7 +146,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
   const handleReset = useCallback(() => {
     clearTimer();
     setIsRunning(false);
-    setTimeRemaining(MODE_DURATIONS[mode]);
+    setTimeByMode(t => ({ ...t, [mode]: MODE_DURATIONS[mode] }));
   }, [mode, clearTimer]);
 
   const handleToggle = useCallback(() => {
@@ -130,7 +184,10 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
             key={m}
             className={`pomodoro-tab${mode === m ? ' active' : ''}`}
             style={mode === m ? { color: MODE_COLORS[m], borderColor: MODE_COLORS[m] } : undefined}
-            onClick={() => switchMode(m)}
+            onClick={() => {
+              if (isRunning) return;
+              switchMode(m);
+            }}
           >
             {MODE_LABELS[m]}
           </button>
@@ -174,10 +231,14 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
       {/* Controls */}
       <div className="pomodoro-controls">
         <button className="pomodoro-btn" style={{ borderColor: modeColor, color: modeColor }} onClick={handleToggle}>
-          {isRunning ? '❚❚ Pause' : '▶ Start'}
+          {isRunning ? (
+            <><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5, verticalAlign: 'middle' }}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>Pause</>
+          ) : (
+            <><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style={{ marginRight: 5, verticalAlign: 'middle' }}><polygon points="5 3 19 12 5 21 5 3"/></svg>Start</>
+          )}
         </button>
         <button className="pomodoro-btn pomodoro-btn-reset" style={{ color: modeColor }} onClick={handleReset}>
-          ↺
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
         </button>
       </div>
 
