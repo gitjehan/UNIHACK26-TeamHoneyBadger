@@ -61,6 +61,10 @@ button {
   overflow: hidden;
 }
 
+.app-shell > :last-child {
+  overflow-y: auto;
+}
+
 /* ── Header ────────────────────────────────────────────── */
 
 .top-header {
@@ -108,7 +112,7 @@ button {
 
 .dashboard-grid {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   display: grid;
   grid-template-columns: 320px 1fr 300px;
   gap: 14px;
