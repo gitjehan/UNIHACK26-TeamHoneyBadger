@@ -278,6 +278,177 @@
   animation: egg-shell-pulse 0.9s ease-in-out infinite;
 }
 
+/* ─── Hatch Animation ──────────────────────────────────────── */
+
+/* Phase 1: Intense cracking — rapid violent shake */
+@keyframes egg-shake-intense {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  8%  { transform: translate(-3px, -1px) rotate(-4deg); }
+  16% { transform: translate(3px, 0) rotate(3deg); }
+  24% { transform: translate(-2px, -2px) rotate(-3deg); }
+  32% { transform: translate(4px, 1px) rotate(4deg); }
+  40% { transform: translate(-4px, 0) rotate(-5deg); }
+  48% { transform: translate(2px, -1px) rotate(5deg); }
+  56% { transform: translate(-3px, 1px) rotate(-4deg); }
+  64% { transform: translate(4px, -1px) rotate(3deg); }
+  72% { transform: translate(-2px, 0) rotate(-3deg); }
+  80% { transform: translate(3px, 1px) rotate(4deg); }
+  88% { transform: translate(-4px, -1px) rotate(-5deg); }
+  96% { transform: translate(2px, 0) rotate(2deg); }
+}
+
+.hatch-phase--crack {
+  animation: egg-shake-intense 0.12s linear infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 210, 80, 0.9));
+}
+
+/* Phase 2: Burst — egg explodes outward */
+@keyframes egg-burst-away {
+  0%   { transform: scale(1); opacity: 1; filter: brightness(1) drop-shadow(0 0 12px rgba(255, 210, 80, 0.9)); }
+  25%  { transform: scale(1.25); opacity: 1; filter: brightness(1.8) drop-shadow(0 0 20px rgba(255, 210, 80, 1)); }
+  100% { transform: scale(0); opacity: 0; filter: brightness(3) drop-shadow(0 0 30px rgba(255, 255, 255, 1)); }
+}
+
+.hatch-phase--burst {
+  animation: egg-burst-away 0.6s ease-in forwards;
+  pointer-events: none;
+}
+
+/* Golden flash overlay */
+@keyframes hatch-flash-anim {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.9; }
+  50%  { opacity: 0.4; }
+  100% { opacity: 0; }
+}
+
+.hatch-flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255, 248, 224, 0.95) 0%, rgba(255, 210, 80, 0.6) 40%, transparent 70%);
+  border-radius: 12px;
+  z-index: 10;
+  animation: hatch-flash-anim 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Shell fragment container */
+.hatch-fragments {
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.hatch-fragment {
+  position: absolute;
+  width: 8px;
+  height: 10px;
+  border-radius: 2px 2px 1px 1px;
+  will-change: transform, opacity;
+}
+
+@keyframes shell-fly-tl {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-45px, -55px) rotate(-180deg); opacity: 0; }
+}
+
+@keyframes shell-fly-tr {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(42px, -50px) rotate(150deg); opacity: 0; }
+}
+
+@keyframes shell-fly-l {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-55px, -5px) rotate(-210deg); opacity: 0; }
+}
+
+@keyframes shell-fly-r {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(52px, -10px) rotate(200deg); opacity: 0; }
+}
+
+@keyframes shell-fly-bl {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-35px, 35px) rotate(-140deg); opacity: 0; }
+}
+
+@keyframes shell-fly-br {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(38px, 30px) rotate(160deg); opacity: 0; }
+}
+
+.hatch-fragment--1 { animation: shell-fly-tl 0.7s ease-out forwards; background: #F5EDE4; }
+.hatch-fragment--2 { animation: shell-fly-tr 0.7s ease-out forwards; background: #E0D4C4; }
+.hatch-fragment--3 { animation: shell-fly-l 0.7s ease-out 0.05s forwards; background: #FFFDF8; }
+.hatch-fragment--4 { animation: shell-fly-r 0.7s ease-out 0.05s forwards; background: #C8A882; }
+.hatch-fragment--5 { animation: shell-fly-bl 0.7s ease-out 0.1s forwards; background: #F5EDE4; }
+.hatch-fragment--6 { animation: shell-fly-br 0.7s ease-out 0.1s forwards; background: #E0D4C4; }
+
+/* Phase 3: Cat emerges with bounce */
+@keyframes pet-emerge-bounce {
+  0%   { transform: scale(0) translateY(20px); opacity: 0; }
+  30%  { transform: scale(1.12) translateY(-6px); opacity: 1; }
+  50%  { transform: scale(0.95) translateY(2px); opacity: 1; }
+  70%  { transform: scale(1.05) translateY(-2px); opacity: 1; }
+  85%  { transform: scale(0.98) translateY(0); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.hatch-emerge {
+  animation: pet-emerge-bounce 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Celebratory sparkles */
+.hatch-sparkles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.hatch-sparkle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #FFD250;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  will-change: transform, opacity;
+}
+
+@keyframes sparkle-rise {
+  0%   { transform: translateY(0) scale(0) rotate(0deg); opacity: 0; }
+  20%  { transform: translateY(-8px) scale(1.2) rotate(72deg); opacity: 1; }
+  80%  { transform: translateY(-30px) scale(0.7) rotate(144deg); opacity: 0.5; }
+  100% { transform: translateY(-40px) scale(0) rotate(216deg); opacity: 0; }
+}
+
+.hatch-sparkle--1 { top: 30%; left: 25%; animation: sparkle-rise 1s ease-out 0s forwards; }
+.hatch-sparkle--2 { top: 20%; left: 60%; animation: sparkle-rise 1s ease-out 0.1s forwards; width: 5px; height: 5px; }
+.hatch-sparkle--3 { top: 45%; left: 15%; animation: sparkle-rise 1.1s ease-out 0.2s forwards; }
+.hatch-sparkle--4 { top: 35%; left: 75%; animation: sparkle-rise 0.9s ease-out 0.15s forwards; width: 7px; height: 7px; }
+.hatch-sparkle--5 { top: 55%; left: 30%; animation: sparkle-rise 1s ease-out 0.25s forwards; width: 4px; height: 4px; }
+.hatch-sparkle--6 { top: 25%; left: 45%; animation: sparkle-rise 1.1s ease-out 0.05s forwards; }
+.hatch-sparkle--7 { top: 50%; left: 70%; animation: sparkle-rise 0.9s ease-out 0.3s forwards; width: 5px; height: 5px; }
+.hatch-sparkle--8 { top: 40%; left: 50%; animation: sparkle-rise 1s ease-out 0.2s forwards; width: 8px; height: 8px; }
+
+/* ─── Evolution Glow (stage transitions beyond hatch) ──────── */
+
+@keyframes evolution-glow-anim {
+  0%   { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+  30%  { filter: brightness(1.3) drop-shadow(0 0 15px rgba(255, 210, 80, 0.7)); }
+  60%  { filter: brightness(1.1) drop-shadow(0 0 8px rgba(255, 210, 80, 0.4)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 transparent); }
+}
+
+.evolution-glow-active {
+  animation: evolution-glow-anim 2s ease-out forwards;
+}
+
 /* ─── Reduced Motion ────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -285,7 +456,14 @@
   .pet-sprite-wrapper--egg-wobble,
   .pet-heart,
   .pet-z,
-  .egg-shell-glow--hatching {
+  .egg-shell-glow--hatching,
+  .hatch-phase--crack,
+  .hatch-phase--burst,
+  .hatch-emerge,
+  .hatch-sparkle,
+  .hatch-fragment,
+  .hatch-flash-overlay,
+  .evolution-glow-active {
     animation: none;
   }
 }

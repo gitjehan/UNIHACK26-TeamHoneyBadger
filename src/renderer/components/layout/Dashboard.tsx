@@ -2,6 +2,7 @@ import { memo, type RefObject, useEffect, useMemo, useState } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
+import { AmbientSoundPlayer } from '@renderer/components/panels/AmbientSoundPlayer';
 import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { PomodoroTimer } from '@renderer/components/pomodoro/PomodoroTimer';
@@ -115,6 +116,7 @@ export const Dashboard = memo(function Dashboard({
           focusScore={snapshot.focus.score}
           stressScore={snapshot.stress.score}
         />
+        <AmbientSoundPlayer />
       </div>
 
       <div
