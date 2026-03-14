@@ -368,7 +368,7 @@ class ScoreEngine {
     this.overallSum += this.snapshot.overall.score;
     this.blinkRateSum += this.snapshot.blink.rate;
 
-    if (this.snapshot.overall.score >= STATE_THRESHOLDS.upright) {
+    if (this.snapshot.overall.score >= STATE_THRESHOLDS.petProgress) {
       this.totalUprightSeconds += deltaSeconds;
       this.currentStreakSeconds += deltaSeconds;
       this.streakGraceSeconds = 30;

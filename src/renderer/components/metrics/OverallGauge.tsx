@@ -17,7 +17,7 @@ function gradeLabel(score: number): string {
 }
 
 export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugeProps): JSX.Element {
-  const radius = 74;
+  const radius = 80;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(100, value));
   const targetOffset = circumference - (clamped / 100) * circumference;
@@ -64,9 +64,9 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dasharray 1s ease, stroke 1s ease, stroke-dashoffset 1s ease' }}
         />
-        <text x="90" y="83" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="38" fontWeight={500} letterSpacing="-0.02em">{clamped}</text>
-        <text x="90" y="100" textAnchor="middle" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight={500}>/100</text>
-        <text x="90" y="115" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={600} letterSpacing="0.08em">{grade.toUpperCase()}</text>
+        <text x="90" y="82" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="30" fontWeight={500} letterSpacing="-0.02em">{clamped}</text>
+        <text x="90" y="98" textAnchor="middle" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={500}>/100</text>
+        <text x="90" y="112" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={600} letterSpacing="0.06em">{grade.toUpperCase()}</text>
       </svg>
     </div>
   );

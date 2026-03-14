@@ -658,6 +658,55 @@ button {
   display: block;
   position: absolute;
   inset: 0;
+  transition: opacity 0.5s ease-out, filter 0.5s ease-out;
+}
+
+.webcam-stage--dimmed .webcam-video {
+  opacity: 0.35;
+  filter: grayscale(0.3);
+}
+
+/* ── No-Person Positioning Prompt ──────────────────────── */
+
+.webcam-no-person {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.webcam-no-person__content {
+  text-align: center;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.webcam-no-person__icon {
+  color: rgba(255, 255, 255, 0.8);
+  animation: prompt-pulse 2.4s ease-in-out infinite;
+}
+
+.webcam-no-person__text {
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  max-width: 220px;
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+@keyframes prompt-pulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
 }
 
 /* ── Digital Twin ───────────────────────────────────────── */
@@ -761,6 +810,10 @@ button {
 
 /* ── Ambient Panel ──────────────────────────────────────── */
 
+.ambient-panel {
+  padding: 14px 16px;
+}
+
 .ambient-scale {
   display: grid;
   gap: 6px;
@@ -784,10 +837,10 @@ button {
 }
 
 .ambient-stats {
-  margin-top: 12px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   color: #A89B8C;
   font-size: 10px;
   font-weight: 500;
@@ -797,7 +850,7 @@ button {
 
 .ambient-stat-value {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -1241,12 +1294,17 @@ input:focus-visible {
   position: relative;
   z-index: 1;
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: 22px;
   font-weight: 500;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  line-height: 1;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  padding: 12px 14px;
+  text-align: center;
+  max-width: 75px;
+  white-space: nowrap;
+  box-sizing: content-box;
 }
 
 .pomodoro-controls {
@@ -1308,4 +1366,176 @@ input:focus-visible {
   font-weight: 500;
   text-align: center;
   animation: fadeIn var(--transition-normal);
+}
+
+/* ── Ambient Sound Player ─────────────────────────────── */
+
+.sound-player {
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 28px;
+}
+
+.sound-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sound-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  background: var(--bg-card-muted);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.sound-option:hover {
+  background: var(--bg-card);
+  border-color: #d9d3c8;
+  box-shadow: 0 1px 4px rgba(44, 36, 22, 0.06);
+}
+
+.sound-option--active {
+  border-color: var(--green-primary);
+  background: var(--green-bg);
+  padding: 10px 20px 10px 14px;
+}
+
+.sound-option--active:hover {
+  border-color: var(--green-primary);
+  background: var(--green-bg);
+}
+
+.sound-option-icon {
+  font-size: 18px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.sound-option-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: left;
+}
+
+.sound-option--active .sound-option-label {
+  color: var(--green-primary);
+  font-weight: 600;
+}
+
+.sound-option-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
+}
+
+.sound-option-eq span {
+  display: block;
+  width: 3px;
+  border-radius: 1px;
+  background: var(--green-primary);
+  animation: eqBounce 0.6s ease-in-out infinite alternate;
+}
+
+.sound-option-eq span:nth-child(1) {
+  height: 6px;
+  animation-delay: 0s;
+}
+.sound-option-eq span:nth-child(2) {
+  height: 12px;
+  animation-delay: 0.15s;
+}
+.sound-option-eq span:nth-child(3) {
+  height: 8px;
+  animation-delay: 0.3s;
+}
+
+@keyframes eqBounce {
+  0% { transform: scaleY(0.4); }
+  100% { transform: scaleY(1); }
+}
+
+.sound-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  animation: fadeIn var(--transition-normal);
+}
+
+.sound-play-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--green-primary);
+  background: var(--green-bg);
+  color: var(--green-primary);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+  letter-spacing: -1px;
+}
+
+.sound-play-btn:hover {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+}
+
+.sound-volume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sound-volume-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.sound-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-card);
+  outline: none;
+  cursor: pointer;
+}
+
+.sound-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--green-primary);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: transform var(--transition-fast);
+}
+
+.sound-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
 }

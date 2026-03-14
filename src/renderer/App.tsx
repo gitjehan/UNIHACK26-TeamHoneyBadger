@@ -225,6 +225,14 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (stage !== 'ready') return;
+    const interval = setInterval(() => {
+      window.kinetic.storeSet('pet', stateRef.current.pet).catch(() => {});
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage !== 'ready') return;
     const upsert = async () => {
       await window.kinetic.upsertLeaderboard(sessionEntry);
     };

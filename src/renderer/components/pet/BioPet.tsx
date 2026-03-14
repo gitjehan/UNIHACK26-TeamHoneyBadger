@@ -14,6 +14,9 @@ interface BioPetProps {
 }
 
 const HEALTH_HYS = 3000;
+const SETTLE_WINDOW_MS = 3000;
+
+type HatchPhase = 'none' | 'crack' | 'burst' | 'emerge';
 
 export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stressScore }: BioPetProps): JSX.Element {
   const committedRef = useRef<PetHealthState>(pet.health);
@@ -21,7 +24,6 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   const pendingSinceRef = useRef(Date.now());
   const [committed, setCommitted] = useState<PetHealthState>(pet.health);
 
-  // Health hysteresis - 3s delay before committing change
   useEffect(() => {
     const h = pet.health;
     if (h !== pendingRef.current) {
@@ -48,11 +50,45 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   const healthClass = committed.toLowerCase();
   const isEgg = pet.stage === 0;
 
-  // Egg wobble — fires periodically, more often as hatching approaches
+  // ── Hatch + evolution animation ──────────────────────────────
+  const mountTimeRef = useRef(Date.now());
+  const prevStageRef = useRef(pet.stage);
+  const [hatchPhase, setHatchPhase] = useState<HatchPhase>('none');
+  const [evolving, setEvolving] = useState(false);
+
+  useEffect(() => {
+    const prev = prevStageRef.current;
+    const curr = pet.stage;
+    prevStageRef.current = curr;
+
+    // Ignore stage changes during initial state settling from store load
+    if (Date.now() - mountTimeRef.current < SETTLE_WINDOW_MS) return;
+
+    if (prev === 0 && curr >= 1) {
+      setHatchPhase('crack');
+      const t1 = setTimeout(() => setHatchPhase('burst'), 1000);
+      const t2 = setTimeout(() => setHatchPhase('emerge'), 1800);
+      const t3 = setTimeout(() => setHatchPhase('none'), 3200);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+    }
+
+    if (curr > prev && prev >= 1) {
+      setEvolving(true);
+      const t = setTimeout(() => setEvolving(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [pet.stage]);
+
+  const isHatching = hatchPhase !== 'none';
+  const showEgg = isEgg || hatchPhase === 'crack' || hatchPhase === 'burst';
+  const showCat = !isEgg && (hatchPhase === 'none' || hatchPhase === 'emerge');
+
+  // ── Egg wobble ───────────────────────────────────────────────
   const [wobbling, setWobbling] = useState(false);
   const wobbleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
-    if (!isEgg) return;
+    if (!isEgg || isHatching) return;
     const intervalMs =
       pet.eggCrackProgress >= 95 ? 800 :
       pet.eggCrackProgress >= 85 ? 1800 :
@@ -68,39 +104,62 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
     };
     schedule();
     return () => { if (wobbleRef.current) clearTimeout(wobbleRef.current); };
-  }, [isEgg, pet.eggCrackProgress]);
+  }, [isEgg, isHatching, pet.eggCrackProgress]);
 
-  // Egg overlay for cracks
-  const eggOverlay = !isEgg ? null :
-    pet.eggCrackProgress >= 95 ? { grid: eggCracks95, palette: crackGlowPalette } :
+  // During hatching always show full crack overlay
+  const eggOverlay = !showEgg ? null :
+    pet.eggCrackProgress >= 95 || isHatching ? { grid: eggCracks95, palette: crackGlowPalette } :
     pet.eggCrackProgress >= 85 ? { grid: eggCracks85, palette: crackPalette } : null;
 
-  // Glow class for the shell when cracking
-  const eggGlowClass = !isEgg ? '' :
+  const eggGlowClass = !showEgg || isHatching ? '' :
     pet.eggCrackProgress >= 95 ? 'egg-shell-glow egg-shell-glow--hatching' :
     pet.eggCrackProgress >= 85 ? 'egg-shell-glow egg-shell-glow--cracking' : '';
 
-  // Evolution progress
+  // ── Evolution progress ───────────────────────────────────────
   const stages = [0, 10, 30, 120, 300, 600];
   const next = stages[Math.min(pet.stage + 1, stages.length - 1)];
   const curr = stages[pet.stage] ?? 0;
   const prog = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - curr) / Math.max(1, next - curr)) * 100));
   const showEvolution = pet.stage < 5;
 
+  const spriteWrapperClasses = [
+    'pet-sprite-wrapper',
+    isEgg && !isHatching ? 'pet-sprite-wrapper--egg' : '',
+    wobbling && !isHatching ? 'pet-sprite-wrapper--egg-wobble' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <div className="card">
       <div className="pet-scene">
         <div className={`pet-glow pet-glow--${healthClass}`} />
 
-        <div className={`pet-sprite-wrapper ${isEgg ? 'pet-sprite-wrapper--egg' : ''} ${wobbling ? 'pet-sprite-wrapper--egg-wobble' : ''}`}>
+        {hatchPhase === 'burst' && <div className="hatch-flash-overlay" />}
+
+        <div className={spriteWrapperClasses}>
           {/* Cushion */}
           <div style={{ position: 'absolute', bottom: 5, zIndex: 0 }}>
             <PixelSprite grid={cushionGrid} palette={cushionPalette} scale={3} />
           </div>
 
-          {/* Pet */}
-          <div className={eggGlowClass} style={{ position: 'relative', zIndex: 1, marginBottom: isEgg ? 25 : 8 }}>
-            {isEgg ? (
+          {/* Shell fragments during burst/emerge */}
+          {(hatchPhase === 'burst' || hatchPhase === 'emerge') && (
+            <div className="hatch-fragments">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className={`hatch-fragment hatch-fragment--${i}`} />
+              ))}
+            </div>
+          )}
+
+          {/* Egg sprite */}
+          {showEgg && (
+            <div
+              className={
+                hatchPhase === 'crack' ? 'hatch-phase--crack' :
+                hatchPhase === 'burst' ? 'hatch-phase--burst' :
+                eggGlowClass
+              }
+              style={{ position: 'relative', zIndex: 1, marginBottom: 25 }}
+            >
               <PixelSprite
                 grid={eggGrid}
                 palette={eggPalette}
@@ -108,13 +167,33 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
                 overlayPalette={eggOverlay?.palette}
                 scale={4}
               />
-            ) : (
+            </div>
+          )}
+
+          {/* Cat sprite */}
+          {showCat && (
+            <div
+              className={
+                hatchPhase === 'emerge' ? 'hatch-emerge' :
+                evolving ? 'evolution-glow-active' : ''
+              }
+              style={{ position: 'relative', zIndex: 1, marginBottom: 8 }}
+            >
               <AnimatedCat health={committed} scale={3} />
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Sparkles during cat emerge */}
+          {hatchPhase === 'emerge' && (
+            <div className="hatch-sparkles">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className={`hatch-sparkle hatch-sparkle--${i}`} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {!isEgg && <PetHealthEffect health={committed} />}
+        {!isEgg && !isHatching && <PetHealthEffect health={committed} />}
       </div>
 
       {/* Meta section */}

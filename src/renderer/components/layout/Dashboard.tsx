@@ -2,7 +2,7 @@ import { memo, type RefObject, useEffect, useMemo, useState } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
-import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
+import { AmbientSoundPlayer } from '@renderer/components/panels/AmbientSoundPlayer';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { PomodoroTimer } from '@renderer/components/pomodoro/PomodoroTimer';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
@@ -134,28 +134,12 @@ export const Dashboard = memo(function Dashboard({
 
       <div className="dashboard-column dashboard-column--right">
         <OverallGauge value={snapshot.overall.score} />
-        <button
-          type="button"
-          className="dashboard-collapse-toggle"
-          onClick={() => setInsightsCollapsed((current) => !current)}
-          aria-expanded={!insightsCollapsed}
-        >
-          {insightsCollapsed ? 'Show system details' : 'Hide system details'}
-        </button>
-        {!insightsCollapsed && (
-          <>
-            <SystemsPanel
-              systems={state.systems}
-              poseBackend={visionBackend.pose}
-              faceBackend={visionBackend.face}
-            />
-            <AmbientPanel
-              brightness={state.ambient.brightness}
-              warmth={state.ambient.warmth}
-              overallScore={snapshot.overall.score}
-            />
-          </>
-        )}
+        <AmbientSoundPlayer />
+        <AmbientPanel
+          brightness={state.ambient.brightness}
+          warmth={state.ambient.warmth}
+          overallScore={snapshot.overall.score}
+        />
       </div>
     </div>
   );

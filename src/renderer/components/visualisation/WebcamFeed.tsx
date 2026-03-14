@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { LANDMARKS } from '@renderer/lib/constants';
 import type { Point } from '@renderer/lib/types';
 
@@ -197,7 +197,69 @@ interface WebcamFeedProps {
   onToggle: () => void;
 }
 
+function PositionPrompt(): JSX.Element {
+  return (
+    <div className="webcam-no-person" role="status">
+      <div className="webcam-no-person__content">
+        <svg
+          className="webcam-no-person__icon"
+          viewBox="0 0 64 64"
+          width="56"
+          height="56"
+          fill="none"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M4 18V4h14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M46 4h14v14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M60 46v14H46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M18 60H4V46" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="32" cy="24" r="7" strokeWidth="2" />
+          <path d="M18 54c0-8 6.3-14 14-14s14 6 14 14" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+        <p className="webcam-no-person__text">
+          Position yourself directly in front of the camera for Kinetic to work
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const LOST_DELAY_MS = 1500;
+const INITIAL_GRACE_MS = 5000;
+
 export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
+  const [personDetected, setPersonDetected] = useState(true);
+  const lostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasEverDetected = useRef(false);
+
+  const hasLandmarks = landmarks.length > 0;
+
+  useEffect(() => {
+    if (hasLandmarks) {
+      hasEverDetected.current = true;
+      if (lostTimerRef.current) {
+        clearTimeout(lostTimerRef.current);
+        lostTimerRef.current = null;
+      }
+      setPersonDetected(true);
+    } else if (!lostTimerRef.current) {
+      const delay = hasEverDetected.current ? LOST_DELAY_MS : INITIAL_GRACE_MS;
+      lostTimerRef.current = setTimeout(() => {
+        setPersonDetected(false);
+        lostTimerRef.current = null;
+      }, delay);
+    }
+  }, [hasLandmarks]);
+
+  useEffect(() => {
+    return () => {
+      if (lostTimerRef.current) clearTimeout(lostTimerRef.current);
+    };
+  }, []);
+
+  const showPrompt = !personDetected && !collapsed;
+
   return (
     <div className={`card webcam-card${collapsed ? ' webcam-card--collapsed' : ''}`}>
       <div className="webcam-card__header">
@@ -214,7 +276,7 @@ export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collaps
       </div>
 
       {/* Always mounted — only hidden via CSS so the MediaStream stays attached */}
-      <div className={`webcam-stage${collapsed ? ' webcam-stage--hidden' : ''}`}>
+      <div className={`webcam-stage${collapsed ? ' webcam-stage--hidden' : ''}${showPrompt ? ' webcam-stage--dimmed' : ''}`}>
         <video
           ref={videoRef}
           className="webcam-video"
@@ -222,9 +284,10 @@ export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collaps
           playsInline
           autoPlay
         />
-        {landmarks.length > 0 && (
+        {hasLandmarks && personDetected && (
           <SkeletonOverlay landmarks={landmarks} postureScore={postureScore} />
         )}
+        {showPrompt && <PositionPrompt />}
       </div>
     </div>
   );
