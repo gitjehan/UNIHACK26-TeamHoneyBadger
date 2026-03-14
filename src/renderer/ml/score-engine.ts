@@ -86,6 +86,16 @@ function initialSnapshot(): ScoreSnapshot {
 class ScoreEngine {
   private listeners = new Set<Listener>();
 
+  constructor() {
+    // Independently tick absence tracking so the 60s reset fires even when
+    // recompute() is not being called (i.e. person is not detected).
+    setInterval(() => {
+      if (this._personDetected) return; // recompute pipeline handles the present case
+      this.updateScreenPresence(1);
+      this.emit();
+    }, 1000);
+  }
+
   private systems: SystemsState = { ...DEFAULT_SYSTEMS };
 
   private snapshot: ScoreSnapshot = initialSnapshot();
