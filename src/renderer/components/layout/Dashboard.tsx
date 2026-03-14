@@ -48,7 +48,7 @@ export function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto auto' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto 1fr auto' }}>
         <div className="metric-grid">
           <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
           <MetricCard
@@ -68,7 +68,7 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto', alignContent: 'start' }}>
         <OverallGauge value={snapshot.overall.score} />
         <AmbientPanel
           brightness={state.ambient.brightness}

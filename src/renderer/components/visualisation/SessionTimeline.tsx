@@ -77,7 +77,7 @@ export const SessionTimeline = memo(function SessionTimeline({ data }: SessionTi
   return (
     <div className="card">
       <h3>Session Timeline</h3>
-      <div style={{ display: 'flex', gap: 14, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 4 }}>
         <Legend color="#3D6B4F" label="Posture" />
         <Legend color="#5A8A6B" label="Focus" />
         <Legend color="#B85A4D" label="Stress" />
