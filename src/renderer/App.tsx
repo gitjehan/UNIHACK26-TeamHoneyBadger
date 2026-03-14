@@ -47,6 +47,8 @@ export default function App(): JSX.Element {
 
   const sessionIdRef = useRef(uuidv4());
   const calibrationSamplesRef = useRef<CalibrationSample[]>([]);
+  const brightnessRangeRef = useRef<[number, number]>([0.2, 1.0]);
+  const warmthIntensityRef = useRef<number>(1.0);
   const poseEngineRef = useRef<PoseEngine | null>(null);
   const faceEngineRef = useRef<FaceEngine | null>(null);
   const latestPoseLandmarksRef = useRef<import('@renderer/lib/types').Point[]>([]);
@@ -79,10 +81,12 @@ export default function App(): JSX.Element {
   useEffect(() => {
     let mounted = true;
     const bootstrap = async () => {
-      const [storedCalibration, storedPet, storedNick] = await Promise.all([
+      const [storedCalibration, storedPet, storedNick, storedBrightnessRange, storedWarmthIntensity] = await Promise.all([
         window.kinetic.storeGet('calibration'),
         window.kinetic.storeGet('pet'),
         window.kinetic.storeGet('nickname'),
+        window.kinetic.storeGet('brightnessRange'),
+        window.kinetic.storeGet('warmthIntensity'),
       ]);
       if (!mounted) return;
 
@@ -94,6 +98,12 @@ export default function App(): JSX.Element {
       const pet = sanitizePet(storedPet);
       if (pet) scoreEngine.setPetState(pet);
       if (typeof storedNick === 'string' && storedNick.trim()) setNickname(storedNick);
+      if (Array.isArray(storedBrightnessRange) && storedBrightnessRange.length === 2) {
+        brightnessRangeRef.current = storedBrightnessRange as [number, number];
+      }
+      if (typeof storedWarmthIntensity === 'number') {
+        warmthIntensityRef.current = storedWarmthIntensity;
+      }
     };
     bootstrap().catch((error) => console.warn('Bootstrap failed', error));
     return () => {
@@ -188,11 +198,16 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (stage !== 'ready') return;
+    const applyAmbient = () => {
+      const { brightness, warmth } = stateRef.current.ambient;
+      const [minB, maxB] = brightnessRangeRef.current;
+      const adjustedBrightness = Math.min(maxB, Math.max(minB, brightness));
+      const adjustedWarmth = Math.min(1, Math.max(0, warmth * warmthIntensityRef.current));
+      window.kinetic.updateAmbient({ brightness: adjustedBrightness, warmth: adjustedWarmth });
+    };
     scoreEngine.setAmbientStatus('active');
-    window.kinetic.updateAmbient(stateRef.current.ambient);
-    const interval = setInterval(() => {
-      window.kinetic.updateAmbient(stateRef.current.ambient);
-    }, 1000);
+    applyAmbient();
+    const interval = setInterval(applyAmbient, 1000);
     return () => clearInterval(interval);
   }, [stage]);
 

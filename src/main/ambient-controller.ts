@@ -28,7 +28,7 @@ export class AmbientController {
 
   private step = 0;
 
-  private totalSteps = 40;
+  private totalSteps = 60;
 
   private startBrightness = 1;
 
@@ -37,9 +37,23 @@ export class AmbientController {
   private gammaHelperPath = path.resolve(process.cwd(), 'src/main/gamma-helper');
 
   setTarget(brightness: number, warmth: number): void {
-    this.targetBrightness = clamp(brightness, 0.2, 1);
-    this.targetWarmth = clamp(warmth, 0, 1);
-    this.restartTransition();
+    const newBrightness = clamp(brightness, 0.2, 1);
+    const newWarmth = clamp(warmth, 0, 1);
+
+    // Dead zone: ignore tiny target changes to prevent constant restarts
+    if (
+      Math.abs(newBrightness - this.targetBrightness) < 0.02 &&
+      Math.abs(newWarmth - this.targetWarmth) < 0.02
+    ) return;
+
+    this.targetBrightness = newBrightness;
+    this.targetWarmth = newWarmth;
+
+    // If no transition is running, start one; otherwise let the ongoing
+    // transition retarget smoothly without resetting from scratch.
+    if (!this.timer) {
+      this.restartTransition();
+    }
   }
 
   async reset(): Promise<void> {
