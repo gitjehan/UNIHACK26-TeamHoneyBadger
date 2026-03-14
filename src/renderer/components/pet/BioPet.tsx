@@ -33,63 +33,38 @@ function fp(ctx: CanvasRenderingContext2D, x: number, y: number, c: string) {
 
 function drawBg(ctx: CanvasRenderingContext2D, w: number) {
   const g = ctx.createLinearGradient(0, 0, 0, CH);
-  g.addColorStop(0, '#b8d4e8');
-  g.addColorStop(0.5, '#d0e0d8');
-  g.addColorStop(1, '#c0d4b8');
+  g.addColorStop(0, '#c0d8e8');
+  g.addColorStop(0.6, '#d8e4dc');
+  g.addColorStop(1, '#c8d8c0');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, CH);
 
   const gw = Math.ceil(w / PX);
-  const gy = Math.ceil(CH / PX) - 4;
+  const gy = Math.ceil(CH / PX) - 3;
 
-  // Pixel clouds
-  const clouds = [
-    { x: 4, y: 3 },
-    { x: gw - 10, y: 2 },
-    { x: Math.floor(gw / 2) - 6, y: 4 },
-  ];
-  for (const cl of clouds) {
-    const cc = 'rgba(255,255,255,0.7)';
-    const cs = 'rgba(235,240,245,0.5)';
-    fp(ctx, cl.x + 1, cl.y, cc); fp(ctx, cl.x + 2, cl.y, cc); fp(ctx, cl.x + 3, cl.y, cc);
-    fp(ctx, cl.x, cl.y + 1, cc); fp(ctx, cl.x + 1, cl.y + 1, cc); fp(ctx, cl.x + 2, cl.y + 1, cc);
-    fp(ctx, cl.x + 3, cl.y + 1, cc); fp(ctx, cl.x + 4, cl.y + 1, cc);
-    fp(ctx, cl.x + 1, cl.y + 2, cs); fp(ctx, cl.x + 2, cl.y + 2, cs); fp(ctx, cl.x + 3, cl.y + 2, cs);
-  }
-
-  // Ground layers
+  // Ground
   for (let x = 0; x < gw; x++) {
     fp(ctx, x, gy, '#88c488');
     fp(ctx, x, gy + 1, '#78b478');
     fp(ctx, x, gy + 2, '#68a468');
-    fp(ctx, x, gy + 3, '#589458');
   }
 
-  // Grass tufts
-  for (let x = 0; x < gw; x += 2) {
-    const v = (x * 7 + 3) % 5;
-    if (v < 2) fp(ctx, x, gy - 1, v === 0 ? '#6aaa6a' : '#78b878');
-    if (v === 3) { fp(ctx, x, gy - 1, '#5a9858'); fp(ctx, x, gy - 2, '#6aaa6a'); }
+  // Sparse grass tufts
+  for (let x = 2; x < gw; x += 4) fp(ctx, x, gy - 1, (x * 3) % 7 < 3 ? '#6aaa6a' : '#78b878');
+
+  // Three small flowers
+  const fx = [5, gw - 6, Math.floor(gw / 2) + 7];
+  const fc = ['#f0a0b0', '#ffe8e0', '#f5a8b8'];
+  for (let i = 0; i < 3; i++) {
+    fp(ctx, fx[i], gy - 1, fc[i]);
+    fp(ctx, fx[i], gy - 2, '#f0c840');
   }
 
-  // 5-petal pixel flowers
-  const flowers = [
-    { x: 4, c: '#f0a0b0' },
-    { x: 10, c: '#fff0ee' },
-    { x: gw - 7, c: '#f0b8c8' },
-    { x: gw - 14, c: '#ffe0d0' },
-    { x: Math.floor(gw / 2) + 6, c: '#f5a8b8' },
-  ];
-  for (const f of flowers) {
-    const cx = f.x;
-    const cy = gy - 2;
-    fp(ctx, cx, cy - 1, f.c);
-    fp(ctx, cx - 1, cy, f.c);
-    fp(ctx, cx + 1, cy, f.c);
-    fp(ctx, cx, cy + 1, f.c);
-    fp(ctx, cx, cy, '#f0c840');
-    fp(ctx, cx, cy + 2, '#5a8a50');
-    fp(ctx, cx, cy + 3, '#5a8a50');
+  // Two small clouds
+  const cw = 'rgba(255,255,255,0.6)';
+  for (const cx of [5, gw - 9]) {
+    fp(ctx, cx, 3, cw); fp(ctx, cx + 1, 3, cw); fp(ctx, cx + 2, 3, cw);
+    fp(ctx, cx - 1, 4, cw); fp(ctx, cx, 4, cw); fp(ctx, cx + 1, 4, cw); fp(ctx, cx + 2, 4, cw); fp(ctx, cx + 3, 4, cw);
   }
 }
 
@@ -106,58 +81,45 @@ function drawShadow(ctx: CanvasRenderingContext2D, cx: number, gy: number, width
 // ── Egg ────────────────────────────────────────────────────
 
 function drawEgg(ctx: CanvasRenderingContext2D, cx: number, cy: number, crack: number, frame: number) {
-  const H = 10, W = 6;
-  const wobbleTable = [0, 0, 0, 1, 1, 0, 0, 0, 0, -1, -1, 0];
-  const ox = cx + wobbleTable[frame % wobbleTable.length];
+  const rows = EGG_P.length;
+  const half = Math.floor(rows / 2);
+  const wobble = [0, 0, 0, 1, 1, 0, 0, 0, 0, -1, -1, 0][frame % 12];
+  const ox = cx + wobble;
 
-  // Fill
-  for (let dy = -H; dy <= H; dy++) {
-    const hw = eggHW(dy, H, W);
+  // Fill body
+  for (let r = 0; r < rows; r++) {
+    const hw = EGG_P[r];
+    const dy = r - half;
     for (let dx = -hw; dx <= hw; dx++) fp(ctx, ox + dx, cy + dy, EC.b);
   }
-  // Highlight (top-left inner area)
-  for (let dy = -H + 2; dy < -H + 5; dy++) {
-    const hw = eggHW(dy, H, W);
-    for (let dx = -hw + 1; dx < -hw + 3 && dx < 0; dx++) fp(ctx, ox + dx, cy + dy, EC.h);
-  }
-  // Shadow (bottom-right inner area)
-  for (let dy = 3; dy <= H - 2; dy++) {
-    const hw = eggHW(dy, H, W);
-    fp(ctx, ox + hw - 1, cy + dy, EC.s);
-    if (hw > 2) fp(ctx, ox + hw - 2, cy + dy, EC.s);
-  }
-  // Speckles — cute spots
-  const spots = [[-2, -4], [1, -6], [3, -2], [-3, 2], [1, 4], [-1, 0], [2, 6]];
-  for (const [sx, sy] of spots) {
-    const hw = eggHW(sy, H, W);
-    if (Math.abs(sx) < hw - 1) fp(ctx, ox + sx, cy + sy, EC.spot);
-  }
+
+  // Small highlight (2 px, upper-left)
+  fp(ctx, ox - 2, cy - half + 4, EC.h);
+  fp(ctx, ox - 2, cy - half + 5, EC.h);
+  fp(ctx, ox - 1, cy - half + 3, EC.h);
+
   // Outline
-  for (let dy = -H; dy <= H; dy++) {
-    const hw = eggHW(dy, H, W);
+  for (let r = 0; r < rows; r++) {
+    const hw = EGG_P[r];
     if (hw <= 0) continue;
+    const dy = r - half;
     fp(ctx, ox - hw, cy + dy, EC.o);
     fp(ctx, ox + hw, cy + dy, EC.o);
-    if (dy > -H) {
-      const phw = eggHW(dy - 1, H, W);
-      for (let dx = phw + 1; dx <= hw; dx++) { fp(ctx, ox + dx, cy + dy, EC.o); fp(ctx, ox - dx, cy + dy, EC.o); }
-    }
-    if (dy < H) {
-      const nhw = eggHW(dy + 1, H, W);
-      for (let dx = nhw + 1; dx <= hw; dx++) { fp(ctx, ox + dx, cy + dy, EC.o); fp(ctx, ox - dx, cy + dy, EC.o); }
-    }
+    const prev = r > 0 ? EGG_P[r - 1] : 0;
+    const next = r < rows - 1 ? EGG_P[r + 1] : 0;
+    for (let dx = prev + 1; dx <= hw; dx++) { fp(ctx, ox + dx, cy + dy, EC.o); fp(ctx, ox - dx, cy + dy, EC.o); }
+    for (let dx = next + 1; dx <= hw; dx++) { fp(ctx, ox + dx, cy + dy, EC.o); fp(ctx, ox - dx, cy + dy, EC.o); }
   }
 
-  // Cracks
+  // Cracks — simple zigzag lines
   if (crack > 20) {
-    const k = EC.k;
-    [[-2, -1], [-1, 0], [0, -1], [1, 0], [2, -1], [3, 0]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, k));
+    [[-2, 0], [-1, 1], [0, 0], [1, 1], [2, 0]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, EC.k));
   }
   if (crack > 50) {
-    [[-1, 3], [-2, 4], [-3, 3], [-2, 2]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, EC.k));
+    [[1, 4], [2, 3], [3, 4]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, EC.k));
   }
   if (crack > 80) {
-    [[1, -5], [2, -4], [1, -3], [0, -4], [3, -5]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, EC.k));
+    [[-1, -4], [-2, -3], [-3, -4]].forEach(([dx, dy]) => fp(ctx, ox + dx, cy + dy, EC.k));
   }
 }
 
@@ -406,7 +368,7 @@ export function BioPet({ pet, postureTilt: _tilt, postureScore, focusScore, stre
 
     const gridW = Math.ceil(w / PX);
     const cx = Math.floor(gridW / 2);
-    const gy = Math.ceil(CH / PX) - 4;
+    const gy = Math.ceil(CH / PX) - 3;
     const spriteY = gy - 14;
 
     let frame = 0;
