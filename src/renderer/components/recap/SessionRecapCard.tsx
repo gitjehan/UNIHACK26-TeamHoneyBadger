@@ -523,11 +523,11 @@ function blinkLabel(rate: number): string {
 function petStageLabel(stage: number): string {
   switch (stage) {
     case 0: return 'Egg';
-    case 1: return 'Hatchling';
-    case 2: return 'Chick';
-    case 3: return 'Fledgling';
-    case 4: return 'Eagle';
-    case 5: return 'Legend';
+    case 1: return 'Kitten';
+    case 2: return 'Mouser';
+    case 3: return 'Companion';
+    case 4: return 'Guardian';
+    case 5: return 'Ascended';
     default: return 'Seedling';
   }
 }

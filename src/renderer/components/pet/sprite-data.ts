@@ -9,6 +9,7 @@ export const eggPalette: Record<string, string> = {
   s: '#E0D4C4',
   h: '#FFFDF8',
   x: '#C8A882',
+  p: '#C4917B',
 };
 
 export const cushionPalette: Record<string, string> = {
@@ -27,11 +28,11 @@ export const eggGrid: string[] = [
   '.....ohhhhbbbboo....',
   '....ohhhbbbbbbbbo...',
   '...ohhbbbbbbbbbbbo..',
-  '...ohbbbbbbbbbbbbo..',
+  '...ohbbbpbpbpbbbbo..',
   '..ohbbbbbbxbbbbbbo..',
-  '..obbbbbbbbbbbbbbo..',
-  '..obbxbbbbbbbbbbbo..',
-  '..obbbbbbbbbbbbbbo..',
+  '..obbbbbbpppbbbbbo..',
+  '..obbxbbbpppbbbbbo..',
+  '..obbbbbbbpbbbbbbo..',
   '..obbbbbbbbbbxbbbo..',
   '..obbbbbbbbbbbbbbo..',
   '..obbbbbbxbbbbbo...',

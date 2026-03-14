@@ -429,7 +429,7 @@ class ScoreEngine {
     if (health !== 'Wilting') this.pet.sickSince = null;
     this.pet.health = health;
 
-    this.pet.eggCrackProgress = clamp((this.pet.totalLockedInMinutes / 10) * 100, 0, 100);
+    this.pet.eggCrackProgress = clamp((this.pet.totalLockedInMinutes / PET_EVOLUTION[1].minMinutes) * 100, 0, 100);
 
     const stage = [...PET_EVOLUTION]
       .reverse()
