@@ -30,6 +30,16 @@
   background: linear-gradient(135deg, #16212b, #12263b 44%, #1b2f46);
 }
 
+.leaderboard-map-west-cut {
+  pointer-events: none;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  background: linear-gradient(90deg, rgba(7, 10, 15, 0.66) 0%, rgba(7, 10, 15, 0.46) 62%, rgba(7, 10, 15, 0) 100%);
+  clip-path: polygon(0% 0%, 88% 0%, 72% 100%, 0% 100%);
+  z-index: 1;
+}
+
 .leaderboard-map-vignette {
   pointer-events: none;
   position: absolute;
@@ -44,11 +54,11 @@
   top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 4;
+  z-index: 5;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(7, 10, 16, 0.76);
-  color: #dce7ff;
+  background: rgba(7, 10, 16, 0.8);
+  color: #d7fdff;
   padding: 5px 12px;
   font-size: 10px;
   font-weight: 700;
@@ -61,6 +71,7 @@
   position: absolute;
   top: 16px;
   left: 16px;
+  z-index: 6;
   width: min(260px, calc(100% - 180px));
   background: rgba(8, 12, 18, 0.74);
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -100,10 +111,6 @@
 
 .leaderboard-map-hud__row--current {
   color: #ffe99a;
-}
-
-.leaderboard-map-hud__row--placeholder {
-  opacity: 0.78;
 }
 
 .leaderboard-map-hud__rank {

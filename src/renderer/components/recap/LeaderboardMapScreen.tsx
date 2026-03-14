@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import type * as GeoJSON from 'geojson';
 import type { LeaderboardEntry } from '@renderer/lib/types';
 import { AnimatedCat, CatSprite } from '@renderer/components/pet/CatSprite';
 import './leaderboard-map-screen.css';
@@ -15,15 +16,16 @@ type MaplibreWithWorker = typeof maplibregl & {
 (maplibregl as MaplibreWithWorker).workerClass = MaplibreWorker;
 
 const MAP_CENTER: [number, number] = [151.19, -33.865];
-const MAP_ZOOM = 10.15;
+const MAP_ZOOM = 10.35;
 const MAP_PITCH = 0;
 const MAP_BEARING = 0;
 const MAP_STYLE = 'https://demotiles.maplibre.org/style.json';
+const MAP_BOUNDS: maplibregl.LngLatBoundsLike = [[150.95, -34.08], [151.36, -33.7]];
 
 const SYDNEY_POSITIONS: Array<{ lng: number; lat: number; name: string }> = [
   { lng: 151.2093, lat: -33.8688, name: 'CBD' },
   { lng: 151.2741, lat: -33.8914, name: 'Bondi' },
-  { lng: 151.0054, lat: -33.8148, name: 'Parramatta' },
+  { lng: 151.1799, lat: -33.8981, name: 'Inner West' },
   { lng: 151.2858, lat: -33.7969, name: 'Manly' },
 ];
 
@@ -42,14 +44,89 @@ const SYDNEY_CALLOUTS = [
   { lng: 151.2153, lat: -33.8568, label: 'Opera House', emoji: '🎭' },
   { lng: 151.2108, lat: -33.8523, label: 'Harbour Bridge', emoji: '🌉' },
   { lng: 151.2741, lat: -33.8914, label: 'Bondi Beach', emoji: '🏖️' },
+  { lng: 151.1914, lat: -33.8638, label: 'Darling Harbour', emoji: '⚓' },
 ] as const;
 
-const FALLBACK_PLAYERS = [
-  { nickname: 'HarbourHustler', score: 86 },
-  { nickname: 'BondiBlazer', score: 79 },
-  { nickname: 'ParraPulse', score: 72 },
-  { nickname: 'ManlyMomentum', score: 68 },
-] as const;
+const SYDNEY_FOCUS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [151.03, -33.98],
+          [151.06, -33.95],
+          [151.11, -33.93],
+          [151.16, -33.9],
+          [151.22, -33.88],
+          [151.27, -33.85],
+          [151.31, -33.81],
+          [151.33, -33.77],
+          [151.28, -33.74],
+          [151.19, -33.74],
+          [151.11, -33.78],
+          [151.06, -33.83],
+          [151.03, -33.9],
+          [151.03, -33.98],
+        ]],
+      },
+    },
+  ],
+};
+
+const SYDNEY_WEST_MASK_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[
+          [150.55, -34.3],
+          [151.04, -34.3],
+          [151.04, -33.5],
+          [150.55, -33.5],
+          [150.55, -34.3],
+        ]],
+      },
+    },
+  ],
+};
+
+const SYDNEY_HARBOUR_LINE_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+  type: 'FeatureCollection',
+  features: [
+    {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [151.146, -33.864],
+          [151.174, -33.86],
+          [151.198, -33.857],
+          [151.214, -33.852],
+          [151.231, -33.848],
+          [151.248, -33.85],
+          [151.27, -33.846],
+        ],
+      },
+    },
+  ],
+};
+
+const MAP_LAYER_IDS = {
+  westMaskSource: 'sydney-west-mask-source',
+  westMaskLayer: 'sydney-west-mask-layer',
+  focusSource: 'sydney-focus-source',
+  focusFillLayer: 'sydney-focus-fill-layer',
+  focusLineLayer: 'sydney-focus-line-layer',
+  harbourSource: 'sydney-harbour-line-source',
+  harbourLayer: 'sydney-harbour-line-layer',
+} as const;
 
 function rankToScale(targetPx: number): number {
   return targetPx / 32;
@@ -64,36 +141,66 @@ function formatScore(score: number): string {
   return String(Math.round(score));
 }
 
-function buildFallbackEntry(index: number, nickname: string, score: number): LeaderboardEntry {
-  return {
-    nickname,
-    sessionId: `fallback-${index + 1}`,
-    avgOverallScore: score,
-    bestStreak: 0,
-    totalLockedInMinutes: 0,
-    level: 1,
-    levelTitle: 'Starter',
-    timestamp: new Date(0).toISOString(),
-  };
-}
-
-function buildTopFour(entries: LeaderboardEntry[]): LeaderboardEntry[] {
-  const output = entries.slice(0, 4);
-  const used = new Set(output.map((entry) => entry.nickname.trim().toLowerCase()));
-
-  FALLBACK_PLAYERS.forEach((fallback, index) => {
-    if (output.length >= 4) return;
-    if (used.has(fallback.nickname.toLowerCase())) return;
-    output.push(buildFallbackEntry(index, fallback.nickname, fallback.score));
-    used.add(fallback.nickname.toLowerCase());
-  });
-
-  while (output.length < 4) {
-    const index = output.length;
-    output.push(buildFallbackEntry(index, `SydneyGuest ${index + 1}`, 60 - index * 4));
+function addSydneyContextLayers(map: maplibregl.Map): void {
+  if (!map.getSource(MAP_LAYER_IDS.westMaskSource)) {
+    map.addSource(MAP_LAYER_IDS.westMaskSource, {
+      type: 'geojson',
+      data: SYDNEY_WEST_MASK_GEOJSON,
+    });
+    map.addLayer({
+      id: MAP_LAYER_IDS.westMaskLayer,
+      type: 'fill',
+      source: MAP_LAYER_IDS.westMaskSource,
+      paint: {
+        'fill-color': '#070b12',
+        'fill-opacity': 0.56,
+      },
+    });
   }
 
-  return output;
+  if (!map.getSource(MAP_LAYER_IDS.focusSource)) {
+    map.addSource(MAP_LAYER_IDS.focusSource, {
+      type: 'geojson',
+      data: SYDNEY_FOCUS_GEOJSON,
+    });
+    map.addLayer({
+      id: MAP_LAYER_IDS.focusFillLayer,
+      type: 'fill',
+      source: MAP_LAYER_IDS.focusSource,
+      paint: {
+        'fill-color': '#4fd1ff',
+        'fill-opacity': 0.09,
+      },
+    });
+    map.addLayer({
+      id: MAP_LAYER_IDS.focusLineLayer,
+      type: 'line',
+      source: MAP_LAYER_IDS.focusSource,
+      paint: {
+        'line-color': '#8be7ff',
+        'line-width': 2.1,
+        'line-opacity': 0.9,
+        'line-dasharray': [1.1, 1.3],
+      },
+    });
+  }
+
+  if (!map.getSource(MAP_LAYER_IDS.harbourSource)) {
+    map.addSource(MAP_LAYER_IDS.harbourSource, {
+      type: 'geojson',
+      data: SYDNEY_HARBOUR_LINE_GEOJSON,
+    });
+    map.addLayer({
+      id: MAP_LAYER_IDS.harbourLayer,
+      type: 'line',
+      source: MAP_LAYER_IDS.harbourSource,
+      paint: {
+        'line-color': '#74f2ff',
+        'line-width': 2.4,
+        'line-opacity': 0.9,
+      },
+    });
+  }
 }
 
 interface LeaderboardMapScreenProps {
@@ -108,7 +215,7 @@ export function LeaderboardMapScreen({
   onClose,
 }: LeaderboardMapScreenProps): JSX.Element {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const top4 = useMemo(() => buildTopFour(entries), [entries]);
+  const top4 = useMemo(() => entries.slice(0, 4), [entries]);
 
   useEffect(() => {
     document.body.classList.add('overlay-open');
@@ -125,6 +232,7 @@ export function LeaderboardMapScreen({
       zoom: MAP_ZOOM,
       pitch: MAP_PITCH,
       bearing: MAP_BEARING,
+      maxBounds: MAP_BOUNDS,
       interactive: false,
       attributionControl: false,
     });
@@ -133,6 +241,9 @@ export function LeaderboardMapScreen({
     const markers: maplibregl.Marker[] = [];
 
     const mountMapMarkers = () => {
+      if (map.loaded()) addSydneyContextLayers(map);
+      else map.once('load', () => addSydneyContextLayers(map));
+
       const harbourPulse = document.createElement('div');
       harbourPulse.className = 'leaderboard-harbour-pulse';
       const harbourPulseMarker = new maplibregl.Marker({ element: harbourPulse, anchor: 'center' })
@@ -206,6 +317,7 @@ export function LeaderboardMapScreen({
 
         const label = document.createElement('div');
         label.className = 'leaderboard-marker__label';
+        label.title = `${entry.nickname} - ${formatScore(entry.avgOverallScore)}`;
         label.textContent = `${entry.nickname}  ${formatScore(entry.avgOverallScore)}`;
         wrapper.appendChild(label);
 
@@ -242,31 +354,34 @@ export function LeaderboardMapScreen({
       <div className="leaderboard-map-shell" style={{ animation: 'slideUp 0.3s ease-out' }} onClick={(event) => event.stopPropagation()}>
         <section className="leaderboard-map-card">
           <div ref={mapContainerRef} className="leaderboard-map-canvas" />
+          <div className="leaderboard-map-west-cut" />
           <div className="leaderboard-map-vignette" />
-          <div className="leaderboard-map-location">SYDNEY, NSW - AUSTRALIA</div>
+          <div className="leaderboard-map-location">SYDNEY HARBOUR BASIN - NSW</div>
 
           <aside className="leaderboard-map-hud" aria-label="Top four leaderboard list">
             <div className="leaderboard-map-hud__title">SYDNEY LOCK IN BOARD</div>
-            {top4.map((entry, i) => {
-              const currentUser = sameNickname(entry.nickname, currentUserNickname);
-              const placeholder = entry.sessionId.startsWith('fallback-');
-              return (
-                <div
-                  key={`${entry.sessionId}-${entry.nickname}-${i}`}
-                  className={[
-                    'leaderboard-map-hud__row',
-                    currentUser ? 'leaderboard-map-hud__row--current' : '',
-                    placeholder ? 'leaderboard-map-hud__row--placeholder' : '',
-                  ].filter(Boolean).join(' ')}
-                >
-                  <span className="leaderboard-map-hud__rank" style={{ color: RANK_COLORS[i] }}>
-                    #{i + 1}
-                  </span>
-                  <span className="leaderboard-map-hud__name">{entry.nickname}</span>
-                  <span className="leaderboard-map-hud__score">{formatScore(entry.avgOverallScore)}</span>
-                </div>
-              );
-            })}
+            {top4.length === 0 ? (
+              <div className="leaderboard-map-hud__empty">No leaderboard entries yet.</div>
+            ) : (
+              top4.map((entry, i) => {
+                const currentUser = sameNickname(entry.nickname, currentUserNickname);
+                return (
+                  <div
+                    key={`${entry.sessionId}-${entry.nickname}-${i}`}
+                    className={[
+                      'leaderboard-map-hud__row',
+                      currentUser ? 'leaderboard-map-hud__row--current' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <span className="leaderboard-map-hud__rank" style={{ color: RANK_COLORS[i] }}>
+                      #{i + 1}
+                    </span>
+                    <span className="leaderboard-map-hud__name">{entry.nickname}</span>
+                    <span className="leaderboard-map-hud__score">{formatScore(entry.avgOverallScore)}</span>
+                  </div>
+                );
+              })
+            )}
           </aside>
 
           <button type="button" className="leaderboard-map-button" onClick={onClose}>
