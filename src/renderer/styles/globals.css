@@ -67,6 +67,7 @@ button {
 }
 
 .app-content {
+  height: 100%;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
@@ -144,14 +145,15 @@ button {
 
 .dashboard-grid {
   width: 100%;
-  min-height: max-content;
+  height: 100%;
+  min-height: 0;
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) minmax(250px, 300px);
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 20px;
-  padding: 20px;
-  align-content: start;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
 }
 
 .dashboard-banner,
@@ -161,9 +163,10 @@ button {
 
 .dashboard-column {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   min-height: 0;
   min-width: 0;
+  overflow-y: auto;
   align-content: start;
 }
 
@@ -180,7 +183,7 @@ button {
 }
 
 .dashboard-column--right {
-  grid-template-rows: auto auto auto auto;
+  grid-template-rows: auto auto auto auto auto;
 }
 
 .dashboard-collapse-toggle {
@@ -696,6 +699,7 @@ button {
 .digital-twin-canvas {
   width: 100%;
   aspect-ratio: 4 / 3;
+  max-height: 160px;
   border-radius: 10px;
   background: var(--bg-card-muted);
   border: 1px solid var(--border-card);
@@ -1168,4 +1172,140 @@ input:focus-visible {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
+}
+
+/* ── Pomodoro Timer ───────────────────────────────────── */
+
+.pomodoro-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.pomodoro-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-card-muted);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.pomodoro-tab {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-tertiary);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pomodoro-tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.pomodoro-tab.active {
+  background: var(--bg-card);
+  box-shadow: 0 1px 4px rgba(44, 36, 22, 0.08);
+}
+
+.pomodoro-ring-container {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomodoro-ring-container svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.pomodoro-arc {
+  transition: stroke-dashoffset 1s linear;
+}
+
+.pomodoro-time {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.pomodoro-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pomodoro-btn {
+  border: 1px solid var(--border-card);
+  background: var(--bg-card-muted);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 8px 20px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.pomodoro-btn:hover {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+.pomodoro-btn:active {
+  transform: translateY(0);
+}
+
+.pomodoro-btn-reset {
+  background: transparent;
+  border-color: var(--border-card);
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.pomodoro-rounds {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pomodoro-round-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-card);
+  background: transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.pomodoro-nudge {
+  color: var(--red-primary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+  animation: fadeIn var(--transition-normal);
 }

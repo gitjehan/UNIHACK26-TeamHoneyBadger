@@ -6,7 +6,6 @@ import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
 import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
-import { ambientAudio } from '@renderer/lib/ambient-audio';
 import type {
   LeaderboardEntry,
   PetState,
@@ -171,29 +170,19 @@ export default function App(): JSX.Element {
 
     scoreEngine.setAmbientStatus('active');
     applyAmbient();
-    ambientAudio.update(stateRef.current.snapshot.overall.score, stateRef.current.snapshot.stress.score);
 
     let tick = 0;
     const interval = setInterval(() => {
       tick++;
       // Ambient light every 1s (every tick)
       applyAmbient();
-      // Audio + timeline every 2s (every other tick)
+      // Timeline every 2s (every other tick)
       if (tick % 2 === 0) {
-        const latest = stateRef.current;
-        ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
         setTimeline(scoreEngine.getTimeline());
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [stage]);
-
-  useEffect(
-    () => () => {
-      ambientAudio.stop();
-    },
-    [],
-  );
 
   useEffect(() => {
     if (stage !== 'ready') return;
@@ -301,7 +290,6 @@ export default function App(): JSX.Element {
   }, [stage, timeline.length, recap, visionBackend]);
 
   const startSession = () => {
-    ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));
     scoreEngine.startSession();
     setStage('ready');
   };

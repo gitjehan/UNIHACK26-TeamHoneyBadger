@@ -4,7 +4,7 @@ import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
 import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
-import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
+import { PomodoroTimer } from '@renderer/components/pomodoro/PomodoroTimer';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
 import { WebcamFeed } from '@renderer/components/visualisation/WebcamFeed';
 import type { VisionBackend } from '@renderer/lib/types';
@@ -108,11 +108,7 @@ export const Dashboard = memo(function Dashboard({
       </div>
 
       <div className="dashboard-column dashboard-column--left">
-        <DigitalTwin
-          landmarks={state.poseLandmarks}
-          postureScore={snapshot.posture.score}
-          shoulderSlant={snapshot.posture.shoulderSlant}
-        />
+        <PomodoroTimer postureScore={snapshot.posture.score} />
         <BioPet
           pet={state.pet}
           postureScore={snapshot.posture.score}
