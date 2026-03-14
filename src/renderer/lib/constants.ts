@@ -48,8 +48,8 @@ export const AMBIENT_MAP = [
   { scoreMin: 0, scoreMax: 20, brightness: [0.2, 0.3], warmth: [0.7, 0.9] },
 ] as const;
 
-export const POSE_FPS = 10;
-export const FACE_FPS = 10;
+export const POSE_FPS = 8;
+export const FACE_FPS = 5;
 export const POSE_LOOP_INTERVAL = Math.round(1000 / POSE_FPS);
 export const FACE_LOOP_INTERVAL = Math.round(1000 / FACE_FPS);
 

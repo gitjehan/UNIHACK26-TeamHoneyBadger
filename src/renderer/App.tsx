@@ -182,7 +182,7 @@ export default function App(): JSX.Element {
     if (stage === 'welcome') return;
     const timer = setInterval(() => {
       setTimeline(scoreEngine.getTimeline());
-    }, 1000);
+    }, 2000);
     return () => clearInterval(timer);
   }, [stage]);
 
