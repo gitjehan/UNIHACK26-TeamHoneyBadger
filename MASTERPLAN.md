@@ -109,27 +109,28 @@ General polish pass across the app — responsive layout fixes, hover/focus stat
 
 **Result**: Smooth, ambient transitions with no flicker or abrupt jumps.
 
-#### Plan 06 — Pet Evolution Names (Cat-Themed) — NOT STARTED
+#### Plan 06 — Pet Evolution Names (Cat-Themed) — DONE
 
-**Problem**: Evolution stage names (Hatchling, Fledgling) are bird-themed but the pet is a ginger cat. Names should match the animal.
+**Problem**: Evolution stage names (Hatchling, Fledgling) were bird-themed but the pet is a ginger cat.
 
-**Current names**: Egg → Hatchling → Fledgling → Companion → Guardian → Ascended
+**Names**: Egg → **Kitten** → **Mouser** → Companion → Guardian → Ascended
 
-**Proposed cat-themed names**: Egg → Kitten → Mouser → Companion → Guardian → Ascended
+**What was done**:
+- [x] Updated `PET_EVOLUTION` titles in `constants.ts` (Hatchling → Kitten, Fledgling → Mouser)
+- [x] Updated `petStageLabel()` in `SessionRecapCard.tsx` to match all `PET_EVOLUTION` stage names
+- [x] Aligned `BioPet.tsx` evolution progress to read from `PET_EVOLUTION` instead of hardcoded array (fixed a -37% progress bug)
+- [x] **Demo speed**: Compressed thresholds from 0/10/30/120/300/600 min → 0/1/3/8/15/25 min
+- [x] Updated egg crack formula in `score-engine.ts` to derive from `PET_EVOLUTION[1].minMinutes` instead of hardcoded 10
+- [x] Updated MASTERPLAN stage name references
 
-**Changes needed**:
-- [ ] Update `PET_EVOLUTION` titles in `constants.ts`
-- [ ] Update default `stageName` in `score-engine.ts` and `ipc-handlers.ts`
-- [ ] Update any hardcoded stage name references in `BioPet.tsx` and `elastic-client.ts`
-- [ ] Update MASTERPLAN stage name references
+#### Plan 07 — Add Paw Print to Egg — DONE
 
-#### Plan 07 — Add Paw Print to Egg (`plans/07-egg-paw-print.md`) — NOT STARTED
+**Problem**: The pixel-art egg was plain. Adding a paw print gives it identity and hints that a cat is inside.
 
-**Problem**: The pixel-art egg is plain. Adding a paw print gives it identity and hints that a cat is inside.
-
-**Changes needed**:
-- [ ] Add a `eggPawPrint` overlay grid to `sprite-data.ts` (similar to `eggCracks85` / `eggCracks95` — a small paw silhouette in a contrasting color on the egg surface)
-- [ ] Render the paw overlay in `PixelSprite.tsx` on top of the egg at all times (before crack overlays)
+**What was done**:
+- [x] Added paw pad color (`p: '#C4917B'`, warm pinkish-brown) to `eggPalette` in `sprite-data.ts`
+- [x] Embedded a cat paw print directly into `eggGrid` — three toe beans (row 5), main pad (rows 7–8), and bottom point (row 9), centered on the egg body
+- [x] No overlay needed — the paw is baked into the egg grid and renders automatically via `PixelSprite`
 
 #### Plan 08 — Welcome / Opening Screen Redesign — NOT STARTED
 
@@ -193,8 +194,8 @@ Blink detection was unreliable and has been **fixed**. Current implementation:
 |---|------|------|-------|
 | 1 | Redesign welcome/opening screen — looks subpar, needs visual impact | Plan 08 | `WelcomeScreen.tsx`, `globals.css` |
 | 2 | Auto-save pet state every 30s + on window close | Plan 02 | `App.tsx` |
-| 3 | Rename pet evolution stages to cat-themed (Hatchling → Kitten, Fledgling → Mouser) | Plan 06 | `constants.ts`, `score-engine.ts`, `ipc-handlers.ts` |
-| 4 | Add paw print to egg sprite | Plan 07 | `sprite-data.ts`, `PixelSprite.tsx` |
+| ~~3~~ | ~~Rename pet evolution stages to cat-themed (Hatchling → Kitten, Fledgling → Mouser)~~ | ~~Plan 06~~ | ~~`constants.ts`, `score-engine.ts`, `BioPet.tsx`, `SessionRecapCard.tsx`~~ | **DONE** |
+| ~~4~~ | ~~Add paw print to egg sprite~~ | ~~Plan 07~~ | ~~`sprite-data.ts`~~ | **DONE** |
 
 #### Important for Polish (should do)
 
@@ -228,16 +229,16 @@ Blink detection was unreliable and has been **fixed**. Current implementation:
 | **Posture accuracy** (Plan 01) | Fixed — smoothing, penalties, calibration | 8% | 100% |
 | **Ambient smoothing** (Plan 05) | Fixed — smooth transitions, no flicker | 5% | 100% |
 | **Welcome screen redesign** (Plan 08) | Current screen is subpar, needs visual impact | 5% | 0% |
-| **Pet names + egg paw** (Plans 06, 07) | Bird names → cat names, paw print on egg | 3% | 0% |
+| **Pet names + egg paw** (Plans 06, 07) | Cat names (Kitten/Mouser), paw print on egg, demo-speed thresholds | 3% | 100% |
 | **Pet persistence & unlocks** (Plan 02) | Auto-save, accessories, hatch animation pending | 5% | 0% |
 | **Leaderboard UI polish** (Plan 09) | Basic table → podium, avatars, rank badges | 4% | 0% |
 | **Gamification** (Plan 04) | Toasts, celebrations, streak reactions planned | 3% | 0% |
 | **UI/UX polish** (Plan 03) | Streak display, responsive tweaks, empty states | 2% | 0% |
 | **Demo prep** | Slides, script, data seeding, rehearsal | 7% | 0% |
 
-**Overall MVP progress: ~85%**
+**Overall MVP progress: ~88%**
 
-The core product is feature-complete and the two biggest quality issues are resolved: **posture tracking** now reacts within 3 seconds with accurate scoring (Plan 01 done), and **ambient screen transitions** are smooth with no flicker or abrupt jumps (Plan 05 done). Blink detection is stable. Remaining work focuses on **visual polish and identity**: the welcome screen needs a redesign (looks generic), pet evolution names need to be cat-themed instead of bird-themed (Hatchling/Fledgling → Kitten/Mouser), the egg needs a paw print, the leaderboard needs visual flair (podium, avatars, rank badges), pet state should auto-save, and gamification notifications need wiring. Demo prep (slides, script, data seeding) is also outstanding.
+The core product is feature-complete and the three biggest quality issues are resolved: **posture tracking** now reacts within 3 seconds with accurate scoring (Plan 01 done), **ambient screen transitions** are smooth with no flicker or abrupt jumps (Plan 05 done), and **pet identity** is cat-themed with paw print egg, Kitten/Mouser stage names, and demo-speed evolution thresholds (Plans 06+07 done). Blink detection is stable. Remaining work focuses on **visual polish**: the welcome screen needs a redesign (looks generic), the leaderboard needs visual flair (podium, avatars, rank badges), pet state should auto-save, and gamification notifications need wiring. Demo prep (slides, script, data seeding) is also outstanding.
 
 ---
 
@@ -1042,12 +1043,12 @@ Your pet starts as an **egg**. Good posture hatches it. Sustained focus levels i
 
 | Stage | Name | Unlock Condition | Visual |
 |-------|------|-----------------|--------|
-| 0 | **Egg** | Default start state | Resting egg, subtle glow pulse, cracks appear as upright time accumulates |
-| 1 | **Hatchling** | 10 min cumulative upright time | Tiny creature emerges from egg shell, wobbly idle animation |
-| 2 | **Fledgling** | 30 min cumulative | Slightly bigger, steadier, gains a small accessory (scarf/hat) |
-| 3 | **Companion** | 120 min cumulative | Full-sized, smooth animations, glowing aura, second accessory |
-| 4 | **Guardian** | 300 min cumulative | Larger, particle effects, wings or crown, confident posture |
-| 5 | **Ascended** | 600 min cumulative | Full glow, trailing particles, halo, all accessories equipped |
+| 0 | **Egg** | Default start state | Resting egg with paw print, subtle glow pulse, cracks appear as upright time accumulates |
+| 1 | **Kitten** | 1 min cumulative upright time | Tiny creature emerges from egg shell, wobbly idle animation |
+| 2 | **Mouser** | 3 min cumulative | Slightly bigger, steadier, gains a small accessory (scarf/hat) |
+| 3 | **Companion** | 8 min cumulative | Full-sized, smooth animations, glowing aura, second accessory |
+| 4 | **Guardian** | 15 min cumulative | Larger, particle effects, wings or crown, confident posture |
+| 5 | **Ascended** | 25 min cumulative | Full glow, trailing particles, halo, all accessories equipped |
 
 - "Cumulative upright time" = total minutes with Overall score ≥ 65 across ALL sessions
 - Stored in electron-store, persists across app restarts
@@ -1063,7 +1064,7 @@ Within any evolution stage, the pet has 3 health states:
 | **Fading** | 30–64 | Neutral/concerned, amber tones, dimmer glow | "Shoulders rounding, blink rate dropping. Your pet loses petals and its glow dims." |
 | **Wilting** | <30 | Sad/sick, red tones, drooping, shaking | "Deep slouch, eye fatigue, high cognitive load. Your pet curls inward, urging a reset." |
 
-**Wilting is the "sick" state.** The pet visually droops, shivers, and loses color. At higher evolution levels, the contrast is more dramatic — a Stage 4 Guardian going sick looks *wrong* in a way that a Hatchling doesn't. This creates stronger emotional pressure to fix your posture as the pet gets more impressive.
+**Wilting is the "sick" state.** The pet visually droops, shivers, and loses color. At higher evolution levels, the contrast is more dramatic — a Stage 4 Guardian going sick looks *wrong* in a way that a Kitten doesn't. This creates stronger emotional pressure to fix your posture as the pet gets more impressive.
 
 #### Accessories & Cosmetics
 
@@ -1197,7 +1198,7 @@ function blinkRateLabel(rate: number): string {
 7. Stress estimation (affect engine + posture variance + blink deviation) — DONE
 8. Focus score (composite of posture stability + inverse fatigue + inverse stress) — DONE
 9. Session timeline sparkline charts (Posture, Focus, Stress over time) — DONE
-10. **Bio-Pet lifecycle**: Pixel-art ginger cat. Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting) with behavior AI (walk, run, sleep, groom). Slouch = pet sleeps. *(Implemented as 2D sprite sheet, not Three.js)* — **needs Plan 02 persistence + unlocks**
+10. **Bio-Pet lifecycle**: Pixel-art ginger cat. Egg (with paw print) → hatch → 5 evolution stages (Kitten → Mouser → Companion → Guardian → Ascended). 3 health states (Thriving/Fading/Wilting) with behavior AI (walk, run, sleep, groom). Slouch = pet sleeps. Demo-speed thresholds (1/3/8/15/25 min). *(Implemented as 2D sprite sheet, not Three.js)* — **needs Plan 02 persistence + unlocks**
 11. Multi-signal ambient response (posture + fatigue both drive brightness/warmth) — DONE (Plan 05 smoothing applied)
 12. Systems status panel + Ambient Response panel — DONE (systems panel removed from user-facing UI)
 
@@ -1216,9 +1217,9 @@ function blinkRateLabel(rate: number): string {
 ### What to CUT if behind:
 - Cut bottom-up (20 → 12)
 - **NEVER cut**: Posture detection, Pomodoro timer, real brightness/gamma ambient response, dashboard — these ARE the product
-- **Priority order for remaining Plans**: Plan 08 (welcome screen) > Plan 06+07 (pet names + egg paw) > Plan 09 (leaderboard) > Plan 02 (pet persistence) > Plan 04 (gamification) > Plan 03 (UI polish)
+- **Priority order for remaining Plans**: Plan 08 (welcome screen) > Plan 09 (leaderboard) > Plan 02 (pet persistence) > Plan 04 (gamification) > Plan 03 (UI polish)
 - Plan 08 (welcome screen) is the first thing judges see — sets the tone for the entire demo
-- Plans 06+07 (cat names + paw) are quick wins that make the pet feel intentional, not generic
+- ~~Plans 06+07 (cat names + paw) are quick wins~~ — **DONE**: Kitten/Mouser names, paw print on egg, demo-speed thresholds
 - Plan 09 (leaderboard) adds competitive visual impact — podium and avatars make it demo-worthy
 - Pet accessories rendering (Plan 02) is visual polish — can ship without it. Auto-save is more critical than accessories.
 - If Elasticsearch isn't ready, the entire app works without it — recap card works locally, leaderboard falls back to local data
@@ -1348,6 +1349,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 - [x] **Egg state** (`BioPet.tsx`, `sprite-data.ts`, `PixelSprite.tsx`)
   - Pixel-art SVG egg rendered via `PixelSprite` (rect-based SVG, `imageRendering: pixelated`)
+  - Cat paw print baked into the egg grid (`p: '#C4917B'` warm pinkish-brown) — hints that a cat is inside
   - Rests on a pixel-art cushion beneath it
   - Crack overlays at ≥85% (`eggCracks85`) and ≥95% (`eggCracks95`) egg crack progress — rendered as SVG overlay on top of the egg
   - Glow effect on the egg shell when cracking (CSS: `egg-shell-glow--cracking`, `egg-shell-glow--hatching`)
@@ -1381,7 +1383,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Stat chips: Posture, Focus, Stress, Time locked in
 - [x] **Evolution stage tracking** — stages 0–5, driven by `totalLockedInMinutes`
   - Progress bar shows % toward next stage
-  - Stage names: Egg → Hatchling → Fledgling → Companion → Guardian → Ascended
+  - Stage names: Egg → Kitten → Mouser → Companion → Guardian → Ascended (demo-speed thresholds: 0/1/3/8/15/25 min)
 - [x] **Streak system** — tracked in score-engine, displayed in meta panel as locked-in minutes
 
 ### Pet — Still Pending (from Plan 2)
@@ -1464,8 +1466,8 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 - [x] **Plan 01 — Posture tracking accuracy**: Fixed smoothing lag (7.5s → 3s), removed double-counted slouch penalty, aligned constants, fixed calibration race condition + visibility filtering
 - [x] **Plan 05 — Ambient smoothing**: Eliminated bucket-edge jumps, fixed transition restarts, smoothed fatigue noise, applied user preferences, overlapped AMBIENT_MAP buckets, increased transition to 3s
 - [ ] **Plan 08 — Welcome screen redesign**: Current opening screen is subpar — needs hero visual, better typography, entrance animations, more inviting Start button
-- [ ] **Plan 06 — Pet evolution names**: Rename bird-themed stages (Hatchling, Fledgling) to cat-themed (Kitten, Mouser)
-- [ ] **Plan 07 — Egg paw print**: Add paw print overlay to the pixel-art egg sprite
+- [x] **Plan 06 — Pet evolution names**: Renamed Hatchling → Kitten, Fledgling → Mouser; compressed thresholds for demo speed (0/1/3/8/15/25 min); fixed BioPet.tsx hardcoded stages bug
+- [x] **Plan 07 — Egg paw print**: Embedded cat paw print into `eggGrid` in `sprite-data.ts` (paw pad color `#C4917B`)
 - [ ] **Plan 09 — Leaderboard UI polish**: Add podium for top 3, pet avatars, rank badges, better styling
 - [ ] **Plan 02 — Pet persistence & unlocks**: Auto-save every 30s, save on window close, wire hat/crown unlocks, hatch transition animation, render all accessories, wire SweatDrop to Fading
 - [ ] **Plan 04 — Gamification**: Toast notification component, pet celebration effects, streak milestone reactions, in-session feedback
@@ -1612,7 +1614,7 @@ interface LeaderboardEntry {
 ### 6. Pet State Machine
 
 - Set electron-store pet state to stage 0 (Egg), `totalLockedInMinutes: 0`
-- Run app with good posture (Overall ≥ 65) for 10+ minutes → assert pet stage transitions from 0 to 1 (Hatchling)
+- Run app with good posture (Overall ≥ 65) for 1+ minutes → assert pet stage transitions from 0 to 1 (Kitten)
 - While sitting upright, assert pet health state is `'Thriving'`
 - Slouch until Overall drops below 30 → assert pet health transitions to `'Wilting'`
 - Sit back up → assert pet health recovers to `'Thriving'` or `'Fading'`
@@ -1761,12 +1763,12 @@ export const PET_HEALTH = {
 
 // --- Pet Evolution Stages (permanent, cumulative) ---
 export const PET_EVOLUTION = [
-  { stage: 0, title: 'Egg',        minMinutes: 0,   description: 'Resting. Good posture will hatch it.' },
-  { stage: 1, title: 'Hatchling',  minMinutes: 10,  description: 'Just born! Wobbly but curious.' },
-  { stage: 2, title: 'Fledgling',  minMinutes: 30,  description: 'Growing steadier. Gained a scarf!' },
-  { stage: 3, title: 'Companion',  minMinutes: 120, description: 'Full-sized. Loyal and glowing.' },
-  { stage: 4, title: 'Guardian',   minMinutes: 300, description: 'Powerful. Wings unfurled.' },
-  { stage: 5, title: 'Ascended',   minMinutes: 600, description: 'Transcendent. Full radiance.' },
+  { stage: 0, title: 'Egg',        minMinutes: 0,  description: 'Resting. Good posture will hatch it.' },
+  { stage: 1, title: 'Kitten',     minMinutes: 1,  description: 'Just born! Wobbly but curious.' },
+  { stage: 2, title: 'Mouser',     minMinutes: 3,  description: 'Growing steadier. Gained a scarf!' },
+  { stage: 3, title: 'Companion',  minMinutes: 8,  description: 'Full-sized. Loyal and glowing.' },
+  { stage: 4, title: 'Guardian',   minMinutes: 15, description: 'Powerful. Wings unfurled.' },
+  { stage: 5, title: 'Ascended',   minMinutes: 25, description: 'Transcendent. Full radiance.' },
 ];
 
 // --- Pet Accessories (unlocked by milestones) ---

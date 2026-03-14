@@ -109,11 +109,11 @@ export const PET_HEALTH: Record<PetHealthState, { minScore: number; color: strin
 
 export const PET_EVOLUTION = [
   { stage: 0, title: 'Egg', minMinutes: 0 },
-  { stage: 1, title: 'Hatchling', minMinutes: 10 },
-  { stage: 2, title: 'Fledgling', minMinutes: 30 },
-  { stage: 3, title: 'Companion', minMinutes: 120 },
-  { stage: 4, title: 'Guardian', minMinutes: 300 },
-  { stage: 5, title: 'Ascended', minMinutes: 600 },
+  { stage: 1, title: 'Kitten', minMinutes: 1 },
+  { stage: 2, title: 'Mouser', minMinutes: 3 },
+  { stage: 3, title: 'Companion', minMinutes: 8 },
+  { stage: 4, title: 'Guardian', minMinutes: 15 },
+  { stage: 5, title: 'Ascended', minMinutes: 25 },
 ] as const;
 
 export const PET_ACCESSORIES = [

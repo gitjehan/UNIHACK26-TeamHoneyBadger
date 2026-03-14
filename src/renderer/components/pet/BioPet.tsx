@@ -3,6 +3,7 @@ import type { PetHealthState, PetState } from '@renderer/lib/types';
 import { AnimatedCat } from './CatSprite';
 import { PixelSprite } from './PixelSprite';
 import { PetHealthEffect } from './PetEffects';
+import { PET_EVOLUTION } from '@renderer/lib/constants';
 import { eggGrid, eggPalette, eggCracks85, eggCracks95, crackPalette, crackGlowPalette, cushionGrid, cushionPalette } from './sprite-data';
 import './pet-animations.css';
 
@@ -116,9 +117,8 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
     pet.eggCrackProgress >= 85 ? 'egg-shell-glow egg-shell-glow--cracking' : '';
 
   // ── Evolution progress ───────────────────────────────────────
-  const stages = [0, 10, 30, 120, 300, 600];
-  const next = stages[Math.min(pet.stage + 1, stages.length - 1)];
-  const curr = stages[pet.stage] ?? 0;
+  const next = PET_EVOLUTION[Math.min(pet.stage + 1, PET_EVOLUTION.length - 1)].minMinutes;
+  const curr = PET_EVOLUTION[pet.stage]?.minMinutes ?? 0;
   const prog = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - curr) / Math.max(1, next - curr)) * 100));
   const showEvolution = pet.stage < 5;
 
