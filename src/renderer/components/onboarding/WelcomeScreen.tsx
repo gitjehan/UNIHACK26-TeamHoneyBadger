@@ -48,13 +48,9 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps): JSX.Element {
           ))}
         </div>
 
-        <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '0 auto 20px', textAlign: 'center' }}>
-          Calibration takes ~3 seconds. Sit upright, keep shoulders level, look at the screen.
-        </p>
-
         <div className="actions" style={{ justifyContent: 'center' }}>
           <button className="btn btn-primary" type="button" onClick={onStart} style={{ padding: '12px 28px', fontSize: 14 }}>
-            Start Calibration
+            Start
           </button>
         </div>
       </div>

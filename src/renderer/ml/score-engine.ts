@@ -9,7 +9,6 @@ import { clamp, lerp } from '@renderer/lib/math';
 import { RollingAverage, RollingBuffer } from '@renderer/lib/rolling-buffer';
 import type {
   AmbientTarget,
-  CalibrationData,
   PetHealthState,
   PetState,
   Point,
@@ -85,8 +84,6 @@ function initialSnapshot(): ScoreSnapshot {
 
 class ScoreEngine {
   private listeners = new Set<Listener>();
-
-  private calibration: CalibrationData | null = null;
 
   private systems: SystemsState = { ...DEFAULT_SYSTEMS };
 
@@ -168,14 +165,6 @@ class ScoreEngine {
       poseFps: this.poseFps,
       faceFps: this.faceFps,
     };
-  }
-
-  getCalibration(): CalibrationData | null {
-    return this.calibration;
-  }
-
-  setCalibration(calibration: CalibrationData): void {
-    this.calibration = calibration;
   }
 
   setPetState(pet: PetState): void {
@@ -276,7 +265,7 @@ class ScoreEngine {
 
   updatePosture(landmarks: Point[]): void {
     this.poseLandmarks = landmarks;
-    const posture = scorePosture(landmarks, this.calibration);
+    const posture = scorePosture(landmarks);
     this.postureSmoothing.push(posture.score);
     const slouchPenalty = posture.slumpSeverity * 20;
     const smoothedPosture = clamp(
@@ -294,7 +283,7 @@ class ScoreEngine {
     this.emotionState = emotionState || 'neutral';
     this.emotionConfidence = emotionConfidence || 0.5;
 
-    const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17, aspectRatio);
+    const blinkFrame = this.blinkDetector.update(landmarks, 17, aspectRatio);
     this.snapshot = { ...this.snapshot, blink: blinkFrame };
     this.fatigueScore = blinkFrame.fatigueScore;
     this.recompute(this.snapshot.posture, blinkFrame);
@@ -304,7 +293,7 @@ class ScoreEngine {
     posture = this.snapshot.posture,
     blink = this.snapshot.blink,
   ): void {
-    const baselineBlink = this.calibration?.baselineBlinkRate ?? 17;
+    const baselineBlink = 17;
     const blinkRateDeviation = Math.abs(blink.rate - baselineBlink) / Math.max(1, baselineBlink);
     const postureVariance = this.postureVariance.deviation;
 

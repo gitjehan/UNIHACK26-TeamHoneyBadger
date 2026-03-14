@@ -6,7 +6,6 @@ interface SessionRecapCardProps {
   onCopy: (dataUrl: string) => Promise<void>;
   onSave: (dataUrl: string) => Promise<void>;
   onClose: () => void;
-  onRecalibrate: () => void;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -52,7 +51,6 @@ export function SessionRecapCard({
   onCopy,
   onSave,
   onClose,
-  onRecalibrate,
 }: SessionRecapCardProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dataUrlRef = useRef<string>('');
@@ -442,14 +440,6 @@ export function SessionRecapCard({
           style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
           {saveLabel}
-        </button>
-        <button
-          className="btn btn-secondary"
-          type="button"
-          onClick={onRecalibrate}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-        >
-          Recalibrate
         </button>
       </div>
     </div>

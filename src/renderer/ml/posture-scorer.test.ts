@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LANDMARKS } from '@renderer/lib/constants';
-import type { CalibrationData, Point } from '@renderer/lib/types';
+import type { Point } from '@renderer/lib/types';
 import { calculatePostureScore, scorePosture } from './posture-scorer';
 
 function createLandmarks(): Point[] {
@@ -15,17 +15,8 @@ function createLandmarks(): Point[] {
 }
 
 describe('posture scorer', () => {
-  const calibration: CalibrationData = {
-    uprightNeckAngle: 175,
-    uprightShoulderSlant: 1,
-    uprightTrunkVector: [0, 0.14],
-    baselineBlinkRate: 17,
-    baselineEAR: 0.27,
-    timestamp: Date.now(),
-  };
-
   it('computes high score for upright landmarks', () => {
-    const score = scorePosture(createLandmarks(), calibration);
+    const score = scorePosture(createLandmarks());
     expect(score.score).toBeGreaterThan(70);
   });
 
@@ -33,7 +24,7 @@ describe('posture scorer', () => {
     const points = createLandmarks();
     points[LANDMARKS.LEFT_HIP] = { x: 0.46, y: 0.64, visibility: 0 };
     points[LANDMARKS.RIGHT_HIP] = { x: 0.54, y: 0.64, visibility: 0 };
-    const score = scorePosture(points, calibration);
+    const score = scorePosture(points);
     expect(score.score).toBeGreaterThan(65);
   });
 
