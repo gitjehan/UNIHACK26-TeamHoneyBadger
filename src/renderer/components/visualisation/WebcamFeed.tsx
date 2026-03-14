@@ -2,14 +2,6 @@ import { useEffect, useRef, type RefObject } from 'react';
 import { LANDMARKS } from '@renderer/lib/constants';
 import type { Point } from '@renderer/lib/types';
 
-interface WebcamFeedProps {
-  videoRef: RefObject<HTMLVideoElement | null>;
-  poseFps: number;
-  faceFps: number;
-  landmarks?: Point[];
-  postureScore?: number;
-}
-
 const UPPER_CONNECTIONS: [number, number][] = [
   [11, 12],
   [11, 13], [13, 15],
@@ -197,19 +189,63 @@ function SkeletonOverlay({ landmarks, postureScore }: { landmarks: Point[]; post
   );
 }
 
-export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], postureScore = 0 }: WebcamFeedProps): JSX.Element {
+interface WebcamFeedProps {
+  videoRef: RefObject<HTMLVideoElement | null>;
+  poseFps: number;
+  faceFps: number;
+  landmarks?: Point[];
+  postureScore?: number;
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
   return (
-    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: 10, minHeight: 0, overflow: 'hidden' }}>
-      <h3>Webcam Feed</h3>
+    <div
+      className="card"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: collapsed ? 0 : 10,
+        padding: collapsed ? '8px 14px' : undefined,
+        minHeight: 0,
+        overflow: 'hidden',
+        transition: 'padding 0.2s ease',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ margin: 0, opacity: collapsed ? 0.5 : 1, transition: 'opacity 0.2s' }}>Webcam Feed</h3>
+        <button
+          onClick={onToggle}
+          style={{
+            background: 'none',
+            border: '1px solid var(--border-card)',
+            cursor: 'pointer',
+            padding: '3px 8px',
+            borderRadius: 6,
+            color: 'var(--text-tertiary)',
+            fontSize: 11,
+            lineHeight: 1.4,
+            letterSpacing: '0.04em',
+          }}
+          title={collapsed ? 'Show webcam' : 'Hide webcam'}
+        >
+          {collapsed ? 'show' : 'hide'}
+        </button>
+      </div>
+
+      {/* Always mounted — only hidden via CSS so the MediaStream stays attached */}
       <div
         style={{
+          display: collapsed ? 'none' : 'block',
           position: 'relative',
           borderRadius: 12,
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
-          minHeight: 140,
           aspectRatio: '4 / 3',
+          flex: 1,
+          minHeight: 0,
         }}
       >
         <video
@@ -223,7 +259,8 @@ export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], posture
           <SkeletonOverlay landmarks={landmarks} postureScore={postureScore} />
         )}
       </div>
-      <div style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+
+      <div style={{ display: collapsed ? 'none' : 'block', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
         {poseFps} fps pose · {faceFps} fps face
       </div>
     </div>
