@@ -104,7 +104,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
   const progress = timeRemaining / totalDuration;
   const cx = 100;
   const cy = 100;
-  const radius = 80;
+  const radius = 86;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - progress);
 
@@ -165,7 +165,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
           />
           {/* Endpoint dot */}
           {progress > 0 && (
-            <circle cx={dotX} cy={dotY} r={6} fill={modeColor} />
+            <circle cx={dotX} cy={dotY} r={4} fill={modeColor} />
           )}
         </svg>
         <div className="pomodoro-time">{formattedTime}</div>
