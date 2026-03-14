@@ -195,6 +195,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
       </div>
 
       {/* SVG arc + countdown */}
+      <div className="pomodoro-ring-wrapper">
       <div className="pomodoro-ring-container">
         <svg viewBox="0 0 200 200">
           {/* Track ring */}
@@ -226,6 +227,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
           )}
         </svg>
         <div className="pomodoro-time">{formattedTime}</div>
+      </div>
       </div>
 
       {/* Controls */}
