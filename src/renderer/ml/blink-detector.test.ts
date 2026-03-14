@@ -6,8 +6,8 @@ import type { Point } from '@renderer/lib/types';
 /**
  * Build a fake 468-landmark array with realistic eye geometry.
  *
- * @param leftOpenness  - 0 = fully closed, 1 = fully open (left eye)
- * @param rightOpenness - 0 = fully closed, 1 = fully open (right eye)
+ * @param leftOpenness  - 0.1 = nearly closed, 1 = fully open (left eye)
+ * @param rightOpenness - 0.1 = nearly closed, 1 = fully open (right eye)
  * @param hScale        - horizontal compression factor (1 = frontal, <1 = turned away)
  */
 function buildLandmarks(
@@ -20,7 +20,7 @@ function buildLandmarks(
   // Left eye — centred at (0.35, 0.4)
   const lCx = 0.35;
   const lCy = 0.4;
-  const eyeWidth = 0.04 * hScale; // shrinks when head turns
+  const eyeWidth = 0.04 * hScale;
   const eyeHeight = 0.015;
 
   lm[LEFT_EYE.left]  = { x: lCx - eyeWidth, y: lCy };
@@ -47,11 +47,27 @@ function buildLandmarks(
   return lm;
 }
 
+const OPEN = buildLandmarks(1, 1);
+const CLOSED = buildLandmarks(0.1, 0.1);
+
 /** Feed N identical frames of open eyes to prime the baseline. */
 function primeBaseline(detector: BlinkDetector, n = 15): void {
   for (let i = 0; i < n; i++) {
-    detector.update(buildLandmarks(1, 1), 17, 4 / 3);
+    detector.update(OPEN, 17, 4 / 3);
   }
+}
+
+/**
+ * Perform a blink: close for `closeFrames` then reopen.
+ * Advances fake timers so the cache refreshes.
+ */
+function doBlink(detector: BlinkDetector, closeFrames = 2): BlinkFrame {
+  for (let i = 0; i < closeFrames; i++) {
+    detector.update(CLOSED, 17);
+  }
+  // Advance time so the 500ms cache window refreshes before we read the result.
+  vi.advanceTimersByTime(600);
+  return detector.update(OPEN, 17);
 }
 
 describe('BlinkDetector', () => {
@@ -60,42 +76,32 @@ describe('BlinkDetector', () => {
   beforeEach(() => {
     detector = new BlinkDetector();
     vi.useFakeTimers();
+    // Start at a reasonable timestamp
+    vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
   });
 
   // ─── Basic blink detection ────────────────────────────────────
 
   it('returns zero blinks when eyes stay open', () => {
     primeBaseline(detector);
-    // 30 more frames of open eyes
-    let frame: BlinkFrame = detector.update(buildLandmarks(1, 1), 17);
+    vi.advanceTimersByTime(600);
+    let frame: BlinkFrame = detector.update(OPEN, 17);
     for (let i = 0; i < 30; i++) {
-      frame = detector.update(buildLandmarks(1, 1), 17);
+      frame = detector.update(OPEN, 17);
     }
     expect(frame.rate).toBe(0);
   });
 
   it('detects a normal blink (close for 2 frames then reopen)', () => {
     primeBaseline(detector);
-
-    // Close eyes for 2 frames
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    // Re-open
-    const frame = detector.update(buildLandmarks(1, 1), 17);
-
+    const frame = doBlink(detector, 2);
     expect(frame.rate).toBe(1);
   });
 
   it('detects a prolonged closure (> BLINK_MAX_FRAMES)', () => {
     primeBaseline(detector);
-
     // Close eyes for 6 frames (> max of 4)
-    for (let i = 0; i < 6; i++) {
-      detector.update(buildLandmarks(0, 0), 17);
-    }
-    // Re-open
-    const frame = detector.update(buildLandmarks(1, 1), 17);
-
+    const frame = doBlink(detector, 6);
     expect(frame.prolongedClosures).toBe(1);
     // Should NOT count as a blink
     expect(frame.rate).toBe(0);
@@ -103,12 +109,8 @@ describe('BlinkDetector', () => {
 
   it('does not double-count a blink from both eyes', () => {
     primeBaseline(detector);
-
     // Both eyes close and reopen — should be 1 blink, not 2
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    const frame = detector.update(buildLandmarks(1, 1), 17);
-
+    const frame = doBlink(detector, 2);
     expect(frame.rate).toBe(1);
   });
 
@@ -118,18 +120,19 @@ describe('BlinkDetector', () => {
     primeBaseline(detector);
 
     // Simulate head turning: far eye shrinks to 40% of normal width.
-    // The EAR of the foreshortened eye will drop, but it should NOT
-    // be counted as a blink because the eye is unreliable.
+    // EAR of the foreshortened eye will drop, but should NOT be a blink.
     for (let i = 0; i < 10; i++) {
-      // hScale=0.4 means eye width shrinks to 40%, well below FORESHORTEN_RATIO of 0.55
+      vi.advanceTimersByTime(100);
       detector.update(buildLandmarks(1, 1, 0.4), 17);
     }
     // Come back to frontal
     for (let i = 0; i < 10; i++) {
-      detector.update(buildLandmarks(1, 1, 1), 17);
+      vi.advanceTimersByTime(100);
+      detector.update(OPEN, 17);
     }
 
-    const frame = detector.update(buildLandmarks(1, 1, 1), 17);
+    vi.advanceTimersByTime(600);
+    const frame = detector.update(OPEN, 17);
     expect(frame.rate).toBe(0);
   });
 
@@ -138,35 +141,35 @@ describe('BlinkDetector', () => {
 
     // Turn head away and back
     for (let i = 0; i < 10; i++) {
+      vi.advanceTimersByTime(100);
       detector.update(buildLandmarks(1, 1, 0.4), 17);
     }
-    // Stabilise back to frontal for enough frames to re-prime
+    // Stabilise back to frontal
     for (let i = 0; i < 15; i++) {
-      detector.update(buildLandmarks(1, 1, 1), 17);
+      vi.advanceTimersByTime(100);
+      detector.update(OPEN, 17);
     }
 
     // Now do a real blink
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    const frame = detector.update(buildLandmarks(1, 1), 17);
-
+    const frame = doBlink(detector, 2);
     expect(frame.rate).toBeGreaterThanOrEqual(1);
   });
 
   // ─── Jitter suppression ───────────────────────────────────────
 
-  it('suppresses blinks during high-jitter EAR signal (head movement)', () => {
+  it('foreshortened eyes do not produce blinks even with EAR fluctuations', () => {
     primeBaseline(detector);
 
-    // Simulate jittery EAR by rapidly alternating openness
+    // When the head turns, the foreshortened eye produces fluctuating EAR.
+    // The foreshortening gate should suppress these regardless.
     for (let i = 0; i < 20; i++) {
-      const openness = i % 2 === 0 ? 1 : 0.5;
-      detector.update(buildLandmarks(openness, openness), 17);
+      vi.advanceTimersByTime(100);
+      detector.update(buildLandmarks(1, 1, 0.3), 17);
     }
 
-    const frame = detector.update(buildLandmarks(1, 1), 17);
-    // Jitter should have suppressed most/all false blinks
-    expect(frame.rate).toBeLessThanOrEqual(1);
+    vi.advanceTimersByTime(600);
+    const frame = detector.update(OPEN, 17);
+    expect(frame.rate).toBe(0);
   });
 
   // ─── Baseline priming ────────────────────────────────────────
@@ -174,11 +177,12 @@ describe('BlinkDetector', () => {
   it('does not detect blinks before baseline is primed', () => {
     // Feed only 3 frames (< MIN_BASELINE_SAMPLES = 8) then close eyes
     for (let i = 0; i < 3; i++) {
-      detector.update(buildLandmarks(1, 1), 17);
+      detector.update(OPEN, 17);
     }
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    const frame = detector.update(buildLandmarks(1, 1), 17);
+    vi.advanceTimersByTime(600);
+    detector.update(CLOSED, 17);
+    detector.update(CLOSED, 17);
+    const frame = detector.update(OPEN, 17);
 
     expect(frame.rate).toBe(0);
   });
@@ -196,7 +200,8 @@ describe('BlinkDetector', () => {
 
   it('produces a fatigue score between 0 and 100', () => {
     primeBaseline(detector);
-    const frame = detector.update(buildLandmarks(1, 1), 17);
+    vi.advanceTimersByTime(600);
+    const frame = detector.update(OPEN, 17);
     expect(frame.fatigueScore).toBeGreaterThanOrEqual(0);
     expect(frame.fatigueScore).toBeLessThanOrEqual(100);
   });
@@ -207,19 +212,22 @@ describe('BlinkDetector', () => {
     primeBaseline(detector);
 
     // Start closing
-    detector.update(buildLandmarks(0, 0), 17);
+    detector.update(CLOSED, 17);
 
     // Head turns away mid-blink (eye becomes foreshortened/unreliable)
     for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(100);
       detector.update(buildLandmarks(1, 1, 0.3), 17);
     }
 
     // Head comes back and eyes are open — should NOT register a stale blink
     for (let i = 0; i < 15; i++) {
-      detector.update(buildLandmarks(1, 1, 1), 17);
+      vi.advanceTimersByTime(100);
+      detector.update(OPEN, 17);
     }
 
-    const frame = detector.update(buildLandmarks(1, 1, 1), 17);
+    vi.advanceTimersByTime(600);
+    const frame = detector.update(OPEN, 17);
     expect(frame.rate).toBe(0);
   });
 
@@ -230,31 +238,27 @@ describe('BlinkDetector', () => {
 
     // Blink 1
     vi.advanceTimersByTime(1000);
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(1, 1), 17);
+    doBlink(detector, 2);
 
     // Stabilise
-    for (let i = 0; i < 10; i++) {
-      detector.update(buildLandmarks(1, 1), 17);
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(100);
+      detector.update(OPEN, 17);
     }
 
     // Blink 2
     vi.advanceTimersByTime(2000);
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(1, 1), 17);
+    doBlink(detector, 2);
 
     // Stabilise
-    for (let i = 0; i < 10; i++) {
-      detector.update(buildLandmarks(1, 1), 17);
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(100);
+      detector.update(OPEN, 17);
     }
 
     // Blink 3
     vi.advanceTimersByTime(2000);
-    detector.update(buildLandmarks(0, 0), 17);
-    detector.update(buildLandmarks(0, 0), 17);
-    const frame = detector.update(buildLandmarks(1, 1), 17);
+    const frame = doBlink(detector, 2);
 
     expect(frame.rate).toBe(3);
   });

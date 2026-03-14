@@ -67,10 +67,17 @@ button {
   border-bottom: 1px solid var(--border-card);
   background: linear-gradient(180deg, #f5f0e8 0%, #f0ebe1 100%);
   padding: 14px 22px;
+  padding-left: 80px; /* clear macOS traffic lights */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  -webkit-app-region: drag;
+}
+
+.top-header button,
+.top-header .state-tabs {
+  -webkit-app-region: no-drag;
 }
 
 .brand {

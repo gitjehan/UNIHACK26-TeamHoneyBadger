@@ -50,13 +50,6 @@ const MIN_BASELINE_SAMPLES = 8;
  */
 const FORESHORTEN_RATIO = 0.55;
 
-/**
- * Maximum coefficient of variation (stddev/mean) of recent EAR values
- * that is considered stable. Above this, the signal is too jittery (head
- * movement) and we suppress blink detection + freeze the baseline.
- */
-const MAX_EAR_CV = 0.12;
-
 const LEFT_EYE_INDICES  = [LEFT_EYE.left,  LEFT_EYE.right,  ...LEFT_EYE.top,  ...LEFT_EYE.bottom];
 const RIGHT_EYE_INDICES = [RIGHT_EYE.left, RIGHT_EYE.right, ...RIGHT_EYE.top, ...RIGHT_EYE.bottom];
 
@@ -70,9 +63,6 @@ function isEyeVisible(landmarks: Point[], indices: number[]): boolean {
 }
 
 function hasEyeLandmarks(landmarks: Point[]): boolean {
-  // Require at least one complete eye to be visible. When the face is turned
-  // far to one side, the occluded eye's landmarks will be missing/zeroed —
-  // we still want to detect blinks on the visible eye.
   return isEyeVisible(landmarks, LEFT_EYE_INDICES) || isEyeVisible(landmarks, RIGHT_EYE_INDICES);
 }
 
@@ -87,11 +77,6 @@ function eyeHorizontalSpan(landmarks: Point[], eye: typeof LEFT_EYE, aspectRatio
 }
 
 function eyeAspectRatio(landmarks: Point[], eye: typeof LEFT_EYE, aspectRatio: number): number {
-  // Eye openness is measured in the Y axis; eye width in the X axis.
-  // Face-engine normalizes x by videoWidth and y by videoHeight separately,
-  // so we must correct for aspect ratio before comparing vertical and
-  // horizontal distances: multiply x-based distances by (width/height) so
-  // both axes are in the same physical unit (height-normalised).
   const safeVertical = (aIdx: number, bIdx: number): number => {
     const a = landmarks[aIdx];
     const b = landmarks[bIdx];
@@ -119,8 +104,6 @@ function eyeAspectRatio(landmarks: Point[], eye: typeof LEFT_EYE, aspectRatio: n
 
 interface EyeState {
   openBuffer: RollingAverage;
-  /** Short rolling buffer of recent EAR values to detect jitter/instability. */
-  jitterBuffer: RollingAverage;
   /** Rolling baseline for the eye's horizontal span (used to detect foreshortening). */
   hSpanBuffer: RollingAverage;
   closing: boolean;
@@ -130,7 +113,6 @@ interface EyeState {
 function makeEyeState(): EyeState {
   return {
     openBuffer: new RollingAverage(20),
-    jitterBuffer: new RollingAverage(8),
     hSpanBuffer: new RollingAverage(20),
     closing: false,
     closedFrames: 0,
@@ -194,10 +176,16 @@ export class BlinkDetector {
     const leftReliable  = leftVisible  && this.isEyeReliable(this.leftEye,  leftHSpan);
     const rightReliable = rightVisible && this.isEyeReliable(this.rightEye, rightHSpan);
 
-    // Always update horizontal span baselines for visible eyes (even unreliable
-    // ones, so the baseline can recover when the user faces forward again).
-    if (leftVisible  && leftHSpan  > 0) this.leftEye.hSpanBuffer.push(leftHSpan);
-    if (rightVisible && rightHSpan > 0) this.rightEye.hSpanBuffer.push(rightHSpan);
+    // Only update horizontal span baselines when the eye is reliable.
+    // Foreshortened values would corrupt the baseline and weaken the gate.
+    if (leftReliable  && leftHSpan  > 0) this.leftEye.hSpanBuffer.push(leftHSpan);
+    if (rightReliable && rightHSpan > 0) this.rightEye.hSpanBuffer.push(rightHSpan);
+
+    // If an eye became unreliable (head turned mid-blink), reset its closing
+    // state to avoid registering a stale partial blink when it becomes visible again.
+    // This MUST happen before the ear <= 0 early return below.
+    if (!leftReliable  && this.leftEye.closing)  { this.leftEye.closing = false;  this.leftEye.closedFrames = 0; }
+    if (!rightReliable && this.rightEye.closing) { this.rightEye.closing = false; this.rightEye.closedFrames = 0; }
 
     // Use the average of reliable eyes for the all-frames EAR buffer.
     const reliableCount = (leftReliable ? 1 : 0) + (rightReliable ? 1 : 0);
@@ -213,23 +201,9 @@ export class BlinkDetector {
 
     const now = Date.now();
 
-    // --- Jitter gate ---
-    // Feed EAR into per-eye jitter buffers. Only run the state machine for
-    // eyes that are reliable AND whose signal is stable (low jitter).
-    if (leftReliable)  this.leftEye.jitterBuffer.push(leftEar);
-    if (rightReliable) this.rightEye.jitterBuffer.push(rightEar);
-
-    const leftStable  = leftReliable  && this.isSignalStable(this.leftEye);
-    const rightStable = rightReliable && this.isSignalStable(this.rightEye);
-
-    // Only run the state machine for eyes that are reliable AND stable.
-    const leftResult  = leftStable  ? this.processEye(this.leftEye,  leftEar,  now) : { blink: false, closure: false };
-    const rightResult = rightStable ? this.processEye(this.rightEye, rightEar, now) : { blink: false, closure: false };
-
-    // If an eye went from closing to not-being-processed (head turned mid-blink),
-    // reset its closing state to avoid a stale partial blink.
-    if (!leftStable  && this.leftEye.closing)  { this.leftEye.closing = false;  this.leftEye.closedFrames = 0; }
-    if (!rightStable && this.rightEye.closing) { this.rightEye.closing = false; this.rightEye.closedFrames = 0; }
+    // Only run the state machine for eyes that are reliable (not foreshortened).
+    const leftResult  = leftReliable  ? this.processEye(this.leftEye,  leftEar,  now) : { blink: false, closure: false };
+    const rightResult = rightReliable ? this.processEye(this.rightEye, rightEar, now) : { blink: false, closure: false };
 
     // Register at most one blink event per BLINK_COOLDOWN_MS window to prevent
     // double-counting when both eyes close in the same frame (a normal blink).
@@ -252,10 +226,10 @@ export class BlinkDetector {
     if (now - this.lastLogTime > 5000) {
       this.lastLogTime = now;
       const leftStr  = leftVisible
-        ? `L:${leftEar.toFixed(4)}(base:${lb.toFixed(4)},closing:${this.leftEye.closing},rel:${leftReliable},stab:${leftStable})`
+        ? `L:${leftEar.toFixed(4)}(base:${lb.toFixed(4)},closing:${this.leftEye.closing},rel:${leftReliable})`
         : 'L:hidden';
       const rightStr = rightVisible
-        ? `R:${rightEar.toFixed(4)}(base:${rb.toFixed(4)},closing:${this.rightEye.closing},rel:${rightReliable},stab:${rightStable})`
+        ? `R:${rightEar.toFixed(4)}(base:${rb.toFixed(4)},closing:${this.rightEye.closing},rel:${rightReliable})`
         : 'R:hidden';
       console.log(
         `[BlinkDetector] ${leftStr} ${rightStr}` +
@@ -276,20 +250,6 @@ export class BlinkDetector {
     // Not enough data yet — allow it through so the baseline can build up.
     if (eye.hSpanBuffer.filledCount < 5 || baselineHSpan <= 0) return true;
     return currentHSpan >= baselineHSpan * FORESHORTEN_RATIO;
-  }
-
-  /**
-   * Returns true when the recent EAR values for this eye are stable enough
-   * to trust for blink detection. During head movement the EAR oscillates
-   * rapidly — we detect this via coefficient of variation.
-   */
-  private isSignalStable(eye: EyeState): boolean {
-    // Need enough samples to measure stability.
-    if (eye.jitterBuffer.filledCount < 4) return false;
-    const avg = eye.jitterBuffer.average;
-    if (avg <= 0) return false;
-    const cv = eye.jitterBuffer.deviation / avg;
-    return cv <= MAX_EAR_CV;
   }
 
   /**

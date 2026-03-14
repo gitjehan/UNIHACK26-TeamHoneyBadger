@@ -2,7 +2,6 @@ import type { RefObject } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
-import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
@@ -64,13 +63,8 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto 1fr' }}>
         <OverallGauge value={snapshot.overall.score} />
-        <SystemsPanel
-          systems={state.systems}
-          poseBackend={visionBackend.pose}
-          faceBackend={visionBackend.face}
-        />
         <AmbientPanel
           brightness={state.ambient.brightness}
           warmth={state.ambient.warmth}
