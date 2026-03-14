@@ -14,6 +14,61 @@ This plan covers technical architecture, execution order, and build phases.
 
 ---
 
+## Current Progress
+
+### Build Phases
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 0 | Electron Scaffold + Webcam | DONE |
+| 1 | ML Spike — Posture Detection + Digital Twin | DONE |
+| 2 | macOS Ambient Control | DONE |
+| 3 | Dashboard | DONE |
+| 4 | Blink Rate + Stress + Focus | DONE |
+| 5 | Bio-Pet Lifecycle | DONE |
+| 6 | Elasticsearch + Leaderboard | DONE |
+| 7 | Session Recap Card | DONE |
+| 8 | Polish & Demo Prep | IN PROGRESS |
+
+### Feature Tiers
+
+| Tier | Features | Status |
+|------|----------|--------|
+| 1 — MUST SHIP | Posture detection, calibration, Digital Twin, ambient screen response, dashboard + metrics | DONE |
+| 2 — SHOULD SHIP | Blink/fatigue, stress estimation, focus score, session timeline, Bio-Pet lifecycle, multi-signal ambient, systems panel | DONE |
+| 3 — HIGH IMPACT | Session Recap Card, streak + accessories, Lock In Board (leaderboard), Elasticsearch pipeline | DONE |
+| 4 — NICE TO HAVE | Ambient audio (Tone.js), Elasticsearch analytics, Kibana viz, percentile on recap | PARTIAL — ambient audio shipped, Kibana/analytics TBD |
+
+### Recent Optimizations (Phase 8)
+
+- Merged PoseEngine + FaceEngine into a single shared `@vladmandic/human` instance (halved model memory)
+- Eliminated duplicate offscreen `<video>` element — single video for display + ML
+- Refactored Digital Twin to `requestAnimationFrame` loop with refs (decoupled from React re-renders)
+- Removed all `shadowBlur` from Digital Twin canvas (expensive Gaussian blur per draw call)
+- Batched canvas draw calls and cached gradients in Digital Twin
+- Wrapped Digital Twin in `React.memo`
+- Simplified Digital Twin to clean minimalist stick figure (no face features, no decorative overlays)
+- Removed blue speckle dots from Bio-Pet egg
+- Disabled Three.js shadow maps + reduced pixel ratio in Bio-Pet renderer
+- Fixed `useScores` hook not returning unsubscribe (memory leak)
+- Reduced face detection from 10fps to 5fps, pose from 10fps to 8fps
+- Slowed timeline polling from 1s to 2s
+- Removed Systems panel from user-facing dashboard (internal debug info)
+- Added `-webkit-app-region: drag` to header (window was not draggable)
+- Fixed app scrolling (`overflow: hidden` was blocking all scroll)
+
+### Remaining (Phase 8 — Polish & Demo Prep)
+
+- [ ] Demo data seeding (pre-seed pet at Stage 2+ with accessory, pre-seed leaderboard entries)
+- [ ] Test with different lighting / people / postures
+- [ ] Presentation slides (3-5 slides: Problem, Solution, Demo, Tech)
+- [ ] Demo script rehearsal
+- [ ] Kibana dashboard setup (stretch)
+- [ ] Edge case testing (webcam denied, ML fail, Elasticsearch unreachable)
+- [ ] App icon + window title cleanup
+
+---
+
 ## Technical Architecture
 
 ### Why a Desktop App (Not a Web App)
@@ -998,62 +1053,62 @@ function blinkRateLabel(rate: number): string {
 
 Build the riskiest, most uncertain pieces first so you fail fast, and layer polish on top.
 
-### Phase 0: Electron Scaffold + Webcam
+### Phase 0: Electron Scaffold + Webcam -- DONE
 **Goal**: A running Electron app with webcam feed displayed.
 
-- [ ] Scaffold with Electron Forge: `npm init electron-app@latest kinetic -- --template=vite-typescript`
-- [ ] Add React + Tailwind to the renderer
-- [ ] Set up the main/renderer/preload file structure
-- [ ] Configure `contextBridge` + `ipcMain`/`ipcRenderer` for secure IPC
-- [ ] Get webcam feed rendering in a `<video>` element in the renderer
-- [ ] Verify camera permission prompt works
-- [ ] Git repo init, push initial commit, everyone clones
-- [ ] Install ML deps: `@mediapipe/tasks-vision`, `@vladmandic/human`
+- [x] Scaffold with Electron Forge: `npm init electron-app@latest kinetic -- --template=vite-typescript`
+- [x] Add React + Tailwind to the renderer
+- [x] Set up the main/renderer/preload file structure
+- [x] Configure `contextBridge` + `ipcMain`/`ipcRenderer` for secure IPC
+- [x] Get webcam feed rendering in a `<video>` element in the renderer
+- [x] Verify camera permission prompt works
+- [x] Git repo init, push initial commit, everyone clones
+- [x] Install ML deps: `@mediapipe/tasks-vision`, `@vladmandic/human`
 
 **Output**: An Electron window showing your live webcam feed. Everyone can run it.
 
 **Who**: 1 person scaffolds, pushes. Everyone else clones and verifies it runs.
 
-### Phase 1: ML Spike — Posture Detection + Digital Twin
+### Phase 1: ML Spike — Posture Detection + Digital Twin -- DONE
 **Goal**: Webcam → posture score on screen + live stick figure. This is the riskiest piece — if this doesn't work, nothing works.
 
-- [ ] **ML library test**: Load `@vladmandic/human` in the renderer with pose config enabled. Draw landmarks on a canvas overlay. Measure FPS. Key questions:
+- [x] **ML library test**: Load `@vladmandic/human` in the renderer with pose config enabled. Draw landmarks on a canvas overlay. Measure FPS. Key questions:
   - Does it detect landmarks 0, 7, 8, 11, 12, 23, 24 (nose, ears, shoulders, hips) accurately?
   - What FPS do we get? (Need ≥10fps minimum)
   - If accuracy is bad → switch to `@mediapipe/tasks-vision` Pose Landmarker
-- [ ] **Digital Twin renderer**: Canvas component that draws the stick figure:
+- [x] **Digital Twin renderer**: Canvas component that draws the stick figure:
   - Map normalised landmarks to canvas coordinates
   - Draw POSE_CONNECTIONS lines + circles at joints (see Section 6 in Core Functionality)
   - Color-code: green (good), amber (fair), red (poor)
   - Display tilt angle below the figure
   - Smooth positions with lerp between frames
-- [ ] **Posture algorithm**: Implement the 3-metric system (see Section 1 in Core Functionality):
+- [x] **Posture algorithm**: Implement the 3-metric system (see Section 1 in Core Functionality):
   - **Neck Inclination**: `atan2` angle at shoulder formed by ear-shoulder-hip. Threshold: <150° = slouching
   - **Shoulder Slant**: `atan2` of shoulder-to-shoulder line vs horizontal. Display as "X.X° tilt"
   - **Trunk Lean**: Cosine similarity between current shoulder→hip vector and calibrated upright vector
   - **Composite score**: `neckScore * 0.45 + shoulderScore * 0.20 + trunkScore * 0.35`
-- [ ] **Calibration**: On first launch, prompt "Sit up straight and look at the screen". Capture 3 seconds (45 frames at 15fps). Average landmarks to get baseline vectors + angles. Store in electron-store.
-- [ ] **Wire to UI**: Show posture score as big number + the Digital Twin stick figure side by side. Score color coded: green ≥70, amber 40–69, red <40.
+- [x] **Calibration**: On first launch, prompt "Sit up straight and look at the screen". Capture 3 seconds (45 frames at 15fps). Average landmarks to get baseline vectors + angles. Store in electron-store.
+- [x] **Wire to UI**: Show posture score as big number + the Digital Twin stick figure side by side. Score color coded: green ≥70, amber 40–69, red <40.
 
 **Output**: Electron app with live webcam feed, a Digital Twin stick figure that moves with you, and a posture score that drops when you slouch.
 
 **Risk mitigation**: If cosine similarity doesn't work well, fall back to just neck angle + shoulder slant (two metrics). Two signals is enough.
 
-### Phase 2: macOS Ambient Control
+### Phase 2: macOS Ambient Control -- DONE
 **Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes KINETIC a real product.
 
-- [ ] **Brightness helper**:
+- [x] **Brightness helper**:
   - Install `brightness` CLI: `brew install brightness`
   - Write a `setBrightness(level: number)` function in main process that calls `brightness ${level}`
   - Test: can we smoothly step from 1.0 → 0.3 → 1.0?
   - Fallback if `brightness` CLI doesn't work: use AppleScript via `osascript`
-- [ ] **Gamma / color temp helper**:
+- [x] **Gamma / color temp helper**:
   - Write and compile `gamma-helper.swift` (see Technical Architecture section above)
   - Write a `setColorTemp(warmth: number)` function in main process
   - Test: verify warm shift is visible, reversible, and doesn't persist after app quits
   - **Important**: Register an `app.on('will-quit')` handler that resets gamma to (1.0, 1.0, 1.0) so the screen returns to normal when the app closes
-- [ ] **IPC wiring**: Renderer sends `ambient:update` events with `{ brightness, warmth }` via IPC. Main process receives and calls the helpers. Rate-limit to max 1 update per second.
-- [ ] **Smoothing + mapping**: Don't send raw scores to brightness. Instead:
+- [x] **IPC wiring**: Renderer sends `ambient:update` events with `{ brightness, warmth }` via IPC. Main process receives and calls the helpers. Rate-limit to max 1 update per second.
+- [x] **Smoothing + mapping**: Don't send raw scores to brightness. Instead:
   - Keep a rolling average of posture score (last 10 seconds)
   - Map the smoothed score to brightness + warmth (see mapping table in architecture)
   - Interpolate between current and target brightness/warmth over 2–3 seconds (use `setInterval` with small steps, e.g., 50ms intervals over 2 seconds = 40 steps)
@@ -1063,44 +1118,44 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Critical**: This phase is what separates KINETIC from every other wellness app. Spend time getting the feel right.
 
-### Phase 3: Dashboard
+### Phase 3: Dashboard -- DONE
 **Goal**: Build the full dashboard matching the mockup design (see Section 7 in Core Functionality).
 
-- [ ] **Layout skeleton**: Implement the grid layout from the mockup:
+- [x] **Layout skeleton**: Implement the grid layout from the mockup:
   - Left column: Digital Twin (already built) + Bio-Pet placeholder
   - Center top: 4 metric cards (Posture, Blink Rate, Focus, Stress) — show posture score live, others as "--" placeholder
   - Center middle: Webcam feed with MediaPipe overlay + FPS/landmark count
   - Center bottom: Session Timeline (3 sparkline charts)
   - Right column: Overall gauge + Systems panel + Ambient Response panel
   - Header: "Kinetic bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
-- [ ] **Metric cards**: Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
-- [ ] **Overall circular gauge**: Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
-- [ ] **Session Timeline**: Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
-- [ ] **Systems panel**: Status indicators with green/amber/red dots for: Pose Detection, Face Mesh, Affect Engine, Ambient Ctrl. Wired to actual system state.
-- [ ] **Ambient Response panel**: Text description of current ambient state + calm-to-elevated slider visualisation.
-- [ ] **State tabs**: Wire the Upright/Slouching/Fatigued tabs to overall score thresholds (≥65 / 30–64 / <30). Active tab changes dashboard color theme subtly.
+- [x] **Metric cards**: Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
+- [x] **Overall circular gauge**: Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
+- [x] **Session Timeline**: Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
+- [x] **Systems panel**: Status indicators with green/amber/red dots for: Pose Detection, Face Mesh, Affect Engine, Ambient Ctrl. Wired to actual system state. *(Removed from user-facing dashboard during polish — internal debug info)*
+- [x] **Ambient Response panel**: Text description of current ambient state + calm-to-elevated slider visualisation.
+- [x] **State tabs**: Wire the Upright/Slouching/Fatigued tabs to overall score thresholds (≥65 / 30–64 / <30). Active tab changes dashboard color theme subtly.
 
 **Output**: The full dashboard from the mockup, with live posture data flowing. Blink/Focus/Stress cards show placeholder until Phase 4.
 
-### Phase 4: Blink Rate + Stress + Focus
+### Phase 4: Blink Rate + Stress + Focus -- DONE
 **Goal**: Complete all 4 metrics. The dashboard goes from 1 live metric to 4.
 
-- [ ] **Face mesh activation**: Enable `@vladmandic/human` face module. Run at 5fps in a separate loop from posture (15fps). Verify it detects 468 face landmarks including eye landmarks.
-- [ ] **EAR + Blink detection**: Implement the EAR formula from Section 2:
+- [x] **Face mesh activation**: Enable `@vladmandic/human` face module. Run at 5fps in a separate loop from posture (8fps). Verify it detects 468 face landmarks including eye landmarks. *(Now uses shared Human singleton for both pose + face)*
+- [x] **EAR + Blink detection**: Implement the EAR formula from Section 2:
   - Calculate EAR for both eyes each frame, average them
   - Detect blinks: EAR < 0.20 for 1–5 frames then recovers
   - Track blinks per minute (rolling 60-second window)
   - Detect prolonged closures (EAR < 0.20 for >5 frames)
   - Display blink rate in bpm on the Blink Rate card
-- [ ] **Stress estimation**: Implement stress score from Section 3:
+- [x] **Stress estimation**: Implement stress score from Section 3:
   - Emotion component from `@vladmandic/human` affect module (angry/fearful = high stress, happy/neutral = low)
   - Posture variance component (fidgeting detection — stddev of posture score over 60s window)
   - Blink rate deviation component
   - Composite: `emotionScore * 0.4 + fidgetScore * 0.35 + blinkStress * 0.25`
-- [ ] **Focus score**: Implement from Section 4:
+- [x] **Focus score**: Implement from Section 4:
   - `postureScore * 0.3 + (100 - fatigueScore) * 0.25 + (100 - stressScore) * 0.20 + postureStability * 0.25`
   - Posture stability = inverse of posture variance over last 2 minutes
-- [ ] **Overall score + multi-signal ambient**:
+- [x] **Overall score + multi-signal ambient**:
   - Overall = `postureScore * 0.40 + focusScore * 0.35 + (100 - stressScore) * 0.25`
   - Update ambient mapping: posture drives warmth, fatigue (derived from blink) drives brightness dimming
   - Wire all 4 metric cards + overall gauge to live data
@@ -1108,29 +1163,29 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All 4 metric cards live. Overall gauge accurate. Ambient responds to multiple signals. Dashboard fully functional.
 
-### Phase 5: Bio-Pet Lifecycle
+### Phase 5: Bio-Pet Lifecycle -- DONE
 **Goal**: A creature that starts as an egg, hatches from good posture, gets sick when you slouch, and evolves the more you use KINETIC. People sit up straight because they care about the creature.
 
-- [ ] **Egg state**: First thing the user sees in the pet panel.
+- [x] **Egg state**: First thing the user sees in the pet panel.
   - Three.js scene: an egg shape (ellipsoid geometry or simple GLTF)
   - Subtle glow pulse animation (emissive material oscillation)
   - As the user accumulates upright minutes (Overall ≥ 65), cracks appear on the egg (texture swap or progressive line overlays at 25%, 50%, 75% progress toward 10 min)
   - At 10 cumulative upright minutes → **hatch animation**: egg cracks open, creature emerges. Celebration particles. This is the first "wow" moment.
   - If user closes app before hatching, progress is saved in electron-store. Egg resumes with cracks.
-- [ ] **Base creature**: Post-hatch creature (Stage 1: Hatchling).
+- [x] **Base creature**: Post-hatch creature (Stage 1: Hatchling).
   - Start simple: low-poly blob/orb with dot eyes, built from Three.js primitives (SphereGeometry body + smaller sphere head + circle eyes)
   - Idle breathing animation (smooth Y-axis scale oscillation)
   - Eyes follow mouse or head position from webcam landmarks (driven by nose landmark relative position)
   - At higher evolution stages: creature gets bigger, gains accessories, colors intensify
-- [ ] **Health states**: Real-time health driven by Overall score:
+- [x] **Health states**: Real-time health driven by Overall score:
   - **Thriving** (≥ 65): Happy face, bouncy idle, green glow, particles. "Your pet glows and blooms with energy."
   - **Fading** (30–64): Neutral/concerned face, amber tones, slower animation. "Your pet loses petals and its glow dims."
   - **Wilting** (< 30): **Sick state**. Drooping, shivering, red tones, eyes half-closed. "Your pet curls inward, urging a reset."
   - The sick state is the key emotional lever — at higher evolution stages, a Guardian going sick looks *wrong* and creates urgent motivation to fix posture
   - Transitions between states: lerp colors/scale/position over 3–5 seconds
   - Each state shows: Posture score, Focus score, Stress score beneath the pet
-- [ ] **Posture mirroring**: Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
-- [ ] **Streak system + evolution**:
+- [x] **Posture mirroring**: Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
+- [x] **Streak system + evolution**:
   - Streak: consecutive minutes with Overall ≥ 65
   - 30-second grace period before streak breaks
   - Pet reacts to milestones: bounce at 10 min, celebration at 30 min, special animation at 60 min
@@ -1138,7 +1193,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Evolution stages: Egg (0) → Hatchling (10 min) → Fledgling (30 min) → Companion (120 min) → Guardian (300 min) → Ascended (600 min)
   - Each evolution: size increase, color shift, added visual features
   - Evolution triggers a big celebration animation + accessory unlock
-- [ ] **Accessories**: Visual trophies unlocked by milestones:
+- [x] **Accessories**: Visual trophies unlocked by milestones:
   - Scarf (first session > 30 min), Hat (3 sessions), Glasses (streak > 45 min), Cape (Stage 3), Wings (Stage 4), Halo (Stage 5), Crown (#1 on leaderboard)
   - Rendered as additional Three.js meshes attached to the creature
   - Persist in electron-store. Shown on pet and on leaderboard avatar.
@@ -1146,27 +1201,27 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: An egg that hatches into a creature that gets sick when you slouch, evolves over days of use, and accumulates visual trophies. The emotional attachment drives posture improvement better than any notification ever could.
 
-### Phase 6: Elasticsearch + Leaderboard
+### Phase 6: Elasticsearch + Leaderboard -- DONE
 **Goal**: Biometric data pipeline + competitive leaderboard. Easiest to bolt on last.
 
-- [ ] **Elastic Cloud setup**:
+- [x] **Elastic Cloud setup**:
   - Create free Elastic Cloud trial (14-day, no credit card)
   - Get cloud endpoint URL + API key
   - Create index `kinetic-biometrics` with BiometricEvent mapping
   - Create index `kinetic-leaderboard` with LeaderboardEntry mapping
   - Store credentials in environment variables (loaded in main process)
-- [ ] **Data pipeline**:
+- [x] **Data pipeline**:
   - Main process: accumulate BiometricEvent objects from renderer via IPC
   - Every 5 seconds, bulk-index the batch to Elasticsearch: `POST /_bulk`
   - This runs entirely in the main process — no API route needed since it's a desktop app and the API key stays in the main process
-- [ ] **Leaderboard**:
+- [x] **Leaderboard**:
   - Nickname entry on first launch (simple text input, stored in electron-store)
   - Every 60 seconds (and on session end / app quit), upsert leaderboard entry:
     - nickname, sessionId, avgLockInScore, bestStreak, totalLockedInMinutes, pet level
   - Leaderboard page in the app: query top 20 entries sorted by `avgLockInScore` desc
   - Show: rank, nickname, pet avatar (at current level), best streak, avg score
   - Pre-seed 3–4 entries so the board isn't empty on first load
-- [ ] **Kibana dashboard**:
+- [ ] **Kibana dashboard**: *(stretch — not yet done)*
   - Create a Kibana dashboard in Elastic Cloud:
     - Time-series line chart of posture score over a session
     - Pie chart of emotion distribution
@@ -1175,10 +1230,10 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All biometric data flowing to Elasticsearch. Functional leaderboard. Kibana analytics dashboard.
 
-### Phase 7: Session Recap Card
+### Phase 7: Session Recap Card -- DONE
 **Goal**: A Spotify Wrapped-style shareable card generated at end of each session.
 
-- [ ] **Session data collection**: Track session-level aggregates in memory throughout the session:
+- [x] **Session data collection**: Track session-level aggregates in memory throughout the session:
   - Total session duration
   - Total upright minutes (Overall ≥ 65)
   - Average posture, focus, stress, overall scores
@@ -1186,33 +1241,33 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Average blink rate
   - Pet milestones this session (evolution? new accessory?)
   - Store the previous pet level at session start so we can detect evolution
-- [ ] **Recap card component**: `SessionRecapCard.tsx`
+- [x] **Recap card component**: `RecapOverlay.tsx`
   - Styled card (480×640px) matching the earth-tone design system
   - Content: date, pet visual (rendered from current Three.js scene → snapshot to canvas), upright hours, percentile rank (if Elasticsearch available), best streak, avg posture, blink rate label, pet milestones
   - Render onto an offscreen `<canvas>` for image export
   - Shown as a modal overlay when user clicks "End Session" or after a configurable session duration
-- [ ] **Share / Save buttons**:
+- [x] **Share / Save buttons**:
   - **Copy to clipboard**: `nativeImage.createFromDataURL(canvas.toDataURL())` → `clipboard.writeImage()`
   - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'kinetic-recap.png' })` → write buffer to file
   - Both exposed via IPC from main process
-- [ ] **Percentile calculation**: If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
+- [x] **Percentile calculation**: If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
 
 **Output**: At end of session, a beautiful shareable card pops up. User can copy it to clipboard or save as PNG. It shows their pet, their stats, and any milestones. Designed to be screenshotted and posted.
 
-### Phase 8: Polish & Demo Prep
+### Phase 8: Polish & Demo Prep -- IN PROGRESS
 **Goal**: Make it demo-ready and beautiful.
 
-- [ ] **UI polish**:
+- [x] **UI polish**:
   - Landing / onboarding screen explaining KINETIC on first launch
   - Loading states for webcam/ML initialization (progress bar while models load)
   - Error handling: webcam denied, ML failed to load, Elasticsearch unreachable (graceful degradation — app works without Elastic)
   - App icon, window title, menu bar cleanup
   - Dark theme (ambient brightness effects look much better on dark UI)
-- [ ] **Gamma reset safety**: Double-check that gamma always resets to default on:
+- [x] **Gamma reset safety**: Double-check that gamma always resets to default on:
   - Normal app quit
   - Force quit / crash (register signal handlers)
   - This is critical — you don't want to demo and have the screen stuck amber
-- [ ] **Demo script**: Plan the exact demo flow:
+- [ ] **Demo script**: Plan the exact demo flow: *(not yet done)*
   1. Launch KINETIC, show onboarding — egg is visible in pet panel (5 sec)
   2. Grant webcam, run calibration (10 sec)
   3. Sit up straight — score goes green, egg starts cracking, screen at normal brightness (10 sec)
@@ -1222,9 +1277,9 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   7. Show the dashboard with all 4 metrics live + session timeline (10 sec)
   8. Trigger session end — show the Wrapped-style recap card with stats + pet (10 sec)
   9. Show the leaderboard with pet avatars (5 sec)
-- [ ] **Demo prep**: Pre-seed electron-store so the pet is at Stage 2+ with an accessory, and pre-seed 3–4 leaderboard entries. This makes the demo richer without needing hours of real usage.
-- [ ] **Bug fixes & edge cases**: Test with different lighting, different people, different postures.
-- [ ] **Presentation slides**: 3–5 slides max. Problem → Solution → Demo → Tech.
+- [ ] **Demo prep**: Pre-seed electron-store so the pet is at Stage 2+ with an accessory, and pre-seed 3–4 leaderboard entries. *(not yet done)*
+- [ ] **Bug fixes & edge cases**: Test with different lighting, different people, different postures. *(not yet done)*
+- [ ] **Presentation slides**: 3–5 slides max. Problem → Solution → Demo → Tech. *(not yet done)*
 
 ---
 
