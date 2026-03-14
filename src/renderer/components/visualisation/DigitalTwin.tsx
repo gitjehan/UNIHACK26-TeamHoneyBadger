@@ -221,10 +221,10 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
   return (
     <div className="card" style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+        <h3 style={{ margin: 0, fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#A89B8C' }}>
           Digital Twin
         </h3>
-        <span style={{ fontSize: 11, color: live ? '#4A7C59' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 10, fontWeight: 500, color: live ? '#4A7C59' : '#A89B8C', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span
             style={{
               width: 6, height: 6, borderRadius: '50%',
@@ -247,17 +247,17 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
       />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', padding: '2px 0' }}>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+        <span style={{ fontSize: 11, color: '#A89B8C' }}>
           {shoulderSlant.toFixed(1)}° tilt
         </span>
         <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
-          <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
+          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#A89B8C' }}>
             Alignment
           </div>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 400, color, letterSpacing: '-0.02em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 500, color, letterSpacing: '-0.02em' }}>
             {postureScore}
           </span>
-          <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>/100</span>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500, color: '#A89B8C', marginLeft: 2 }}>/100</span>
         </div>
       </div>
     </div>

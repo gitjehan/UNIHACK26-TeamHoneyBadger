@@ -100,7 +100,7 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
                 }}
               >
                 <span>{value}</span>
-                {unit ? <span style={{ fontSize: 11, fontWeight: 400, color: '#A89B8C' }}>{unit}</span> : null}
+                {unit ? <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 500, color: '#A89B8C' }}>{unit}</span> : null}
               </div>
             </div>
             <span className={`status-badge status-${status}`}>{statusLabel}</span>

@@ -64,14 +64,14 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dasharray 1s ease, stroke 1s ease, stroke-dashoffset 1s ease' }}
         />
-        <text x="90" y="82" textAnchor="middle" fill={color} fontFamily="var(--font-display)" fontSize="33" fontWeight={400}>
+        <text x="90" y="84" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="46" fontWeight={500} letterSpacing="-0.02em">
           {clamped}
         </text>
-        <text x="90" y="98" textAnchor="middle" fill="var(--text-tertiary)" fontSize="12">
+        <text x="90" y="102" textAnchor="middle" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight={500}>
           /100
         </text>
-        <text x="90" y="116" textAnchor="middle" fill={color} fontSize="13" fontWeight={400}>
-          {grade}
+        <text x="90" y="120" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={600} letterSpacing="0.08em">
+          {grade.toUpperCase()}
         </text>
       </svg>
     </div>

@@ -355,17 +355,17 @@ export function BioPet({ pet, postureTilt: _tilt, postureScore, focusScore, stre
       <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
         {/* Stage + health pill */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)' }}>
+          <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A89B8C' }}>
             Stage {pet.stage}
           </span>
-          <span style={{ fontSize: 15, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: 18, fontFamily: 'var(--font-display)', fontWeight: 500, color: 'var(--text-primary)' }}>
             {pet.stageName}
           </span>
           <span
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               background: hbg, color: hc, borderRadius: 999,
-              padding: '2px 10px', fontSize: 11, fontWeight: 600, marginLeft: 'auto',
+              padding: '2px 10px', fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', marginLeft: 'auto',
             }}
           >
             <span style={{ width: 6, height: 6, borderRadius: 3, background: hc }} />
@@ -377,10 +377,10 @@ export function BioPet({ pet, postureTilt: _tilt, postureScore, focusScore, stre
         {pet.stage < 5 && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 9, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-tertiary)' }}>
+              <span style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#A89B8C' }}>
                 Evolution
               </span>
-              <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: hc }}>
+              <span style={{ fontSize: 16, fontFamily: 'var(--font-display)', fontWeight: 500, color: hc }}>
                 {prog}%
               </span>
             </div>
@@ -404,8 +404,8 @@ export function BioPet({ pet, postureTilt: _tilt, postureScore, focusScore, stre
 
 function Chip({ label, value }: { label: string; value: number | string }) {
   return (
-    <span style={{ background: 'var(--bg-card-muted)', border: '1px solid var(--border-card)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
-      {label} <strong style={{ color: 'var(--text-primary)' }}>{typeof value === 'number' ? Math.round(value) : value}</strong>
+    <span style={{ background: 'var(--bg-card-muted)', border: '1px solid var(--border-card)', borderRadius: 6, padding: '2px 8px', fontSize: 10, color: '#A89B8C', fontWeight: 500, letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums' }}>
+      {label} <strong style={{ fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{typeof value === 'number' ? Math.round(value) : value}</strong>
     </span>
   );
 }
