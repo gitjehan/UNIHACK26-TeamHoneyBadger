@@ -310,13 +310,15 @@ export class BlinkDetector {
       }
     }
 
+    return { blink: false, closure: false };
+  }
+
+  private buildFrame(now: number, baselineBlinkRate: number): BlinkFrame {
+    if (now - this.lastCacheTime >= 500) {
+      this.lastCacheTime = now;
+
       const closureCutoff = now - CLOSURE_WINDOW_MS;
       this.pruneOlderThan(this.closureTimes, closureCutoff);
-
-      // Trim blinkTimes to avoid unbounded growth now that time-based pruning is removed.
-      if (this.blinkTimes.length > BLINK_WINDOW_COUNT) {
-        this.blinkTimes.splice(0, this.blinkTimes.length - BLINK_WINDOW_COUNT);
-      }
 
       // Compute blink rate from the last N blinks (count-based window).
       const blinkCount = this.blinkTimes.length;
@@ -331,9 +333,10 @@ export class BlinkDetector {
           const first = recent[0]!;
           const last = recent[recent.length - 1]!;
           const windowMs = Math.max(1, last - first);
+          const intervalCount = recent.length - 1;
           // Require at least 1s of span to avoid huge rates from nearly-coincident timestamps.
-          if (windowMs >= 1000) {
-            this.cachedBlinkRate = Math.round((recent.length - 1) * (60_000 / windowMs));
+          if (windowMs >= 1000 && intervalCount > 0) {
+            this.cachedBlinkRate = Math.round(intervalCount * (60_000 / windowMs));
           } else {
             this.cachedBlinkRate = 0;
           }
@@ -341,7 +344,11 @@ export class BlinkDetector {
       } else {
         this.cachedBlinkRate = 0;
       }
-      this.cachedClosureCount = this.closureTimes.length;
+
+      // Keep only the last N blinks so the array doesn't grow unbounded.
+      if (this.blinkTimes.length > BLINK_WINDOW_COUNT) {
+        this.blinkTimes.splice(0, this.blinkTimes.length - BLINK_WINDOW_COUNT);
+      }
       this.cachedClosureCount = this.closureTimes.length;
     }
 
