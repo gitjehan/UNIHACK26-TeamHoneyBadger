@@ -230,7 +230,7 @@ export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], posture
           }}
           title={collapsed ? 'Show webcam' : 'Hide webcam'}
         >
-          {collapsed ? 'show' : 'hide'}
+          {collapsed ? '▼' : '▲'}
         </button>
       </div>
 
