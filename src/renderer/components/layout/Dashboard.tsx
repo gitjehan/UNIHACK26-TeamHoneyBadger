@@ -48,7 +48,7 @@ export function Dashboard({
         <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: '1fr 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
         <DigitalTwin
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}

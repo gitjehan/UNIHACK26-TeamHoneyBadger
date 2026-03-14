@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Cat Sprite Sheet Preview</title>
+  <style>
+    body { font-family: system-ui; background: #333; color: #fff; padding: 40px; }
+    h1 { color: #E8AA6A; text-align: center; }
+    h2 { color: #C4864A; margin-top: 30px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+    .card { background: #fff; padding: 20px; border-radius: 12px; text-align: center; }
+    .card h3 { color: #5C3A1E; font-size: 14px; margin-bottom: 10px; }
+    .sprite { 
+      width: 96px; height: 96px; 
+      background-image: url('src/renderer/assets/cat-sprites.png');
+      background-size: 480px auto;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      margin: 0 auto;
+    }
+    .scene { background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%); padding: 10px; border-radius: 8px; }
+    
+    /* Frame positions (32px frames at 3x scale = 96px steps in background) */
+    .sit1 { background-position: 0 0; }
+    .sit2 { background-position: -96px 0; }
+    .sit3 { background-position: -192px 0; }
+    .sit4 { background-position: -288px 0; }
+    .sit5 { background-position: 0 -96px; }
+    .sit6 { background-position: -96px -96px; }
+    
+    .side1 { background-position: 0 -192px; }
+    .side2 { background-position: -96px -192px; }
+    .side3 { background-position: -192px -192px; }
+    
+    .walk1 { background-position: 0 -384px; }
+    .walk2 { background-position: -96px -384px; }
+    .walk3 { background-position: -192px -384px; }
+    .walk4 { background-position: -288px -384px; }
+    
+    .sleep1 { background-position: 0 -480px; }
+    .sleep2 { background-position: -96px -480px; }
+    .sleep3 { background-position: -192px -480px; }
+    
+    .animated { animation: breathe 2s ease-in-out infinite; }
+    @keyframes breathe {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-3px); }
+    }
+  </style>
+</head>
+<body>
+  <h1>Cat Sprite Sheet - Direct PNG Usage</h1>
+  
+  <h2>Sitting (Front)</h2>
+  <div class="grid">
+    <div class="card"><h3>Sit 1</h3><div class="scene"><div class="sprite sit1 animated"></div></div></div>
+    <div class="card"><h3>Sit 2</h3><div class="scene"><div class="sprite sit2"></div></div></div>
+    <div class="card"><h3>Sit 3</h3><div class="scene"><div class="sprite sit3"></div></div></div>
+    <div class="card"><h3>Sit 4</h3><div class="scene"><div class="sprite sit4"></div></div></div>
+  </div>
+  
+  <h2>Side View</h2>
+  <div class="grid">
+    <div class="card"><h3>Side 1</h3><div class="scene"><div class="sprite side1"></div></div></div>
+    <div class="card"><h3>Side 2</h3><div class="scene"><div class="sprite side2"></div></div></div>
+    <div class="card"><h3>Side 3</h3><div class="scene"><div class="sprite side3"></div></div></div>
+  </div>
+  
+  <h2>Walking</h2>
+  <div class="grid">
+    <div class="card"><h3>Walk 1</h3><div class="scene"><div class="sprite walk1"></div></div></div>
+    <div class="card"><h3>Walk 2</h3><div class="scene"><div class="sprite walk2"></div></div></div>
+    <div class="card"><h3>Walk 3</h3><div class="scene"><div class="sprite walk3"></div></div></div>
+    <div class="card"><h3>Walk 4</h3><div class="scene"><div class="sprite walk4"></div></div></div>
+  </div>
+  
+  <h2>Sleeping</h2>
+  <div class="grid">
+    <div class="card"><h3>Sleep 1</h3><div class="scene"><div class="sprite sleep1"></div></div></div>
+    <div class="card"><h3>Sleep 2</h3><div class="scene"><div class="sprite sleep2"></div></div></div>
+    <div class="card"><h3>Sleep 3</h3><div class="scene"><div class="sprite sleep3"></div></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,488 @@
+/* ─────────────────────────────────────────────────────────────
+   Pet Animation Styles
+   Pokemon Gen 4/5 aesthetic with subtle CSS animations
+   ───────────────────────────────────────────────────────────── */
+
+/* ─── CSS Variables ─────────────────────────────────────────── */
+
+:root {
+  --pet-green: #4A7C59;
+  --pet-green-pale: #EAF2EC;
+  --pet-amber: #B8860B;
+  --pet-amber-pale: #FDF6E3;
+  --pet-red: #C0392B;
+  --pet-red-pale: #FDF0EE;
+  --pet-pink: #E88B8B;
+  --pet-text: #2C2416;
+  --pet-text-muted: #A89B8C;
+}
+
+/* ─── Pet Scene Container ───────────────────────────────────── */
+
+.pet-scene {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #FFFFFF;
+  border-radius: 12px;
+}
+
+/* ─── Radial Glow Background ────────────────────────────────── */
+
+.pet-glow {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.08;
+  filter: blur(30px);
+}
+
+.pet-glow--thriving {
+  background: radial-gradient(circle, var(--pet-green) 0%, transparent 70%);
+}
+
+.pet-glow--fading {
+  background: radial-gradient(circle, var(--pet-amber) 0%, transparent 70%);
+}
+
+.pet-glow--wilting {
+  background: radial-gradient(circle, var(--pet-red) 0%, transparent 70%);
+}
+
+/* ─── Sprite Container ──────────────────────────────────────── */
+
+.pet-sprite-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+
+/* ─── Breathing Animation ───────────────────────────────────── */
+
+@keyframes pet-breathe {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.pet-sprite-wrapper--cat {
+  animation: pet-breathe 2.5s ease-in-out infinite;
+}
+
+/* ─── Egg Breathing (slightly slower) ───────────────────────── */
+
+@keyframes egg-breathe {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.pet-sprite-wrapper--egg {
+  animation: egg-breathe 3s ease-in-out infinite;
+}
+
+/* ─── Egg Wobble ────────────────────────────────────────────── */
+
+@keyframes egg-wobble {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-1px) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-1px) rotate(2deg);
+  }
+}
+
+.pet-sprite-wrapper--egg-wobble {
+  animation: egg-wobble 0.4s ease-in-out;
+}
+
+/* ─── Floating Hearts ───────────────────────────────────────── */
+
+.pet-floating-hearts {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  width: 60px;
+  height: 80px;
+  pointer-events: none;
+}
+
+.pet-heart {
+  position: absolute;
+  opacity: 0.85;
+}
+
+@keyframes heart-float-1 {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes heart-float-2 {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-6px) scale(1.02);
+    opacity: 0.9;
+  }
+}
+
+@keyframes heart-float-3 {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-10px) scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+.pet-heart-1 {
+  top: 10px;
+  left: 5px;
+  animation: heart-float-1 2s ease-in-out infinite;
+}
+
+.pet-heart-2 {
+  top: 30px;
+  left: 30px;
+  animation: heart-float-2 2.3s ease-in-out infinite;
+  animation-delay: 0.5s;
+}
+
+.pet-heart-3 {
+  top: 50px;
+  left: 15px;
+  animation: heart-float-3 1.8s ease-in-out infinite;
+  animation-delay: 1s;
+}
+
+/* ─── Sleep Z's ─────────────────────────────────────────────── */
+
+.pet-sleep-zzz {
+  position: absolute;
+  top: 15px;
+  right: 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.pet-z {
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--pet-text-muted);
+  opacity: 0.5;
+  line-height: 1;
+}
+
+@keyframes zzz-bob-1 {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate(2px, -3px);
+    opacity: 0.7;
+  }
+}
+
+@keyframes zzz-bob-2 {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translate(3px, -4px);
+    opacity: 0.65;
+  }
+}
+
+@keyframes zzz-bob-3 {
+  0%, 100% {
+    transform: translate(0, 0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(4px, -5px);
+    opacity: 0.6;
+  }
+}
+
+.pet-z-1 {
+  font-size: 16px;
+  animation: zzz-bob-1 2.5s ease-in-out infinite;
+}
+
+.pet-z-2 {
+  font-size: 13px;
+  margin-left: 8px;
+  margin-top: -2px;
+  animation: zzz-bob-2 2.8s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+.pet-z-3 {
+  font-size: 10px;
+  margin-left: 16px;
+  margin-top: -1px;
+  animation: zzz-bob-3 3s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+/* ─── Sweat Drop ────────────────────────────────────────────── */
+
+.pet-sweat-drop {
+  position: absolute;
+  top: 35px;
+  right: 50px;
+  pointer-events: none;
+}
+
+@keyframes sweat-bob {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.8;
+  }
+  30% {
+    transform: translateY(2px);
+    opacity: 0.9;
+  }
+  60% {
+    transform: translateY(-1px);
+    opacity: 0.7;
+  }
+}
+
+.pet-sweat-drop svg {
+  animation: sweat-bob 1.5s ease-in-out infinite;
+}
+
+/* ─── Tail Flick (applied to tail group in SVG) ─────────────── */
+
+@keyframes tail-flick {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+.pet-tail-flick {
+  animation: tail-flick 0.3s ease-in-out;
+}
+
+/* ─── Crack Glow Pulse ──────────────────────────────────────── */
+
+@keyframes crack-glow {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.pet-crack-glow {
+  animation: crack-glow 1s ease-in-out infinite;
+}
+
+/* ─── Reduced Motion ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-sprite-wrapper--cat,
+  .pet-sprite-wrapper--egg,
+  .pet-sprite-wrapper--egg-wobble,
+  .pet-heart,
+  .pet-z,
+  .pet-sweat-drop svg,
+  .pet-tail-flick,
+  .pet-crack-glow {
+    animation: none;
+  }
+}
+
+/* ─── Pet Meta Section ──────────────────────────────────────── */
+
+.pet-meta-section {
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.pet-stage-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.pet-stage-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pet-text-muted);
+}
+
+.pet-stage-name {
+  font-size: 18px;
+  font-family: var(--font-display, system-ui);
+  font-weight: 500;
+  color: var(--pet-text);
+}
+
+.pet-health-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.pet-health-pill--thriving {
+  background: var(--pet-green-pale);
+  color: var(--pet-green);
+}
+
+.pet-health-pill--fading {
+  background: var(--pet-amber-pale);
+  color: var(--pet-amber);
+}
+
+.pet-health-pill--wilting {
+  background: var(--pet-red-pale);
+  color: var(--pet-red);
+}
+
+.pet-health-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.pet-health-dot--thriving {
+  background: var(--pet-green);
+}
+
+.pet-health-dot--fading {
+  background: var(--pet-amber);
+}
+
+.pet-health-dot--wilting {
+  background: var(--pet-red);
+}
+
+/* ─── Evolution Bar ─────────────────────────────────────────── */
+
+.pet-evolution-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pet-evolution-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pet-evolution-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--pet-text-muted);
+}
+
+.pet-evolution-percent {
+  font-size: 16px;
+  font-family: var(--font-display, system-ui);
+  font-weight: 500;
+}
+
+.pet-evolution-bar {
+  height: 4px;
+  background: var(--bg-card-muted, #F5F3F0);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.pet-evolution-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease-out;
+}
+
+.pet-evolution-fill--thriving {
+  background: var(--pet-green);
+}
+
+.pet-evolution-fill--fading {
+  background: var(--pet-amber);
+}
+
+.pet-evolution-fill--wilting {
+  background: var(--pet-red);
+}
+
+/* ─── Stat Chips ────────────────────────────────────────────── */
+
+.pet-stat-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pet-chip {
+  background: var(--bg-card-muted, #F5F3F0);
+  border: 1px solid var(--border-card, #E8E4DC);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  color: var(--pet-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pet-chip-value {
+  font-family: var(--font-display, system-ui);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pet-text);
+}

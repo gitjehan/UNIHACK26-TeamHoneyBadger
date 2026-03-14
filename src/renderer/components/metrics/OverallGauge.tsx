@@ -50,13 +50,13 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
         aria-label={`Overall score: ${clamped} out of 100`}
         style={{ display: 'block', margin: '0 auto' }}
       >
-        <circle cx="90" cy="90" r={radius} stroke="#F4F2ED" strokeWidth="5" fill="none" />
+        <circle cx="90" cy="90" r={radius} stroke="#E8E4DC" strokeWidth="4" fill="none" />
         <circle
           cx="90"
           cy="90"
           r={radius}
           stroke={color}
-          strokeWidth="5"
+          strokeWidth="4"
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -64,15 +64,9 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dasharray 1s ease, stroke 1s ease, stroke-dashoffset 1s ease' }}
         />
-        <text x="90" y="84" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="46" fontWeight={500} letterSpacing="-0.02em">
-          {clamped}
-        </text>
-        <text x="90" y="102" textAnchor="middle" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight={500}>
-          /100
-        </text>
-        <text x="90" y="120" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={600} letterSpacing="0.08em">
-          {grade.toUpperCase()}
-        </text>
+        <text x="90" y="83" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="38" fontWeight={500} letterSpacing="-0.02em">{clamped}</text>
+        <text x="90" y="100" textAnchor="middle" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="11" fontWeight={500}>/100</text>
+        <text x="90" y="115" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={600} letterSpacing="0.08em">{grade.toUpperCase()}</text>
       </svg>
     </div>
   );
