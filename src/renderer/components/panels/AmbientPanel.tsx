@@ -17,11 +17,11 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
   return (
     <div className="card">
       <h3>Ambient Response</h3>
-      <p style={{ margin: '0 0 12px', color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 12px', color: '#6B5D4F', fontSize: 12, lineHeight: 1.5 }}>
         {description(overallScore)}
       </p>
       <div style={{ display: 'grid', gap: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#A89B8C', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
           <span>calm</span>
           <span>elevated</span>
         </div>
@@ -42,14 +42,15 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
           marginTop: 12,
           display: 'flex',
           gap: 16,
-          color: 'var(--text-secondary)',
-          fontSize: 12,
-          fontFamily: 'var(--font-mono)',
+          color: '#A89B8C',
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: '0.04em',
           fontVariantNumeric: 'tabular-nums',
         }}
       >
-        <span>Brightness {Math.round(brightness * 100)}%</span>
-        <span>Warmth {Math.round(warmth * 100)}%</span>
+        <span>Brightness <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{Math.round(brightness * 100)}%</span></span>
+        <span>Warmth <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{Math.round(warmth * 100)}%</span></span>
       </div>
     </div>
   );

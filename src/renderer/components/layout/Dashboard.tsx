@@ -1,3 +1,4 @@
+import { memo, type RefObject, useMemo } from 'react';
 import { useState, type RefObject } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
@@ -17,7 +18,7 @@ interface DashboardProps {
   visionBackend: { pose: VisionBackend; face: VisionBackend };
 }
 
-export function Dashboard({
+export const Dashboard = memo(function Dashboard({
   state,
   videoRef,
   timeline,
@@ -26,6 +27,11 @@ export function Dashboard({
   const { snapshot } = state;
   const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
   const [webcamCollapsed, setWebcamCollapsed] = useState(false);
+
+  const blinkValue = useMemo(
+    () => (snapshot.blink.warmedUp === false ? null : snapshot.blink.rate),
+    [snapshot.blink.warmedUp, snapshot.blink.rate],
+  );
 
   return (
     <div className="dashboard-grid">
@@ -41,7 +47,7 @@ export function Dashboard({
         <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
         <MetricCard
           label="Blink Rate"
-          value={snapshot.blink.warmedUp === false ? null : snapshot.blink.rate}
+          value={blinkValue}
           unit="bpm"
           kind="blinkRate"
         />
@@ -49,7 +55,7 @@ export function Dashboard({
         <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: '1fr 1fr' }}>
+      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
         <DigitalTwin
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}
@@ -90,4 +96,4 @@ export function Dashboard({
       </div>
     </div>
   );
-}
+});

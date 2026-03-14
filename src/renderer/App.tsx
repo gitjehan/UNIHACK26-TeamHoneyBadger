@@ -36,6 +36,9 @@ export default function App(): JSX.Element {
   });
 
   const sessionIdRef = useRef(uuidv4());
+  const calibrationSamplesRef = useRef<CalibrationSample[]>([]);
+  const brightnessRangeRef = useRef<[number, number]>([0.2, 1.0]);
+  const warmthIntensityRef = useRef<number>(1.0);
   const poseEngineRef = useRef<PoseEngine | null>(null);
   const faceEngineRef = useRef<FaceEngine | null>(null);
 
@@ -63,14 +66,24 @@ export default function App(): JSX.Element {
   useEffect(() => {
     let mounted = true;
     const bootstrap = async () => {
+      const [storedCalibration, storedPet, storedNick, storedBrightnessRange, storedWarmthIntensity] = await Promise.all([
+        window.kinetic.storeGet('calibration'),
       const [storedPet, storedNick] = await Promise.all([
         window.kinetic.storeGet('pet'),
         window.kinetic.storeGet('nickname'),
+        window.kinetic.storeGet('brightnessRange'),
+        window.kinetic.storeGet('warmthIntensity'),
       ]);
       if (!mounted) return;
       const pet = sanitizePet(storedPet);
       if (pet) scoreEngine.setPetState(pet);
       if (typeof storedNick === 'string' && storedNick.trim()) setNickname(storedNick);
+      if (Array.isArray(storedBrightnessRange) && storedBrightnessRange.length === 2) {
+        brightnessRangeRef.current = storedBrightnessRange as [number, number];
+      }
+      if (typeof storedWarmthIntensity === 'number') {
+        warmthIntensityRef.current = storedWarmthIntensity;
+      }
     };
     bootstrap().catch((error) => console.warn('Bootstrap failed', error));
     return () => {
@@ -148,6 +161,14 @@ export default function App(): JSX.Element {
   }, [webcam.ready, webcam.videoRef]);
 
   useEffect(() => {
+    latestPoseLandmarksRef.current = state.poseLandmarks;
+    latestPostureMetricsRef.current = {
+      neckAngle: state.snapshot.posture.neckAngle,
+      shoulderSlant: state.snapshot.posture.shoulderSlant,
+    };
+  }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
+
+  // Consolidated ambient + timeline ticker (reduces 3 intervals to 1)
     if (stage === 'welcome') return;
     const timer = setInterval(() => {
       setTimeline(scoreEngine.getTimeline());
@@ -157,22 +178,31 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (stage !== 'ready') return;
-    scoreEngine.setAmbientStatus('active');
-    window.kinetic.updateAmbient(stateRef.current.ambient);
-    const interval = setInterval(() => {
-      window.kinetic.updateAmbient(stateRef.current.ambient);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [stage]);
 
-  useEffect(() => {
-    if (stage !== 'ready') return;
-    const s = stateRef.current;
-    ambientAudio.update(s.snapshot.overall.score, s.snapshot.stress.score);
+    const applyAmbient = () => {
+      const { brightness, warmth } = stateRef.current.ambient;
+      const [minB, maxB] = brightnessRangeRef.current;
+      const adjustedBrightness = Math.min(maxB, Math.max(minB, brightness));
+      const adjustedWarmth = Math.min(1, Math.max(0, warmth * warmthIntensityRef.current));
+      window.kinetic.updateAmbient({ brightness: adjustedBrightness, warmth: adjustedWarmth });
+    };
+
+    scoreEngine.setAmbientStatus('active');
+    applyAmbient();
+    ambientAudio.update(stateRef.current.snapshot.overall.score, stateRef.current.snapshot.stress.score);
+
+    let tick = 0;
     const interval = setInterval(() => {
-      const latest = stateRef.current;
-      ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
-    }, 2000);
+      tick++;
+      // Ambient light every 1s (every tick)
+      applyAmbient();
+      // Audio + timeline every 2s (every other tick)
+      if (tick % 2 === 0) {
+        const latest = stateRef.current;
+        ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
+        setTimeline(scoreEngine.getTimeline());
+      }
+    }, 1000);
     return () => clearInterval(interval);
   }, [stage]);
 

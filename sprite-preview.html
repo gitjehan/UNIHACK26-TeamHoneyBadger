@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ginger Cat Animations</title>
+  <style>
+    body { font-family: system-ui; background: #fafaf7; padding: 30px; max-width: 900px; margin: 0 auto; }
+    h1 { color: #2C2416; }
+    h2 { color: #5C3A1E; margin: 30px 0 15px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+    .sprite-box {
+      background: white; padding: 16px; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; min-width: 100px;
+    }
+    .sprite-box label { display: block; font-size: 11px; color: #888; margin-top: 6px; }
+    .sprite-box .name { font-weight: 600; color: #5C3A1E; font-size: 13px; }
+    .cat {
+      width: 64px; height: 128px;
+      background-image: url('src/renderer/assets/ginger-cat.png');
+      background-repeat: no-repeat;
+      background-size: 1408px 6784px;
+      image-rendering: pixelated; image-rendering: crisp-edges;
+      margin: 0 auto;
+    }
+    @keyframes breathe { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
+  </style>
+</head>
+<body>
+  <h1>Ginger Cat - Live Animations</h1>
+  <div class="grid" id="anims"></div>
+  <script>
+    const FW = 64, FH = 128;
+    const anims = [
+      { name: 'Idle Sit',     row: 0,  frames: 6, speed: 350 },
+      { name: 'Idle Stand',   row: 1,  frames: 6, speed: 350 },
+      { name: 'Rest Crouch',  row: 2,  frames: 5, speed: 400 },
+      { name: 'Rest Lie',     row: 3,  frames: 5, speed: 400 },
+      { name: 'Walk Right',   row: 6,  frames: 5, speed: 150 },
+      { name: 'Walk Left',    row: 7,  frames: 5, speed: 150 },
+      { name: 'Walk Front',   row: 8,  frames: 5, speed: 150 },
+      { name: 'Walk Back',    row: 9,  frames: 5, speed: 150 },
+      { name: 'Sleep Curl',   row: 12, frames: 2, speed: 800 },
+      { name: 'Sleep Flat',   row: 16, frames: 2, speed: 800 },
+      { name: 'Sleep Belly',  row: 17, frames: 2, speed: 800 },
+      { name: 'Eat Front',    row: 20, frames: 5, speed: 250 },
+      { name: 'Meow Sit',     row: 28, frames: 3, speed: 300 },
+      { name: 'Yawn Sit',     row: 32, frames: 5, speed: 250 },
+      { name: 'Wash Sit',     row: 36, frames: 5, speed: 250 },
+      { name: 'Scratch',      row: 39, frames: 5, speed: 200 },
+      { name: 'Hiss',         row: 41, frames: 2, speed: 400 },
+    ];
+    const c = document.getElementById('anims');
+    anims.forEach(a => {
+      const box = document.createElement('div');
+      box.className = 'sprite-box';
+      const sprite = document.createElement('div');
+      sprite.className = 'cat';
+      sprite.style.backgroundPosition = `0 ${-a.row * FH}px`;
+      if (!a.name.startsWith('Sleep')) sprite.style.animation = 'breathe 2.5s ease-in-out infinite';
+      box.appendChild(sprite);
+      const nm = document.createElement('label');
+      nm.className = 'name'; nm.textContent = a.name;
+      box.appendChild(nm);
+      const info = document.createElement('label');
+      info.textContent = `Row ${a.row} · ${a.frames}f · ${a.speed}ms`;
+      box.appendChild(info);
+      c.appendChild(box);
+      let f = 0;
+      setInterval(() => {
+        f = (f + 1) % a.frames;
+        sprite.style.backgroundPosition = `${-f * FW}px ${-a.row * FH}px`;
+      }, a.speed);
+    });
+  </script>
+</body>
+</html>

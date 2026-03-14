@@ -41,9 +41,9 @@ export const STATUS_THRESHOLDS = {
 export const AMBIENT_UPDATE_INTERVAL = 1000;
 export const AMBIENT_TRANSITION_DURATION = 2000;
 export const AMBIENT_MAP = [
-  { scoreMin: 80, scoreMax: 100, brightness: [0.7, 1.0], warmth: [0.0, 0.0] },
-  { scoreMin: 50, scoreMax: 80, brightness: [0.5, 0.7], warmth: [0.2, 0.4] },
-  { scoreMin: 20, scoreMax: 50, brightness: [0.3, 0.5], warmth: [0.4, 0.7] },
+  { scoreMin: 75, scoreMax: 100, brightness: [0.7, 1.0], warmth: [0.0, 0.0] },
+  { scoreMin: 45, scoreMax: 80, brightness: [0.5, 0.7], warmth: [0.2, 0.4] },
+  { scoreMin: 15, scoreMax: 50, brightness: [0.3, 0.5], warmth: [0.4, 0.7] },
   { scoreMin: 0, scoreMax: 20, brightness: [0.2, 0.3], warmth: [0.7, 0.9] },
 ] as const;
 

@@ -40,42 +40,20 @@ function Sparkline({
   const chartHeight = expanded ? 72 : 32;
 
   return (
-    <div style={{ display: 'flex', alignItems: expanded ? 'flex-start' : 'center', gap: 10, flex: 1, minWidth: 0 }}>
-      <div style={{ flexShrink: 0, width: expanded ? 52 : 'auto' }}>
-        <div
-          style={{
-            fontSize: expanded ? 11 : 12,
-            fontWeight: expanded ? 600 : 400,
-            color: expanded ? color : '#6b6158',
-            fontFamily: "'Lora', 'Georgia', serif",
-            whiteSpace: 'nowrap',
-            textTransform: expanded ? 'uppercase' : 'none',
-            letterSpacing: expanded ? '0.06em' : 0,
-          }}
-        >
-          {label}
-        </div>
-        {expanded && (
-          <div
-            style={{
-              fontSize: 28,
-              fontWeight: 400,
-              color,
-              fontFamily: "'Lora', 'Georgia', serif",
-              fontVariantNumeric: 'tabular-nums',
-              lineHeight: 1.1,
-              marginTop: 2,
-            }}
-          >
-            {latest}
-          </div>
-        )}
-        {expanded && (
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
-            {min}–{max}
-          </div>
-        )}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 600,
+          color: '#A89B8C',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase' as const,
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
 
       <div style={{ flex: 1, height: chartHeight, minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
@@ -102,23 +80,22 @@ function Sparkline({
         </ResponsiveContainer>
       </div>
 
-      {!expanded && (
-        <span
-          style={{
-            fontSize: 14,
-            fontWeight: 600,
-            color,
-            fontFamily: "'Lora', 'Georgia', serif",
-            fontVariantNumeric: 'tabular-nums',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-            minWidth: 24,
-            textAlign: 'right',
-          }}
-        >
-          {latest}
-        </span>
-      )}
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 500,
+          color,
+          fontFamily: 'var(--font-display)',
+          fontVariantNumeric: 'tabular-nums',
+          letterSpacing: '-0.02em',
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+          minWidth: 24,
+          textAlign: 'right',
+        }}
+      >
+        {latest}
+      </span>
     </div>
   );
 }
