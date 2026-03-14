@@ -49,8 +49,8 @@ const SYDNEY_POSITIONS: Array<{ lng: number; lat: number; name: string }> = [
   { lng: 151.2858, lat: -33.7969, name: 'Manly' },
 ];
 const STRATHFIELD_POSITION = { lng: 151.0942, lat: -33.8731, name: 'Strathfield' } as const;
+const LANE_COVE_POSITION = { lng: 151.1689, lat: -33.8149, name: 'Lane Cove' } as const;
 
-const RANK_SIZES = [80, 60, 45, 32] as const;
 const RANK_COLORS = ['#f8d66d', '#d8dde9', '#d79b6f', '#adb4c8'] as const;
 const RANK_LABELS = ['1st', '2nd', '3rd', '4th'] as const;
 const RANK_HEALTH: Array<'Thriving' | 'Fading' | 'Wilting'> = ['Thriving', 'Thriving', 'Fading', 'Wilting'];
@@ -103,6 +103,8 @@ const MAP_LAYER_IDS = {
   isolationSource: 'sydney-isolation-mask-source',
   isolationLayer: 'sydney-isolation-mask-layer',
 } as const;
+const MIN_MARKER_SIZE_PX = 34;
+const MAX_MARKER_SIZE_PX = 86;
 
 function rankToScale(targetPx: number): number {
   return targetPx / 32;
@@ -117,8 +119,14 @@ function formatScore(score: number): string {
   return String(Math.round(score));
 }
 
+function scoreToMarkerSize(score: number): number {
+  const clampedScore = Math.min(100, Math.max(0, score));
+  return Math.round(MIN_MARKER_SIZE_PX + ((MAX_MARKER_SIZE_PX - MIN_MARKER_SIZE_PX) * clampedScore) / 100);
+}
+
 function resolveMarkerPosition(entry: LeaderboardEntry, index: number): { lng: number; lat: number; name: string } | null {
   if (sameNickname(entry.nickname, 'anubhav')) return STRATHFIELD_POSITION;
+  if (sameNickname(entry.nickname, 'eshaan')) return LANE_COVE_POSITION;
   return SYDNEY_POSITIONS[index] ?? null;
 }
 
@@ -204,7 +212,7 @@ export function LeaderboardMapScreen({
 
         const rankColor = RANK_COLORS[i];
         const rankLabel = RANK_LABELS[i];
-        const targetSize = RANK_SIZES[i];
+        const targetSize = scoreToMarkerSize(entry.avgOverallScore);
         const currentUser = sameNickname(entry.nickname, currentUserNickname);
 
         const wrapper = document.createElement('div');
