@@ -51,11 +51,12 @@ export function calculatePostureMetrics(
   const rightShoulder = landmarks[LANDMARKS.RIGHT_SHOULDER];
   const shouldersUsable = isUsable(leftShoulder) && isUsable(rightShoulder);
 
-  const shoulderSlant = Math.abs(
-    shouldersUsable
-      ? Math.atan2(rightShoulder.y - leftShoulder.y, rightShoulder.x - leftShoulder.x) * (180 / Math.PI)
-      : 0,
-  );
+  const shoulderSlant = shouldersUsable
+    ? Math.atan2(
+        Math.abs(rightShoulder.y - leftShoulder.y),
+        Math.abs(rightShoulder.x - leftShoulder.x),
+      ) * (180 / Math.PI)
+    : 0;
 
   const now = Date.now();
   if (now - lastDebugLog >= 2000) {
