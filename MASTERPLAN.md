@@ -1,8 +1,8 @@
-# KINETIC — MASTER PLAN (UNIHACK 2026)
+# AXIS — MASTER PLAN (UNIHACK 2026)
 
-**KINETIC** is a bio-responsive ambient workspace. Your webcam watches your posture, fatigue, and emotion using real-time computer vision — then instead of sending you a notification, it subtly shifts your entire digital environment. Real screen brightness, color temperature, ambient audio, and a living pet companion all respond to how you're sitting and feeling. No popups. No interruptions. Your workspace just adapts.
+**AXIS** is a bio-responsive ambient workspace. Your webcam watches your posture, fatigue, and emotion using real-time computer vision — then instead of sending you a notification, it subtly shifts your entire digital environment. Real screen brightness, color temperature, ambient audio, and a living pet companion all respond to how you're sitting and feeling. No popups. No interruptions. Your workspace just adapts.
 
-> **Pitch**: "KINETIC is a Mac desktop app that uses your webcam to track your posture, fatigue, and emotion in real-time — then adapts your actual screen brightness, color temperature, and a virtual pet companion to keep you healthy without ever interrupting you."
+> **Pitch**: "AXIS is a Mac desktop app that uses your webcam to track your posture, fatigue, and emotion in real-time — then adapts your actual screen brightness, color temperature, and a virtual pet companion to keep you healthy without ever interrupting you."
 
 ---
 
@@ -158,7 +158,7 @@ Blink detection was unreliable and has been **fixed**. Current implementation:
 ### Completed Optimizations (Phase 8)
 
 - **Pomodoro Timer**: Replaced Digital Twin with Pomodoro Timer in left dashboard column (Focus 25m / Short Break 5m / Long Break 15m, posture nudge at <40 score, round counter, localStorage persistence, tab switching disabled while running, per-mode time preservation)
-- **Header alignment**: Moved Kinetic branding far left; reduced `padding-left` from 72px to 24px
+- **Header alignment**: Moved Axis branding far left; reduced `padding-left` from 72px to 24px
 - Refactored dashboard responsiveness: explicit column classes + adaptive grid modes (compact/stacked/short)
 - Added compact-window behavior: auto-collapses non-critical panels while preserving manual expansion
 - Simplified scroll model: single main content scroller (`app-content`)
@@ -245,7 +245,7 @@ The core product is feature-complete and the two biggest quality issues are reso
 
 ### Why a Desktop App (Not a Web App)
 
-The core promise of KINETIC is that your **workspace adapts to you**. A web app can only fake this with CSS filters inside its own tab. An Electron app on macOS can control the **actual screen** — real brightness dimming, real color temperature shifts across your entire display. This is the difference between a demo trick and a real product.
+The core promise of AXIS is that your **workspace adapts to you**. A web app can only fake this with CSS filters inside its own tab. An Electron app on macOS can control the **actual screen** — real brightness dimming, real color temperature shifts across your entire display. This is the difference between a demo trick and a real product.
 
 macOS gives us this for free:
 - **Brightness**: `brightness` CLI tool (one line, `brew install brightness`) or IOKit calls
@@ -428,7 +428,7 @@ kinetic/
 │   │   ├── components/              # React Components
 │   │   │   ├── layout/
 │   │   │   │   ├── Dashboard.tsx     # Main grid layout
-│   │   │   │   ├── Header.tsx        # "Kinetic" branding + state tabs
+│   │   │   │   ├── Header.tsx        # "Axis" branding + state tabs
 │   │   │   │   └── Sidebar.tsx       # Right column (overall, systems, ambient)
 │   │   │   │
 │   │   │   ├── metrics/
@@ -975,7 +975,7 @@ Based on the mockup designs, the dashboard has this grid layout:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Kinetic  bio-responsive workspace     [Upright] [Slouching] [Fatigued]  │
+│  Axis  bio-responsive workspace     [Upright] [Slouching] [Fatigued]  │
 ├──────────────┬──────────────────────────────┬───────────────┤
 │              │  ┌─Posture──┐ ┌─Blink Rate─┐ │   OVERALL    │
 │  POMODORO    │  │  88 /100 │ │  17 bpm    │ │              │
@@ -1087,13 +1087,13 @@ Each pet state card shows: Posture score, Focus score, Stress score.
 
 ### 9. Session Recap Card — "Wrapped-Style" Daily Summary
 
-At the end of each session (or when the user clicks "End Session"), KINETIC generates a shareable recap card. Think Spotify Wrapped but for your posture. Something people screenshot and post.
+At the end of each session (or when the user clicks "End Session"), AXIS generates a shareable recap card. Think Spotify Wrapped but for your posture. Something people screenshot and post.
 
 #### What the Card Shows
 
 ```
 ┌──────────────────────────────────────┐
-│         🌿 KINETIC RECAP             │
+│         🌿 AXIS RECAP             │
 │         March 13, 2026               │
 │                                      │
 │    ┌──────────────────────────┐      │
@@ -1274,7 +1274,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 **Risk mitigation**: If cosine similarity doesn't work well, fall back to just neck angle + shoulder slant (two metrics). Two signals is enough.
 
 ### Phase 2: macOS Ambient Control -- DONE
-**Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes KINETIC a real product.
+**Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes AXIS a real product.
 
 - [x] **Brightness helper**:
   - Install `brightness` CLI: `brew install brightness`
@@ -1295,7 +1295,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: Slouch → your entire Mac screen slowly dims and warms to amber over 2–3 seconds. Sit up → it gradually returns to normal. Across ALL apps, not just the Electron window.
 
-**Critical**: This phase is what separates KINETIC from every other wellness app. Spend time getting the feel right.
+**Critical**: This phase is what separates AXIS from every other wellness app. Spend time getting the feel right.
 
 ### Phase 3: Dashboard -- DONE
 **Goal**: Build the full dashboard matching the mockup design (see Section 7 in Core Functionality).
@@ -1306,7 +1306,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Center middle: Webcam feed with MediaPipe overlay + FPS/landmark count
   - Center bottom: Session Timeline (3 sparkline charts)
   - Right column: Overall gauge + Systems panel + Ambient Response panel
-  - Header: "Kinetic bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
+  - Header: "Axis bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
 - [x] **Metric cards**: Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
 - [x] **Overall circular gauge**: Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
 - [x] **Session Timeline**: Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
@@ -1443,7 +1443,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Shown as a modal overlay when user clicks "End Session" or after a configurable session duration
 - [x] **Share / Save buttons**:
   - **Copy to clipboard**: `nativeImage.createFromDataURL(canvas.toDataURL())` → `clipboard.writeImage()`
-  - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'kinetic-recap.png' })` → write buffer to file
+  - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'axis-recap.png' })` → write buffer to file
   - Both exposed via IPC from main process
 - [x] **Percentile calculation**: If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
 
@@ -1453,7 +1453,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 **Goal**: Make it demo-ready and beautiful. Execute Plans 01–05, then prepare for demo.
 
 - [x] **UI polish**:
-  - Landing / onboarding screen explaining KINETIC on first launch
+  - Landing / onboarding screen explaining AXIS on first launch
   - Loading states for webcam/ML initialization (progress bar while models load)
   - Error handling: webcam denied, ML failed to load, Elasticsearch unreachable (graceful degradation — app works without Elastic)
   - App icon, window title, menu bar cleanup
@@ -1471,7 +1471,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 - [ ] **Plan 04 — Gamification**: Toast notification component, pet celebration effects, streak milestone reactions, in-session feedback
 - [ ] **Plan 03 — UI/UX polish**: Live streak counter in header, responsive breakpoints, hover states, timeline empty state shimmer, recap font fix
 - [ ] **Demo script**: Plan the exact demo flow: *(not yet done)*
-  1. Launch KINETIC, show onboarding — egg is visible in pet panel (5 sec)
+  1. Launch AXIS, show onboarding — egg is visible in pet panel (5 sec)
   2. Grant webcam, run calibration (10 sec)
   3. Sit up straight — score goes green, egg starts cracking, screen at normal brightness (10 sec)
   4. Show the egg hatching into the creature (pre-load cumulative time so it hatches during demo) (10 sec)
@@ -1630,7 +1630,7 @@ interface LeaderboardEntry {
 
 Run the complete user journey as a single test:
 
-1. Launch KINETIC → assert window opens, welcome/calibration screen appears
+1. Launch AXIS → assert window opens, welcome/calibration screen appears
 2. Complete calibration → assert calibration data saved, dashboard appears
 3. Sit upright for 30 seconds → assert posture score > 70, pet is Thriving, ambient brightness near 1.0
 4. Slouch for 15 seconds → assert posture score < 50, pet transitions to Fading or Wilting, screen brightness dims noticeably (read back via `brightness -l`)

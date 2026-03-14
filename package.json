@@ -1,6 +1,6 @@
 {
-  "name": "kinetic",
-  "productName": "KINETIC",
+  "name": "axis",
+  "productName": "Axis",
   "version": "0.1.0",
   "description": "Bio-responsive ambient workspace for UNIHACK 2026",
   "main": ".vite/build/main.js",

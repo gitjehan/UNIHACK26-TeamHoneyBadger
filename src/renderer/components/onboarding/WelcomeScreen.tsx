@@ -22,9 +22,9 @@ export function WelcomeScreen({ onStart }: WelcomeScreenProps): JSX.Element {
   return (
     <div className="onboarding">
       <div className="onboarding-card onboarding-card--welcome">
-        <h2>KINETIC</h2>
+        <h2>AXIS</h2>
         <p style={{ margin: '0 auto 24px', textAlign: 'center' }}>
-          Your webcam tracks posture, blink fatigue, and stress in real time. KINETIC adapts your screen
+          Your webcam tracks posture, blink fatigue, and stress in real time. Axis adapts your screen
           brightness, color warmth, and your Bio-Pet — all without interrupting your flow.
         </p>
 

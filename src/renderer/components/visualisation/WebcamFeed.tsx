@@ -219,7 +219,7 @@ function PositionPrompt(): JSX.Element {
           <path d="M18 54c0-8 6.3-14 14-14s14 6 14 14" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <p className="webcam-no-person__text">
-          Position yourself in front of the camera for Kinetic to work
+          Position yourself in front of the camera for Axis to work
         </p>
       </div>
     </div>
