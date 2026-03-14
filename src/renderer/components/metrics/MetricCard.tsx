@@ -63,16 +63,32 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
   const statusLabel = status === 'good' ? 'Good' : status === 'fair' ? 'Fair' : 'Poor';
   const prevValueRef = useRef(value);
   const [flash, setFlash] = useState(false);
+  const [blinkPulse, setBlinkPulse] = useState(false);
   const pct = progressPercent(kind, value);
+  const isBlinkRate = kind === 'blinkRate';
 
   useEffect(() => {
     if (prevValueRef.current !== value) {
+      const prev = prevValueRef.current;
       prevValueRef.current = value;
+
       setFlash(true);
-      const t = setTimeout(() => setFlash(false), 350);
-      return () => clearTimeout(t);
+      const flashTimeout = setTimeout(() => setFlash(false), 350);
+
+      let blinkTimeout: ReturnType<typeof setTimeout> | undefined;
+      if (isBlinkRate && prev !== null && value !== null && value > prev) {
+        setBlinkPulse(true);
+        blinkTimeout = setTimeout(() => setBlinkPulse(false), 450);
+      } else {
+        setBlinkPulse(false);
+      }
+
+      return () => {
+        clearTimeout(flashTimeout);
+        if (blinkTimeout) clearTimeout(blinkTimeout);
+      };
     }
-  }, [value]);
+  }, [value, isBlinkRate]);
 
   return (
     <div className="card">
@@ -92,7 +108,7 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
                 {label}
               </h3>
               <div
-                className="metric-value"
+                className={`metric-value ${isBlinkRate && blinkPulse ? 'metric-value--blink-pulse' : ''}`}
                 style={{
                   color: statusColor(status),
                   transform: flash ? 'scale(1.03)' : 'scale(1)',

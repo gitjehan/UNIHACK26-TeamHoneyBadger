@@ -328,6 +328,26 @@ button {
   transition: width 0.4s ease-out, background-color 0.25s ease-out;
 }
 
+/* Subtle pulse on the blink-rate value whenever a new blink nudges the rate. */
+.metric-value--blink-pulse {
+  animation: blinkRatePulse 0.45s ease-out;
+}
+
+@keyframes blinkRatePulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(74, 124, 89, 0);
+  }
+  35% {
+    transform: scale(1.08);
+    text-shadow: 0 0 10px rgba(74, 124, 89, 0.45);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(74, 124, 89, 0);
+  }
+}
+
 /* ── Systems Panel ─────────────────────────────────────── */
 
 .systems-list {
