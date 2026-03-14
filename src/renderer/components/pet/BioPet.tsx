@@ -12,6 +12,7 @@ interface BioPetProps {
   postureScore: number;
   focusScore: number;
   stressScore: number;
+  breakReminderDue?: boolean;
 }
 
 const HEALTH_HYS = 3000;
@@ -19,7 +20,7 @@ const SETTLE_WINDOW_MS = 3000;
 
 type HatchPhase = 'none' | 'crack' | 'burst' | 'emerge';
 
-export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stressScore }: BioPetProps): JSX.Element {
+export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stressScore, breakReminderDue = false }: BioPetProps): JSX.Element {
   const committedRef = useRef<PetHealthState>(pet.health);
   const pendingRef = useRef<PetHealthState>(pet.health);
   const pendingSinceRef = useRef(Date.now());
@@ -130,7 +131,7 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
 
   return (
     <div className="card bio-pet-card">
-      <div className="pet-scene">
+      <div className={`pet-scene${breakReminderDue ? ' bio-pet--sleepy' : ''}`}>
         <div className={`pet-glow pet-glow--${healthClass}`} />
 
         {hatchPhase === 'burst' && <div className="hatch-flash-overlay" />}

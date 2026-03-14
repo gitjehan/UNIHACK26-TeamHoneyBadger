@@ -33,6 +33,7 @@ export interface EngineState {
   poseFps: number;
   faceFps: number;
   personDetected: boolean;
+  breakReminderDue: boolean;
 }
 
 export interface SessionStats {
@@ -159,6 +160,12 @@ class ScoreEngine {
   private readonly MISS_THRESHOLD = 6;
   private readonly FOUND_THRESHOLD = 3;
 
+  private continuousScreenSeconds = 0;
+  private absentSeconds = 0;
+  private _breakReminderDue = false;
+  private readonly BREAK_REMINDER_THRESHOLD = 1800; // 30 minutes
+  private readonly ABSENCE_RESET_THRESHOLD = 60;    // 60 seconds away resets
+
   get personDetected(): boolean {
     return this._personDetected;
   }
@@ -202,6 +209,7 @@ class ScoreEngine {
       poseFps: this.poseFps,
       faceFps: this.faceFps,
       personDetected: this._personDetected,
+      breakReminderDue: this._breakReminderDue,
     };
   }
 
@@ -240,6 +248,10 @@ class ScoreEngine {
     this.previousPetStage = this.pet.stage;
     this.sessionNewAccessories.clear();
     this.timeline.clear();
+    // Reset break reminder tracking
+    this.continuousScreenSeconds = 0;
+    this.absentSeconds = 0;
+    this._breakReminderDue = false;
     this.emit();
   }
 
@@ -391,10 +403,39 @@ class ScoreEngine {
     this.emit();
   }
 
+  private updateScreenPresence(deltaSeconds: number): void {
+    if (this._personDetected) {
+      this.continuousScreenSeconds += deltaSeconds;
+      this.absentSeconds = 0;
+
+      if (
+        !this._breakReminderDue &&
+        this.continuousScreenSeconds >= this.BREAK_REMINDER_THRESHOLD
+      ) {
+        this._breakReminderDue = true;
+      }
+    } else {
+      this.absentSeconds += deltaSeconds;
+
+      if (this.absentSeconds >= this.ABSENCE_RESET_THRESHOLD) {
+        this.continuousScreenSeconds = 0;
+        this._breakReminderDue = false;
+      }
+    }
+  }
+
+  dismissBreakReminder(): void {
+    this._breakReminderDue = false;
+    this.continuousScreenSeconds = 0;
+    this.emit();
+  }
+
   private updateSessionStats(): void {
     const now = Date.now();
     const deltaSeconds = Math.max(0, (now - this.lastTick) / 1000);
     this.lastTick = now;
+
+    this.updateScreenPresence(deltaSeconds);
 
     this.sessionScoreCount += 1;
     this.postureSum += this.snapshot.posture.score;

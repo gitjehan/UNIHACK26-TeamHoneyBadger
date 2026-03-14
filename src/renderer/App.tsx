@@ -4,6 +4,7 @@ import { Dashboard } from '@renderer/components/layout/Dashboard';
 import { Header } from '@renderer/components/layout/Header';
 import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
 import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
+import { BreakReminder } from '@renderer/components/ui/BreakReminder';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import type {
@@ -335,6 +336,10 @@ export default function App(): JSX.Element {
       <RecapOverlay
         recap={recap}
         onClose={() => setRecap(null)}
+      />
+      <BreakReminder
+        visible={state.breakReminderDue}
+        onDismiss={() => scoreEngine.dismissBreakReminder()}
       />
     </div>
   );
