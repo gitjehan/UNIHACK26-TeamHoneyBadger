@@ -68,13 +68,13 @@ function savePomodoroState(mode: TimerMode, timeByMode: Record<TimerMode, number
 }
 
 export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: PomodoroTimerProps) {
-  const saved = loadPomodoroState();
-  const [mode, setMode] = useState<TimerMode>(saved?.mode ?? 'focus');
+  const [saved] = useState(loadPomodoroState);
+  const [mode, setMode] = useState<TimerMode>(() => saved?.mode ?? 'focus');
   const [timeByMode, setTimeByMode] = useState<Record<TimerMode, number>>(
     () => saved?.timeByMode ?? { ...initialTimeByMode },
   );
   const [isRunning, setIsRunning] = useState(false);
-  const [completedRounds, setCompletedRounds] = useState(saved?.completedRounds ?? 0);
+  const [completedRounds, setCompletedRounds] = useState(() => saved?.completedRounds ?? 0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const timeRemaining = timeByMode[mode];
