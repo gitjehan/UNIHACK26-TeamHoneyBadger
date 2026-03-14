@@ -48,6 +48,7 @@ const SYDNEY_POSITIONS: Array<{ lng: number; lat: number; name: string }> = [
   { lng: 151.1799, lat: -33.8981, name: 'Inner West' },
   { lng: 151.2858, lat: -33.7969, name: 'Manly' },
 ];
+const STRATHFIELD_POSITION = { lng: 151.0942, lat: -33.8731, name: 'Strathfield' } as const;
 
 const RANK_SIZES = [80, 60, 45, 32] as const;
 const RANK_COLORS = ['#f8d66d', '#d8dde9', '#d79b6f', '#adb4c8'] as const;
@@ -116,6 +117,11 @@ function formatScore(score: number): string {
   return String(Math.round(score));
 }
 
+function resolveMarkerPosition(entry: LeaderboardEntry, index: number): { lng: number; lat: number; name: string } | null {
+  if (sameNickname(entry.nickname, 'anubhav')) return STRATHFIELD_POSITION;
+  return SYDNEY_POSITIONS[index] ?? null;
+}
+
 function addSydneyIsolationLayer(map: maplibregl.Map): void {
   if (map.getSource(MAP_LAYER_IDS.isolationSource)) return;
 
@@ -179,7 +185,7 @@ export function LeaderboardMapScreen({
       }
 
       top4.forEach((entry, i) => {
-        const pos = SYDNEY_POSITIONS[i];
+        const pos = resolveMarkerPosition(entry, i);
         if (!pos) return;
 
         const rankColor = RANK_COLORS[i];
@@ -265,7 +271,7 @@ export function LeaderboardMapScreen({
           <div className="leaderboard-map-location">GREATER SYDNEY REGION</div>
 
           <aside className="leaderboard-map-hud" aria-label="Top four leaderboard list">
-            <div className="leaderboard-map-hud__title">SYDNEY LOCK IN BOARD</div>
+            <div className="leaderboard-map-hud__title">LOCK IN LEADERBOARD</div>
             {top4.length === 0 ? (
               <div className="leaderboard-map-hud__empty">No leaderboard entries yet.</div>
             ) : (
@@ -289,10 +295,6 @@ export function LeaderboardMapScreen({
               })
             )}
           </aside>
-
-          <button type="button" className="leaderboard-map-button" onClick={onClose}>
-            View Stats <span aria-hidden="true">→</span>
-          </button>
 
           <div className="leaderboard-map-attribution">© OpenStreetMap contributors</div>
         </section>

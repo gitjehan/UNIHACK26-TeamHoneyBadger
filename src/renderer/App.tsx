@@ -4,7 +4,6 @@ import { Dashboard } from '@renderer/components/layout/Dashboard';
 import { Header } from '@renderer/components/layout/Header';
 import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
 import { LeaderboardMapScreen } from '@renderer/components/recap/LeaderboardMapScreen';
-import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import type {
@@ -29,7 +28,6 @@ export default function App(): JSX.Element {
   const [nickname, setNickname] = useState('HoneyBadger');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeline, setTimeline] = useState<Array<{ timestamp: number; posture: number; focus: number; stress: number }>>([]);
-  const [recap, setRecap] = useState<SessionRecap | null>(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [visionBackend, setVisionBackend] = useState<{ pose: VisionBackend; face: VisionBackend }>({
     pose: 'starting',
@@ -253,7 +251,6 @@ export default function App(): JSX.Element {
       const below = leaderboard.filter((entry) => entry.avgOverallScore < sessionRecap.avgOverall).length;
       sessionRecap.percentileRank = Math.round((below / leaderboard.length) * 100);
     }
-    setRecap(sessionRecap);
 
     const sessions = ((await window.kinetic.storeGet('sessions')) as Array<Record<string, unknown>>) ?? [];
     sessions.unshift({
@@ -296,12 +293,11 @@ export default function App(): JSX.Element {
       overall: s.snapshot.overall.score,
       petHealth: s.pet.health,
       timelinePoints: timeline.length,
-      recapVisible: Boolean(recap) && !showLeaderboard,
       leaderboardVisible: showLeaderboard,
       systems: s.systems,
       backend: visionBackend,
     };
-  }, [stage, timeline.length, recap, showLeaderboard, visionBackend]);
+  }, [stage, timeline.length, showLeaderboard, visionBackend]);
 
   const startSession = () => {
     scoreEngine.startSession();
@@ -343,7 +339,6 @@ export default function App(): JSX.Element {
           onClose={() => setShowLeaderboard(false)}
         />
       )}
-      <RecapOverlay recap={showLeaderboard ? null : recap} onClose={() => setRecap(null)} />
     </div>
   );
 }

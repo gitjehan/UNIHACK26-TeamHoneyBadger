@@ -11,8 +11,7 @@ const checks: Array<{ label: string; optionalWithoutBrightness?: boolean }> = [
   { label: 'Pet state changes between Thriving/Fading/Wilting' },
   { label: 'Session timeline charts accumulate data' },
   { label: 'Ending session opens Sydney leaderboard map overlay' },
-  { label: 'View Stats closes map and opens recap overlay with non-zero stats' },
-  { label: 'Copy and Save buttons work for recap card' },
+  { label: 'Pressing Escape closes leaderboard and returns to dashboard' },
 ];
 
 function brightnessSupported(): boolean {
