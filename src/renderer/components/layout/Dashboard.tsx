@@ -1,4 +1,5 @@
 import { memo, type RefObject, useMemo } from 'react';
+import { useState, type RefObject } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
@@ -25,6 +26,7 @@ export const Dashboard = memo(function Dashboard({
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
   const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
+  const [webcamCollapsed, setWebcamCollapsed] = useState(false);
 
   const blinkValue = useMemo(
     () => (snapshot.blink.warmedUp === false ? null : snapshot.blink.rate),
@@ -68,13 +70,15 @@ export const Dashboard = memo(function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
+      <div className="column" style={{ gridTemplateRows: webcamCollapsed ? 'auto 1fr' : '1fr auto' }}>
         <WebcamFeed
           videoRef={videoRef}
-          poseFps={state.poseFps}
-          faceFps={state.faceFps}
+          landmarks={state.poseLandmarks}
+          postureScore={snapshot.posture.score}
+          collapsed={webcamCollapsed}
+          onToggle={() => setWebcamCollapsed(c => !c)}
         />
-        <SessionTimeline data={timeline} />
+        <SessionTimeline data={timeline} expanded={webcamCollapsed} />
       </div>
 
       <div className="column" style={{ gridTemplateRows: 'auto auto auto', alignContent: 'start' }}>

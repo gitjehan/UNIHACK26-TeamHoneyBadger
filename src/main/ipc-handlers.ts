@@ -7,7 +7,6 @@ import { elasticClient } from '@main/elastic-client';
 import { IPC } from '@shared/ipc-channels';
 
 interface StoreSchema {
-  calibration: unknown | null;
   pet: {
     stage: number;
     stageName: string;
@@ -30,7 +29,6 @@ interface StoreSchema {
 
 const store = new ElectronStore<StoreSchema>({
   defaults: {
-    calibration: null,
     pet: {
       stage: 0,
       stageName: 'Egg',

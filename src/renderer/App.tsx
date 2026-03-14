@@ -2,31 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Dashboard } from '@renderer/components/layout/Dashboard';
 import { Header } from '@renderer/components/layout/Header';
-import { CalibrationScreen } from '@renderer/components/onboarding/CalibrationScreen';
 import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
 import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
 import { ambientAudio } from '@renderer/lib/ambient-audio';
 import type {
-  CalibrationData,
   LeaderboardEntry,
   PetState,
   SessionRecap,
   VisionBackend,
 } from '@renderer/lib/types';
-import { buildCalibration } from '@renderer/ml/calibration';
 import { FaceEngine } from '@renderer/ml/face-engine';
 import { PoseEngine } from '@renderer/ml/pose-engine';
 import { scoreEngine } from '@renderer/ml/score-engine';
 
-type FlowStage = 'welcome' | 'calibrating' | 'ready';
-
-interface CalibrationSample {
-  landmarks: import('@renderer/lib/types').Point[];
-  neckAngle: number;
-  shoulderSlant: number;
-}
+type FlowStage = 'welcome' | 'ready';
 
 function sanitizePet(raw: unknown) {
   if (!raw || typeof raw !== 'object') return null;
@@ -35,7 +26,6 @@ function sanitizePet(raw: unknown) {
 
 export default function App(): JSX.Element {
   const [stage, setStage] = useState<FlowStage>('welcome');
-  const [secondsLeft, setSecondsLeft] = useState(3);
   const [nickname, setNickname] = useState('HoneyBadger');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeline, setTimeline] = useState<Array<{ timestamp: number; posture: number; focus: number; stress: number }>>([]);
@@ -51,11 +41,6 @@ export default function App(): JSX.Element {
   const warmthIntensityRef = useRef<number>(1.0);
   const poseEngineRef = useRef<PoseEngine | null>(null);
   const faceEngineRef = useRef<FaceEngine | null>(null);
-  const latestPoseLandmarksRef = useRef<import('@renderer/lib/types').Point[]>([]);
-  const latestPostureMetricsRef = useRef<{ neckAngle: number; shoulderSlant: number }>({
-    neckAngle: 175,
-    shoulderSlant: 1,
-  });
 
   const enabled = stage !== 'welcome';
   const webcam = useWebcam(enabled);
@@ -83,18 +68,13 @@ export default function App(): JSX.Element {
     const bootstrap = async () => {
       const [storedCalibration, storedPet, storedNick, storedBrightnessRange, storedWarmthIntensity] = await Promise.all([
         window.kinetic.storeGet('calibration'),
+      const [storedPet, storedNick] = await Promise.all([
         window.kinetic.storeGet('pet'),
         window.kinetic.storeGet('nickname'),
         window.kinetic.storeGet('brightnessRange'),
         window.kinetic.storeGet('warmthIntensity'),
       ]);
       if (!mounted) return;
-
-      if (storedCalibration) {
-        scoreEngine.setCalibration(storedCalibration as CalibrationData);
-        scoreEngine.startSession();
-        setStage('ready');
-      }
       const pet = sanitizePet(storedPet);
       if (pet) scoreEngine.setPetState(pet);
       if (typeof storedNick === 'string' && storedNick.trim()) setNickname(storedNick);
@@ -189,6 +169,13 @@ export default function App(): JSX.Element {
   }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
 
   // Consolidated ambient + timeline ticker (reduces 3 intervals to 1)
+    if (stage === 'welcome') return;
+    const timer = setInterval(() => {
+      setTimeline(scoreEngine.getTimeline());
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [stage]);
+
   useEffect(() => {
     if (stage !== 'ready') return;
 
@@ -277,61 +264,6 @@ export default function App(): JSX.Element {
     return () => clearInterval(interval);
   }, [stage, sessionEntry]);
 
-  useEffect(() => {
-    if (stage !== 'calibrating') return;
-    if (!webcam.ready) {
-      calibrationSamplesRef.current = [];
-      setSecondsLeft(3);
-      return;
-    }
-    calibrationSamplesRef.current = [];
-    setSecondsLeft(3);
-
-    const sampleInterval = setInterval(() => {
-      const landmarks = latestPoseLandmarksRef.current;
-      if (!landmarks.length) return;
-      calibrationSamplesRef.current.push({
-        landmarks,
-        neckAngle: latestPostureMetricsRef.current.neckAngle,
-        shoulderSlant: latestPostureMetricsRef.current.shoulderSlant,
-      });
-    }, 70);
-
-    const countdown = setInterval(() => {
-      setSecondsLeft((current) => Math.max(0, current - 1));
-    }, 1000);
-
-    const done = setTimeout(async () => {
-      clearInterval(sampleInterval);
-      clearInterval(countdown);
-      const samples = calibrationSamplesRef.current;
-      if (samples.length >= 8) {
-        const calibration = buildCalibration(samples);
-        scoreEngine.setCalibration(calibration);
-        await window.kinetic.storeSet('calibration', calibration);
-      } else {
-        const fallback: CalibrationData = {
-          uprightNeckAngle: latestPostureMetricsRef.current.neckAngle || 170,
-          uprightShoulderSlant: latestPostureMetricsRef.current.shoulderSlant || 2,
-          uprightTrunkVector: [0, 0.14],
-          baselineBlinkRate: 17,
-          baselineEAR: 0.27,
-          timestamp: Date.now(),
-        };
-        scoreEngine.setCalibration(fallback);
-        await window.kinetic.storeSet('calibration', fallback);
-      }
-      scoreEngine.startSession();
-      setStage('ready');
-    }, 3100);
-
-    return () => {
-      clearInterval(sampleInterval);
-      clearInterval(countdown);
-      clearTimeout(done);
-    };
-  }, [stage, webcam.ready]);
-
   const endSession = async () => {
     const sessionRecap = scoreEngine.endSession(sessionIdRef.current);
     if (leaderboard.length >= 3) {
@@ -386,22 +318,13 @@ export default function App(): JSX.Element {
     };
   }, [stage, timeline.length, recap, visionBackend]);
 
-  const startCalibration = () => {
+  const startSession = () => {
     ambientAudio.ensureStarted().catch((error) => console.warn('Ambient audio start failed', error));
-    setStage('calibrating');
+    scoreEngine.startSession();
+    setStage('ready');
   };
 
-  if (stage === 'welcome') return <WelcomeScreen onStart={startCalibration} />;
-  if (stage === 'calibrating') {
-    return (
-      <CalibrationScreen
-        secondsLeft={secondsLeft}
-        collecting={webcam.ready}
-        videoRef={webcam.videoRef}
-        error={webcam.error}
-      />
-    );
-  }
+  if (stage === 'welcome') return <WelcomeScreen onStart={startSession} />;
 
   return (
     <div className="app-shell">
@@ -430,11 +353,6 @@ export default function App(): JSX.Element {
       <RecapOverlay
         recap={recap}
         onClose={() => setRecap(null)}
-        onRecalibrate={() => {
-          setRecap(null);
-          void window.kinetic.storeSet('calibration', null);
-          setStage('calibrating');
-        }}
       />
     </div>
   );
