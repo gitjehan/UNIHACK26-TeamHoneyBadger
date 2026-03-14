@@ -11,9 +11,18 @@ import type { BlinkData, Point } from '@renderer/lib/types';
 
 export interface BlinkFrame extends BlinkData {
   fatigueScore: number;
+  /** True once we have enough elapsed time for the blink rate to be meaningful. */
+  warmedUp: boolean;
 }
 
 const BLINK_WINDOW_MS = 60_000;
+
+/**
+ * Minimum elapsed tracking time before we consider the blink rate reliable.
+ * Before this, the rate is extrapolated but marked as not warmed up so
+ * downstream consumers can treat it accordingly (e.g. show "calibrating…").
+ */
+const WARMUP_MS = 15_000;
 const CLOSURE_WINDOW_MS = 300_000;
 
 /**
@@ -149,6 +158,9 @@ export class BlinkDetector {
 
   private lastCacheTime = 0;
 
+  /** Timestamp of the first frame that actually processed eye data. */
+  private firstFrameMs = 0;
+
   /** Continuously updated open-eye baseline (average of both eyes, for fatigue scoring). */
   private baselineOpenEar = 0;
 
@@ -160,6 +172,7 @@ export class BlinkDetector {
 
     this.hasReceivedData = true;
     this.framesSinceLastData = 0;
+    if (!this.firstFrameMs) this.firstFrameMs = Date.now();
 
     const leftVisible  = isEyeVisible(faceLandmarks, LEFT_EYE_INDICES);
     const rightVisible = isEyeVisible(faceLandmarks, RIGHT_EYE_INDICES);
@@ -307,9 +320,21 @@ export class BlinkDetector {
       this.pruneOlderThan(this.blinkTimes, blinkCutoff);
       this.pruneOlderThan(this.closureTimes, closureCutoff);
 
-      this.cachedBlinkRate = this.blinkTimes.length;
+      // Extrapolate blink rate to blinks-per-minute.
+      // If the window isn't full yet (< 60s elapsed), scale up proportionally
+      // so we don't report an artificially low rate during the first minute.
+      const elapsed = this.firstFrameMs > 0 ? now - this.firstFrameMs : 0;
+      const windowMs = Math.min(elapsed, BLINK_WINDOW_MS);
+      if (windowMs >= 1000) {
+        // Scale raw count to per-minute rate
+        this.cachedBlinkRate = Math.round(this.blinkTimes.length * (BLINK_WINDOW_MS / windowMs));
+      } else {
+        this.cachedBlinkRate = 0;
+      }
       this.cachedClosureCount = this.closureTimes.length;
     }
+
+    const warmedUp = this.firstFrameMs > 0 && (now - this.firstFrameMs) >= WARMUP_MS;
 
     const fatigueScore = this.computeFatigue(
       this.cachedBlinkRate,
@@ -323,6 +348,7 @@ export class BlinkDetector {
       avgEAR: this.earBuffer.average,
       prolongedClosures: this.cachedClosureCount,
       fatigueScore,
+      warmedUp,
     };
   }
 
@@ -336,6 +362,7 @@ export class BlinkDetector {
       avgEAR: 0.27,
       prolongedClosures: 0,
       fatigueScore: 15,
+      warmedUp: false,
     };
   }
 

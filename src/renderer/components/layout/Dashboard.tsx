@@ -51,7 +51,12 @@ export function Dashboard({
       <div className="column" style={{ gridTemplateRows: 'auto 1fr auto' }}>
         <div className="metric-grid">
           <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
-          <MetricCard label="Blink Rate" value={snapshot.blink.rate} unit="bpm" kind="blinkRate" />
+          <MetricCard
+            label="Blink Rate"
+            value={snapshot.blink.warmedUp === false ? null : snapshot.blink.rate}
+            unit="bpm"
+            kind="blinkRate"
+          />
           <MetricCard label="Focus" value={snapshot.focus.score} unit="/100" kind="focus" />
           <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
         </div>

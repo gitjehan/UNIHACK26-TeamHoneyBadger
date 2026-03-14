@@ -17,6 +17,8 @@ export interface BlinkData {
   rate: number;
   avgEAR: number;
   prolongedClosures: number;
+  /** True once enough time has elapsed for the blink rate to be meaningful. */
+  warmedUp?: boolean;
 }
 
 export interface StressData {
