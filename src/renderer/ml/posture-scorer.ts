@@ -84,8 +84,8 @@ export function calculatePostureScore(
   neckAngle: number,
   shoulderSlant: number,
 ): number {
-  // Neck: 180° = perfect (100), 130° = terrible (0).
-  const neckScore = clamp(((neckAngle - 130) / 50) * 100, 0, 100);
+  // Neck: 180° = perfect (100), 155° = terrible (0). Tight 25° range for dramatic variance.
+  const neckScore = clamp(((neckAngle - 155) / 25) * 100, 0, 100);
   const shoulderScore = clamp((1 - shoulderSlant / SHOULDER_SLANT_MAX) * 100, 0, 100);
 
   return Math.round(

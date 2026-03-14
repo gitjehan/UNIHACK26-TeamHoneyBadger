@@ -98,7 +98,7 @@ class ScoreEngine {
 
   private blinkDetector = new BlinkDetector();
 
-  private postureSmoothing = new RollingAverage(60);
+  private postureSmoothing = new RollingAverage(8);
 
   private postureVariance = new RollingAverage(60);
 
@@ -266,7 +266,7 @@ class ScoreEngine {
     this.poseLandmarks = landmarks;
     const posture = scorePosture(landmarks);
     this.postureSmoothing.push(posture.score);
-    const slouchPenalty = posture.slumpSeverity * 20;
+    const slouchPenalty = posture.slumpSeverity * 35;
     const smoothedPosture = clamp(
       Math.round((this.postureSmoothing.average ?? posture.score) - slouchPenalty),
       0,

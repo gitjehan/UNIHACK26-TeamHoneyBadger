@@ -2,7 +2,7 @@ import type { PetHealthState } from './types';
 
 export const POSTURE_WEIGHTS = { neck: 0.5, shoulder: 0.5 };
 export const NECK_ANGLE_RANGE = { perfect: 180, terrible: 140 };
-export const SHOULDER_SLANT_MAX = 10;
+export const SHOULDER_SLANT_MAX = 5;
 export const SLOUCH_THRESHOLD = 150;
 
 export const EAR_BLINK_THRESHOLD = 0.2;
