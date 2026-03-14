@@ -18,6 +18,7 @@ export function WebcamFeed({ videoRef, poseFps, faceFps }: WebcamFeedProps): JSX
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
           minHeight: 200,
+          aspectRatio: '4 / 3',
         }}
       >
         <video
