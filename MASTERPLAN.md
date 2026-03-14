@@ -57,6 +57,17 @@ This plan covers technical architecture, execution order, and build phases.
 - Added `-webkit-app-region: drag` to header (window was not draggable)
 - Fixed app scrolling (`overflow: hidden` was blocking all scroll)
 
+### MUST Fix Before Demo
+
+- [ ] Posture tracking inaccurate — scoring feels inconsistent, needs tuning/recalibration of thresholds and weights
+- [x] Blink rate inaccurate — detection was unreliable, now fixed
+- [ ] Pet logic may not be there — verify egg crack progression, hatching trigger, evolution stage transitions all work end-to-end
+- [ ] Pet implementation needs work — visual quality, animations, health state transitions need polish
+- [ ] Entire app not fitting in viewport — layout overflow issues on smaller screens or certain resolutions
+- [ ] Improve UI and UX — general polish pass on spacing, typography, responsiveness, interaction feedback
+- [ ] Add further gamification through pet — more accessory unlocks, milestone celebrations, streak rewards, visual feedback
+- [ ] Improve brightness and screen warmth changer — smoother transitions, better score-to-ambient mapping, feel less abrupt
+
 ### Remaining (Phase 8 — Polish & Demo Prep)
 
 - [ ] Demo data seeding (pre-seed pet at Stage 2+ with accessory, pre-seed leaderboard entries)
