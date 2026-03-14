@@ -335,7 +335,7 @@ export class BlinkDetector {
           const windowMs = Math.max(1, last - first);
           // Require at least 1s of span to avoid huge rates from nearly-coincident timestamps.
           if (windowMs >= 1000) {
-            this.cachedBlinkRate = Math.round(recent.length * (60_000 / windowMs));
+            this.cachedBlinkRate = Math.round((recent.length - 1) * (60_000 / windowMs));
           } else {
             this.cachedBlinkRate = 0;
           }
