@@ -224,7 +224,11 @@ export const AmbientSoundPlayer = memo(function AmbientSoundPlayer(): JSX.Elemen
             onClick={handlePause}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
-            {isPlaying ? '❚❚' : '▶'}
+            {isPlaying ? (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            )}
           </button>
           <div className="sound-volume">
             <svg className="sound-volume-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

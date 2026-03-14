@@ -295,10 +295,14 @@ export function SessionRecapCard({
     roundRect(ctx, leftX, petY, petBoxW, petBoxH, 14);
     ctx.fill();
 
-    // Pet emoji based on stage
-    const petEmoji = petStageEmoji(recap.petLevel);
-    ctx.font = '36px system-ui';
-    ctx.fillText(petEmoji, leftX + 18, petY + 44);
+    // Pet stage label
+    const petLabel = petStageLabel(recap.petLevel);
+    ctx.fillStyle = grade.accent;
+    ctx.font = '700 13px system-ui, -apple-system, sans-serif';
+    ctx.fillText(`Lv.${recap.petLevel}`, leftX + 14, petY + 30);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '500 11px system-ui, -apple-system, sans-serif';
+    ctx.fillText(petLabel, leftX + 14, petY + 48);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = '600 16px system-ui, -apple-system, sans-serif';
@@ -516,14 +520,14 @@ function blinkLabel(rate: number): string {
   return 'fatigued';
 }
 
-function petStageEmoji(stage: number): string {
+function petStageLabel(stage: number): string {
   switch (stage) {
-    case 0: return '\u{1F95A}'; // egg
-    case 1: return '\u{1F423}'; // hatching chick
-    case 2: return '\u{1F424}'; // baby chick
-    case 3: return '\u{1F426}'; // bird
-    case 4: return '\u{1F985}'; // eagle
-    case 5: return '\u{2B50}';  // star
-    default: return '\u{1F331}'; // seedling
+    case 0: return 'Egg';
+    case 1: return 'Hatchling';
+    case 2: return 'Chick';
+    case 3: return 'Fledgling';
+    case 4: return 'Eagle';
+    case 5: return 'Legend';
+    default: return 'Seedling';
   }
 }
