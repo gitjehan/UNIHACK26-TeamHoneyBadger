@@ -71,14 +71,11 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
               const nextBreak = newRounds >= 4 ? 'longBreak' : 'shortBreak';
               setMode(nextBreak);
               setTimeRemaining(MODE_DURATIONS[nextBreak]);
-              if (newRounds >= 4) {
-                return 0; // reset after long break
-              }
               return newRounds;
             } else {
               setMode('focus');
               setTimeRemaining(MODE_DURATIONS.focus);
-              return rounds;
+              return mode === 'longBreak' ? 0 : rounds;
             }
           });
 
