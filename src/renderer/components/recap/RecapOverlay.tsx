@@ -5,10 +5,9 @@ import { SessionRecapCard } from './SessionRecapCard';
 interface RecapOverlayProps {
   recap: SessionRecap | null;
   onClose: () => void;
-  onRecalibrate: () => void;
 }
 
-export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProps): JSX.Element | null {
+export function RecapOverlay({ recap, onClose }: RecapOverlayProps): JSX.Element | null {
   useEffect(() => {
     if (!recap) return;
 
@@ -48,7 +47,7 @@ export function RecapOverlay({ recap, onClose, onRecalibrate }: RecapOverlayProp
     <div className="overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Session Recap">
       {/* Stop click propagation so clicking the card doesn't close */}
       <div onClick={(e) => e.stopPropagation()} style={{ animation: 'slideUp 0.3s ease-out' }}>
-        <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} onRecalibrate={onRecalibrate} />
+        <SessionRecapCard recap={recap} onCopy={copy} onSave={save} onClose={onClose} />
       </div>
     </div>
   );

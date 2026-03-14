@@ -9,7 +9,6 @@ export interface PostureData {
   score: number;
   neckAngle: number;
   shoulderSlant: number;
-  trunkSimilarity: number;
   slumpSeverity: number;
 }
 

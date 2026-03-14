@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Area, AreaChart, ResponsiveContainer } from 'recharts';
+import { Area, AreaChart, ReferenceLine, ResponsiveContainer, YAxis } from 'recharts';
 
 interface TimelinePoint {
   timestamp: number;
@@ -10,6 +10,7 @@ interface TimelinePoint {
 
 interface SessionTimelineProps {
   data: TimelinePoint[];
+  expanded?: boolean;
 }
 
 const METRICS: Array<{ key: keyof Omit<TimelinePoint, 'timestamp'>; label: string; color: string }> = [
@@ -23,43 +24,75 @@ function Sparkline({
   dataKey,
   label,
   color,
+  expanded = false,
 }: {
   data: TimelinePoint[];
   dataKey: string;
   label: string;
   color: string;
+  expanded?: boolean;
 }) {
   const latest = data.length > 0 ? Math.round(data[data.length - 1][dataKey as keyof TimelinePoint] as number) : 0;
+  const values = data.map(d => d[dataKey as keyof TimelinePoint] as number);
+  const min = values.length ? Math.round(Math.min(...values)) : 0;
+  const max = values.length ? Math.round(Math.max(...values)) : 0;
   const gradientId = `spark-${dataKey}`;
+  const chartHeight = expanded ? 72 : 32;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-      <span
-        style={{
-          fontSize: 12,
-          color: '#6b6158',
-          fontFamily: "'Lora', 'Georgia', serif",
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}
-      >
-        {label}
-      </span>
+    <div style={{ display: 'flex', alignItems: expanded ? 'flex-start' : 'center', gap: 10, flex: 1, minWidth: 0 }}>
+      <div style={{ flexShrink: 0, width: expanded ? 52 : 'auto' }}>
+        <div
+          style={{
+            fontSize: expanded ? 11 : 12,
+            fontWeight: expanded ? 600 : 400,
+            color: expanded ? color : '#6b6158',
+            fontFamily: "'Lora', 'Georgia', serif",
+            whiteSpace: 'nowrap',
+            textTransform: expanded ? 'uppercase' : 'none',
+            letterSpacing: expanded ? '0.06em' : 0,
+          }}
+        >
+          {label}
+        </div>
+        {expanded && (
+          <div
+            style={{
+              fontSize: 28,
+              fontWeight: 400,
+              color,
+              fontFamily: "'Lora', 'Georgia', serif",
+              fontVariantNumeric: 'tabular-nums',
+              lineHeight: 1.1,
+              marginTop: 2,
+            }}
+          >
+            {latest}
+          </div>
+        )}
+        {expanded && (
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {min}–{max}
+          </div>
+        )}
+      </div>
 
-      <div style={{ flex: 1, height: 32, minWidth: 0 }}>
+      <div style={{ flex: 1, height: chartHeight, minWidth: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 2, right: 0, bottom: 2, left: 0 }}>
+          <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 4, left: 0 }}>
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.2} />
+                <stop offset="0%" stopColor={color} stopOpacity={expanded ? 0.25 : 0.2} />
                 <stop offset="100%" stopColor={color} stopOpacity={0.02} />
               </linearGradient>
             </defs>
+            {expanded && <YAxis domain={[0, 100]} hide />}
+            {expanded && <ReferenceLine y={70} stroke={color} strokeDasharray="3 3" strokeOpacity={0.3} />}
             <Area
               type="monotone"
               dataKey={dataKey}
               stroke={color}
-              strokeWidth={1.5}
+              strokeWidth={expanded ? 2 : 1.5}
               fill={`url(#${gradientId})`}
               isAnimationActive={false}
               dot={false}
@@ -69,30 +102,32 @@ function Sparkline({
         </ResponsiveContainer>
       </div>
 
-      <span
-        style={{
-          fontSize: 14,
-          fontWeight: 600,
-          color,
-          fontFamily: "'Lora', 'Georgia', serif",
-          fontVariantNumeric: 'tabular-nums',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          minWidth: 24,
-          textAlign: 'right',
-        }}
-      >
-        {latest}
-      </span>
+      {!expanded && (
+        <span
+          style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color,
+            fontFamily: "'Lora', 'Georgia', serif",
+            fontVariantNumeric: 'tabular-nums',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+            minWidth: 24,
+            textAlign: 'right',
+          }}
+        >
+          {latest}
+        </span>
+      )}
     </div>
   );
 }
 
-export const SessionTimeline = memo(function SessionTimeline({ data }: SessionTimelineProps): JSX.Element {
+export const SessionTimeline = memo(function SessionTimeline({ data, expanded = false }: SessionTimelineProps): JSX.Element {
   if (!data.length) {
     return (
-      <div className="card">
-        <h3>Session Timeline</h3>
+      <div className="card" style={{ flex: expanded ? 1 : undefined, minHeight: 0 }}>
+        <h3>Session Analytics</h3>
         <div
           className="timeline"
           style={{
@@ -109,11 +144,28 @@ export const SessionTimeline = memo(function SessionTimeline({ data }: SessionTi
   }
 
   return (
-    <div className="card">
-      <h3>Session Timeline</h3>
-      <div style={{ display: 'flex', gap: 16 }}>
+    <div
+      className="card"
+      style={{
+        flex: expanded ? 1 : undefined,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: expanded ? 14 : 10,
+      }}
+    >
+      <h3 style={{ margin: 0 }}>Session Analytics</h3>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: expanded ? 'column' : 'row',
+          gap: expanded ? 12 : 16,
+          flex: expanded ? 1 : undefined,
+          justifyContent: expanded ? 'space-evenly' : undefined,
+        }}
+      >
         {METRICS.map((m) => (
-          <Sparkline key={m.key} data={data} dataKey={m.key} label={m.label} color={m.color} />
+          <Sparkline key={m.key} data={data} dataKey={m.key} label={m.label} color={m.color} expanded={expanded} />
         ))}
       </div>
     </div>

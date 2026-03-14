@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
@@ -25,6 +25,7 @@ export function Dashboard({
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
   const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
+  const [webcamCollapsed, setWebcamCollapsed] = useState(false);
 
   return (
     <div className="dashboard-grid">
@@ -63,13 +64,15 @@ export function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
+      <div className="column" style={{ gridTemplateRows: webcamCollapsed ? 'auto 1fr' : '1fr auto' }}>
         <WebcamFeed
           videoRef={videoRef}
-          poseFps={state.poseFps}
-          faceFps={state.faceFps}
+          landmarks={state.poseLandmarks}
+          postureScore={snapshot.posture.score}
+          collapsed={webcamCollapsed}
+          onToggle={() => setWebcamCollapsed(c => !c)}
         />
-        <SessionTimeline data={timeline} />
+        <SessionTimeline data={timeline} expanded={webcamCollapsed} />
       </div>
 
       <div className="column" style={{ gridTemplateRows: 'auto auto auto', alignContent: 'start' }}>
