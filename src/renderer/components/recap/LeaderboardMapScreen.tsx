@@ -40,13 +40,6 @@ const RANK_SPRITE_POSES = [
   { row: 3, col: 2, flip: false },
 ] as const;
 
-const SYDNEY_CALLOUTS = [
-  { lng: 151.2153, lat: -33.8568, label: 'Opera House', emoji: '🎭' },
-  { lng: 151.2108, lat: -33.8523, label: 'Harbour Bridge', emoji: '🌉' },
-  { lng: 151.2741, lat: -33.8914, label: 'Bondi Beach', emoji: '🏖️' },
-  { lng: 151.1914, lat: -33.8638, label: 'Darling Harbour', emoji: '⚓' },
-] as const;
-
 const SYDNEY_FOCUS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Polygon> = {
   type: 'FeatureCollection',
   features: [
@@ -124,6 +117,7 @@ const MAP_LAYER_IDS = {
   focusSource: 'sydney-focus-source',
   focusFillLayer: 'sydney-focus-fill-layer',
   focusLineLayer: 'sydney-focus-line-layer',
+  focusGlowLayer: 'sydney-focus-glow-layer',
   harbourSource: 'sydney-harbour-line-source',
   harbourLayer: 'sydney-harbour-line-layer',
 } as const;
@@ -183,6 +177,17 @@ function addSydneyContextLayers(map: maplibregl.Map): void {
         'line-dasharray': [1.1, 1.3],
       },
     });
+    map.addLayer({
+      id: MAP_LAYER_IDS.focusGlowLayer,
+      type: 'line',
+      source: MAP_LAYER_IDS.focusSource,
+      paint: {
+        'line-color': '#8be7ff',
+        'line-width': 4.8,
+        'line-opacity': 0.28,
+        'line-blur': 1.4,
+      },
+    });
   }
 
   if (!map.getSource(MAP_LAYER_IDS.harbourSource)) {
@@ -239,37 +244,30 @@ export function LeaderboardMapScreen({
 
     const roots: Root[] = [];
     const markers: maplibregl.Marker[] = [];
+    let outlinePulseHandle: ReturnType<typeof setInterval> | null = null;
 
     const mountMapMarkers = () => {
-      if (map.loaded()) addSydneyContextLayers(map);
-      else map.once('load', () => addSydneyContextLayers(map));
+      const enableOutlinePulse = () => {
+        if (outlinePulseHandle !== null) return;
+        let phase = 0;
+        outlinePulseHandle = setInterval(() => {
+          if (!map.getLayer(MAP_LAYER_IDS.focusGlowLayer)) return;
+          phase += 0.16;
+          const pulse = (Math.sin(phase) + 1) / 2;
+          map.setPaintProperty(MAP_LAYER_IDS.focusGlowLayer, 'line-width', 4.4 + pulse * 3.2);
+          map.setPaintProperty(MAP_LAYER_IDS.focusGlowLayer, 'line-opacity', 0.18 + pulse * 0.4);
+        }, 120);
+      };
 
-      const harbourPulse = document.createElement('div');
-      harbourPulse.className = 'leaderboard-harbour-pulse';
-      const harbourPulseMarker = new maplibregl.Marker({ element: harbourPulse, anchor: 'center' })
-        .setLngLat([151.209, -33.86])
-        .addTo(map);
-      markers.push(harbourPulseMarker);
-
-      SYDNEY_CALLOUTS.forEach((callout) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'leaderboard-sydney-callout';
-
-        const emoji = document.createElement('span');
-        emoji.className = 'leaderboard-sydney-callout__emoji';
-        emoji.textContent = callout.emoji;
-        wrapper.appendChild(emoji);
-
-        const label = document.createElement('span');
-        label.className = 'leaderboard-sydney-callout__label';
-        label.textContent = callout.label;
-        wrapper.appendChild(label);
-
-        const marker = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
-          .setLngLat([callout.lng, callout.lat])
-          .addTo(map);
-        markers.push(marker);
-      });
+      if (map.loaded()) {
+        addSydneyContextLayers(map);
+        enableOutlinePulse();
+      } else {
+        map.once('load', () => {
+          addSydneyContextLayers(map);
+          enableOutlinePulse();
+        });
+      }
 
       top4.forEach((entry, i) => {
         const pos = SYDNEY_POSITIONS[i];
@@ -337,6 +335,7 @@ export function LeaderboardMapScreen({
 
     return () => {
       window.removeEventListener('keydown', handleEscape);
+      if (outlinePulseHandle !== null) clearInterval(outlinePulseHandle);
       markers.forEach((marker) => marker.remove());
       roots.forEach((root) => root.unmount());
       map.remove();
