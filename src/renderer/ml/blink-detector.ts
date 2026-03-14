@@ -325,15 +325,25 @@ export class BlinkDetector {
       if (blinkCount > 0) {
         const recent = this.blinkTimes.slice(-BLINK_WINDOW_COUNT);
         if (recent.length === 1) {
-          // With only a single observed blink, fall back to the user's
-          // baseline rate rather than deriving an unstable estimate from
-          // a sub-second span.
-          this.cachedBlinkRate = baselineBlinkRate || this.cachedBlinkRate || 0;
+          // With only a single observed blink, the best signal we have is how
+          // long it's been since that blink. If the gap is small, fall back to
+          // baseline to avoid noisy spikes; if it's large, let the rate decay.
+          const sinceLast = Math.max(1, now - recent[0]!);
+          if (sinceLast >= 5000) {
+            this.cachedBlinkRate = Math.round(60_000 / sinceLast);
+          } else {
+            this.cachedBlinkRate = baselineBlinkRate || this.cachedBlinkRate || 0;
+          }
         } else {
           const first = recent[0]!;
           const last = recent[recent.length - 1]!;
-          const windowMs = Math.max(1, last - first);
           const intervalCount = recent.length - 1;
+          // Add a "tail" interval from the most recent blink to the present moment
+          // so long no-blink periods reduce the reported rate before the next blink.
+          const tailMs = Math.max(0, now - last);
+          const includeTail = tailMs >= 5000;
+          const windowMs = Math.max(1, (last - first) + (includeTail ? tailMs : 0));
+
           // Require at least 1s of span to avoid huge rates from nearly-coincident timestamps.
           if (windowMs >= 1000 && intervalCount > 0) {
             this.cachedBlinkRate = Math.round(intervalCount * (60_000 / windowMs));
