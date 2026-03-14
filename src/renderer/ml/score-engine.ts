@@ -102,6 +102,12 @@ class ScoreEngine {
 
   private postureVariance = new RollingAverage(60);
 
+  private fatigueSmoother = new RollingAverage(10);
+
+  private ambientBrightnessSmoother = new RollingAverage(10);
+
+  private ambientWarmthSmoother = new RollingAverage(10);
+
   private timeline = new RollingBuffer<{ timestamp: number; posture: number; focus: number; stress: number }>(300);
 
   private poseLandmarks: Point[] = [];

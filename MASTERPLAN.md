@@ -61,12 +61,20 @@ This plan covers technical architecture, execution order, and build phases.
 
 - [ ] Posture tracking inaccurate — scoring feels inconsistent, needs tuning/recalibration of thresholds and weights
 - [x] Blink rate inaccurate — detection was unreliable, now fixed
-- [ ] Pet logic may not be there — verify egg crack progression, hatching trigger, evolution stage transitions all work end-to-end
-- [ ] Pet implementation needs work — visual quality, animations, health state transitions need polish
+- [x] Pet logic core done — egg crack progression, health states (Thriving/Fading/Wilting), evolution stages, health hysteresis, behavior AI all implemented
+- [ ] Pet still needs: hatch transition animation, accessories rendering, auto-save every 30s, hat/crown unlock wiring
 - [ ] Entire app not fitting in viewport — layout overflow issues on smaller screens or certain resolutions
 - [ ] Improve UI and UX — general polish pass on spacing, typography, responsiveness, interaction feedback
 - [ ] Add further gamification through pet — more accessory unlocks, milestone celebrations, streak rewards, visual feedback
 - [ ] Improve brightness and screen warmth changer — smoother transitions, better score-to-ambient mapping, feel less abrupt
+
+### Design Decision: Digital Twin → Pomodoro Timer
+
+- [x] **Replaced Digital Twin** with a **Pomodoro Timer** in the left column of the dashboard
+- The Digital Twin (stick figure canvas) has been removed from the user-facing UI
+- The Pomodoro Timer sits above the Bio-Pet in the left column
+- Posture score is passed into the timer — a nudge appears during active Focus sessions when posture drops below 40
+- Timer supports: Focus (25 min), Short Break (5 min), Long Break (15 min); round counter; Start/Pause/Reset controls; round dot progress indicator
 
 ### Remaining (Phase 8 — Polish & Demo Prep)
 
@@ -276,16 +284,19 @@ kinetic/
 │   │   │   │   └── StateTabs.tsx     # Upright / Slouching / Fatigued tabs
 │   │   │   │
 │   │   │   ├── visualisation/
-│   │   │   │   ├── DigitalTwin.tsx   # Canvas stick figure with landmarks
 │   │   │   │   ├── WebcamFeed.tsx    # Video element + landmark overlay + FPS counter
 │   │   │   │   └── SessionTimeline.tsx # 3 sparkline area charts
 │   │   │   │
+│   │   │   ├── pomodoro/
+│   │   │   │   └── PomodoroTimer.tsx # 25/5/15 min Pomodoro timer, posture nudge, round counter
+│   │   │   │
 │   │   │   ├── pet/
-│   │   │   │   ├── BioPet.tsx        # Three.js canvas wrapper
-│   │   │   │   ├── PetScene.ts       # Three.js scene setup, lighting, creature
-│   │   │   │   ├── PetAnimator.ts    # State transitions, breathing, mirroring
-│   │   │   │   ├── EggStage.ts       # Egg rendering, crack progression, hatch animation
-│   │   │   │   └── Accessories.ts    # Accessory attachment points + unlocked items
+│   │   │   │   ├── BioPet.tsx        # Main pet container: egg/cat switching, health hysteresis, meta panel
+│   │   │   │   ├── CatSprite.tsx     # Ginger cat sprite sheet renderer + AnimatedCat behavior AI
+│   │   │   │   ├── PixelSprite.tsx   # SVG pixel-art renderer (PixelSprite, PixelHeart, PixelSweat)
+│   │   │   │   ├── PetEffects.tsx    # FloatingHearts, SleepZzz, SweatDrop, PetHealthEffect dispatcher
+│   │   │   │   ├── sprite-data.ts    # Egg/cushion grids, crack overlays, cat frame data, iris color map
+│   │   │   │   └── pet-animations.css # Health glow, egg wobble, breathing, floating hearts, sleep Zzz
 │   │   │   │
 │   │   │   ├── recap/
 │   │   │   │   ├── SessionRecapCard.tsx  # Wrapped-style recap card renderer
@@ -814,22 +825,22 @@ Based on the mockup designs, the dashboard has this grid layout:
 │  Kinetic  bio-responsive workspace     [Upright] [Slouching] [Fatigued]  │
 ├──────────────┬──────────────────────────────┬───────────────┤
 │              │  ┌─Posture──┐ ┌─Blink Rate─┐ │   OVERALL    │
-│  DIGITAL     │  │  88 /100 │ │  17 bpm    │ │              │
-│  TWIN        │  │  Good    │ │  Good      │ │    84        │
+│  POMODORO    │  │  88 /100 │ │  17 bpm    │ │              │
+│  TIMER       │  │  Good    │ │  Good      │ │    84        │
 │              │  └──────────┘ └────────────┘ │   (gauge)    │
-│  (stick      │  ┌─Focus────┐ ┌─Stress─────┐ │              │
-│   figure)    │  │  82 /100 │ │  18 /100   │ ├──────────────┤
-│              │  │  Good    │ │  Good      │ │  SYSTEMS     │
-│  0.5° tilt   │  └──────────┘ └────────────┘ │  Pose Det  ● │
-│              ├──────────────────────────────┤  Face Mesh ● │
-│  ALIGNMENT   │  WEBCAM — MEDIAPIPE HOLISTIC │  Affect    ● │
-│    88 /100   │  (live feed with overlay)    │  Ambient   ● │
-│              │  30 fps · 543 pts            ├──────────────┤
-├──────────────┼──────────────────────────────┤  AMBIENT     │
-│  BIO-PET     │  SESSION TIMELINE            │  RESPONSE    │
-│              │  Posture ───── 88            │  Environment │
-│  (creature)  │  Focus   ───── 82            │  stable.     │
-│  Thriving    │  Stress  ───── 18            │  [calm ▊ elev]│
+│  [Focus][Brk]│  ┌─Focus────┐ ┌─Stress─────┐ │              │
+│  ○ 24:37    │  │  82 /100 │ │  18 /100   │ ├──────────────┤
+│             │  │  Good    │ │  Good      │ │  SYSTEMS     │
+│  ● ● ○ ○   │  └──────────┘ └────────────┘ │  Pose Det  ● │
+│  [Start][↺] ├──────────────────────────────┤  Face Mesh ● │
+│              │  WEBCAM — MEDIAPIPE HOLISTIC │  Affect    ● │
+├──────────────┤  (live feed with overlay)    │  Ambient   ● │
+│  BIO-PET     │  30 fps · 543 pts            ├──────────────┤
+│              ├──────────────────────────────┤  AMBIENT     │
+│  (creature)  │  SESSION TIMELINE            │  RESPONSE    │
+│  Thriving    │  Posture ───── 88            │  Environment │
+│              │  Focus   ───── 82            │  stable.     │
+│              │  Stress  ───── 18            │  [calm ▊ elev]│
 └──────────────┴──────────────────────────────┴───────────────┘
 ```
 
@@ -1024,7 +1035,7 @@ function blinkRateLabel(rate: number): string {
 ### Tier 1: MUST SHIP — The Demo-able Core
 1. Webcam posture detection (neck angle + shoulder slant + trunk lean → composite score 0-100)
 2. Calibration flow (sit up straight for 3 seconds → personalized baseline)
-3. Digital Twin — live stick figure with color-coded landmarks and tilt angle display
+3. ~~Digital Twin — live stick figure~~ → **Pomodoro Timer** (25/5/15 min cycles, posture-aware nudge, round counter)
 4. **Real ambient screen response**: macOS brightness + color temperature shifts driven by posture score
 5. Dashboard with 4 metric cards (Posture, Blink Rate, Focus, Stress) + overall circular gauge
 
@@ -1033,7 +1044,7 @@ function blinkRateLabel(rate: number): string {
 7. Stress estimation (affect engine + posture variance + blink deviation)
 8. Focus score (composite of posture stability + inverse fatigue + inverse stress)
 9. Session timeline sparkline charts (Posture, Focus, Stress over time)
-10. **Bio-Pet lifecycle**: Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting). Posture mirroring. Slouch = pet gets sick.
+10. **Bio-Pet lifecycle**: Pixel-art ginger cat. Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting) with behavior AI (walk, run, sleep, groom). Slouch = pet sleeps. *(Implemented as 2D sprite sheet, not Three.js)*
 11. Multi-signal ambient response (posture + fatigue both drive brightness/warmth)
 12. Systems status panel + Ambient Response panel
 
@@ -1174,43 +1185,59 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: All 4 metric cards live. Overall gauge accurate. Ambient responds to multiple signals. Dashboard fully functional.
 
-### Phase 5: Bio-Pet Lifecycle -- DONE
-**Goal**: A creature that starts as an egg, hatches from good posture, gets sick when you slouch, and evolves the more you use KINETIC. People sit up straight because they care about the creature.
+### Phase 5: Bio-Pet Lifecycle -- DONE (with deviations from original plan)
 
-- [x] **Egg state**: First thing the user sees in the pet panel.
-  - Three.js scene: an egg shape (ellipsoid geometry or simple GLTF)
-  - Subtle glow pulse animation (emissive material oscillation)
-  - As the user accumulates upright minutes (Overall ≥ 65), cracks appear on the egg (texture swap or progressive line overlays at 25%, 50%, 75% progress toward 10 min)
-  - At 10 cumulative upright minutes → **hatch animation**: egg cracks open, creature emerges. Celebration particles. This is the first "wow" moment.
-  - If user closes app before hatching, progress is saved in electron-store. Egg resumes with cracks.
-- [x] **Base creature**: Post-hatch creature (Stage 1: Hatchling).
-  - Start simple: low-poly blob/orb with dot eyes, built from Three.js primitives (SphereGeometry body + smaller sphere head + circle eyes)
-  - Idle breathing animation (smooth Y-axis scale oscillation)
-  - Eyes follow mouse or head position from webcam landmarks (driven by nose landmark relative position)
-  - At higher evolution stages: creature gets bigger, gains accessories, colors intensify
-- [x] **Health states**: Real-time health driven by Overall score:
-  - **Thriving** (≥ 65): Happy face, bouncy idle, green glow, particles. "Your pet glows and blooms with energy."
-  - **Fading** (30–64): Neutral/concerned face, amber tones, slower animation. "Your pet loses petals and its glow dims."
-  - **Wilting** (< 30): **Sick state**. Drooping, shivering, red tones, eyes half-closed. "Your pet curls inward, urging a reset."
-  - The sick state is the key emotional lever — at higher evolution stages, a Guardian going sick looks *wrong* and creates urgent motivation to fix posture
-  - Transitions between states: lerp colors/scale/position over 3–5 seconds
-  - Each state shows: Posture score, Focus score, Stress score beneath the pet
-- [x] **Posture mirroring**: Pet's body tilt matches your posture via shoulder slant angle. Lean left → pet leans left. Slouch → pet droops forward.
-- [x] **Streak system + evolution**:
-  - Streak: consecutive minutes with Overall ≥ 65
-  - 30-second grace period before streak breaks
-  - Pet reacts to milestones: bounce at 10 min, celebration at 30 min, special animation at 60 min
-  - Display: **"Locked in for 47 min"**
-  - Evolution stages: Egg (0) → Hatchling (10 min) → Fledgling (30 min) → Companion (120 min) → Guardian (300 min) → Ascended (600 min)
-  - Each evolution: size increase, color shift, added visual features
-  - Evolution triggers a big celebration animation + accessory unlock
-- [x] **Accessories**: Visual trophies unlocked by milestones:
-  - Scarf (first session > 30 min), Hat (3 sessions), Glasses (streak > 45 min), Cape (Stage 3), Wings (Stage 4), Halo (Stage 5), Crown (#1 on leaderboard)
-  - Rendered as additional Three.js meshes attached to the creature
-  - Persist in electron-store. Shown on pet and on leaderboard avatar.
-  - Unlock triggers toast notification + celebration
+> **Architecture change**: The pet was rebuilt as a **2D pixel-art + sprite sheet system** instead of Three.js. This is faster to render, fits the aesthetic better, and ships more reliably than 3D models.
 
-**Output**: An egg that hatches into a creature that gets sick when you slouch, evolves over days of use, and accumulates visual trophies. The emotional attachment drives posture improvement better than any notification ever could.
+- [x] **Egg state** (`BioPet.tsx`, `sprite-data.ts`, `PixelSprite.tsx`)
+  - Pixel-art SVG egg rendered via `PixelSprite` (rect-based SVG, `imageRendering: pixelated`)
+  - Rests on a pixel-art cushion beneath it
+  - Crack overlays at ≥85% (`eggCracks85`) and ≥95% (`eggCracks95`) egg crack progress — rendered as SVG overlay on top of the egg
+  - Glow effect on the egg shell when cracking (CSS: `egg-shell-glow--cracking`, `egg-shell-glow--hatching`)
+  - Wobble animation that fires periodically — frequency increases as crack progress rises (every 10s at 0%, every 4.5s at 50%, every 1.8s at 85%, every 0.8s at 95%)
+  - Progress persists in electron-store — egg resumes with cracks on relaunch
+  - Dev toggle button (egg ↔ cat preview) visible during stage 0
+- [x] **Base creature** (`CatSprite.tsx`, ginger-cat.png sprite sheet)
+  - **Ginger cat sprite sheet** (352×1696 px, 32×32 frames, 11 cols × 53 rows) — a real pixel-art cat asset
+  - `CatSprite`: renders a single frame using CSS background-position trick
+  - `AnimatedCat`: full behavior simulation with a random action scheduler:
+    - **Thriving**: idle sitting/standing, yawning, grooming (wash), scratching, meowing, walking and running (with boundary bounce), rare naps
+    - **Fading**: mostly idle lying/crouching, occasional yawns, less frequent movement
+    - **Wilting**: locked into sleep animations (curl, flat, belly-up) held for 30–90 seconds at a time
+    - Walk speed varies (walk vs run), direction reverses at ±35px boundaries
+    - Breathing CSS animation during non-sleep states
+- [x] **Health states** with hysteresis (`BioPet.tsx`)
+  - **Thriving** (Overall ≥ 65): active animations, floating pixel hearts (`FloatingHearts`), green glow
+  - **Fading** (30–64): slower/lazier animations, amber glow, no overlay effect
+  - **Wilting** (< 30): sleep-only animations, floating sleep Zzz's (`SleepZzz`), red glow
+  - **3-second hysteresis** before health state commits — prevents flickering on brief score dips
+  - CSS glow ring around pet scene changes color with health state
+- [x] **Pet effects** (`PetEffects.tsx`, `PixelSprite.tsx`)
+  - `FloatingHearts`: 3 pixel-art hearts with staggered CSS float animations (Thriving)
+  - `SleepZzz`: 3 diagonal floating 'z' characters (Wilting)
+  - `SweatDrop`: pixel-art sweat drop component (built, reserved for Fading enhancement)
+  - `PixelHeart` / `PixelSweat`: SVG pixel art sub-components
+- [x] **Meta panel** beneath the pet scene
+  - Stage number + stage name label
+  - Health pill (colored dot + "Thriving" / "Fading" / "Wilting")
+  - Evolution progress bar (color follows health state)
+  - Stat chips: Posture, Focus, Stress, Time locked in
+- [x] **Evolution stage tracking** — stages 0–5, driven by `totalLockedInMinutes`
+  - Progress bar shows % toward next stage
+  - Stage names: Egg → Hatchling → Fledgling → Companion → Guardian → Ascended
+- [x] **Streak system** — tracked in score-engine, displayed in meta panel as locked-in minutes
+
+### Pet — Still Pending (from Plan 2)
+
+- [ ] **Auto-save pet state every 30 seconds** (currently only saves on "End Session")
+- [ ] **Save pet on window close / cleanup** so progress survives force-quit
+- [ ] **Hat unlock** — "3 sessions completed" condition not yet wired
+- [ ] **Crown unlock** — "#1 on leaderboard" condition not yet wired
+- [ ] **Hatch transition animation** — currently snaps instantly from egg to cat; needs a scale-bounce transition
+- [ ] **Accessories** — scarf, hat, glasses, wings, halo, crown have no visual implementation yet (unlock logic exists but no rendering)
+- [ ] **SweatDrop** wired to Fading state (component built, not connected)
+
+**Output**: A ginger cat that starts as a cracking pixel-art egg, hatches into a behaviorally rich cat, and gets sick (sleeps, stops moving) when posture is poor. The emotional attachment is real — the cat is genuinely charming.
 
 ### Phase 6: Elasticsearch + Leaderboard -- DONE
 **Goal**: Biometric data pipeline + competitive leaderboard. Easiest to bolt on last.

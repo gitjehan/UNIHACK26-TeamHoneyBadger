@@ -36,7 +36,6 @@ export default function App(): JSX.Element {
   });
 
   const sessionIdRef = useRef(uuidv4());
-  const calibrationSamplesRef = useRef<CalibrationSample[]>([]);
   const brightnessRangeRef = useRef<[number, number]>([0.2, 1.0]);
   const warmthIntensityRef = useRef<number>(1.0);
   const poseEngineRef = useRef<PoseEngine | null>(null);
@@ -66,9 +65,8 @@ export default function App(): JSX.Element {
   useEffect(() => {
     let mounted = true;
     const bootstrap = async () => {
-      const [storedCalibration, storedPet, storedNick, storedBrightnessRange, storedWarmthIntensity] = await Promise.all([
+      const [, storedPet, storedNick, storedBrightnessRange, storedWarmthIntensity] = await Promise.all([
         window.kinetic.storeGet('calibration'),
-      const [storedPet, storedNick] = await Promise.all([
         window.kinetic.storeGet('pet'),
         window.kinetic.storeGet('nickname'),
         window.kinetic.storeGet('brightnessRange'),
@@ -159,22 +157,6 @@ export default function App(): JSX.Element {
       faceEngineRef.current = null;
     };
   }, [webcam.ready, webcam.videoRef]);
-
-  useEffect(() => {
-    latestPoseLandmarksRef.current = state.poseLandmarks;
-    latestPostureMetricsRef.current = {
-      neckAngle: state.snapshot.posture.neckAngle,
-      shoulderSlant: state.snapshot.posture.shoulderSlant,
-    };
-  }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
-
-  // Consolidated ambient + timeline ticker (reduces 3 intervals to 1)
-    if (stage === 'welcome') return;
-    const timer = setInterval(() => {
-      setTimeline(scoreEngine.getTimeline());
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [stage]);
 
   useEffect(() => {
     if (stage !== 'ready') return;

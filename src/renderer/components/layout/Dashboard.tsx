@@ -1,5 +1,4 @@
-import { memo, type RefObject, useMemo } from 'react';
-import { useState, type RefObject } from 'react';
+import { memo, type RefObject, useMemo, useState } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
