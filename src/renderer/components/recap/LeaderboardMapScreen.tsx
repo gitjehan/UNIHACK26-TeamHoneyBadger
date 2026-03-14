@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -152,12 +152,26 @@ export function LeaderboardMapScreen({
   onClose,
 }: LeaderboardMapScreenProps): JSX.Element {
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const shareHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [shareHintVisible, setShareHintVisible] = useState(false);
   const top4 = useMemo(() => entries.slice(0, 4), [entries]);
 
   useEffect(() => {
     document.body.classList.add('overlay-open');
-    return () => document.body.classList.remove('overlay-open');
+    return () => {
+      document.body.classList.remove('overlay-open');
+      if (shareHintTimeoutRef.current !== null) clearTimeout(shareHintTimeoutRef.current);
+    };
   }, []);
+
+  const handleShareClick = () => {
+    setShareHintVisible(true);
+    if (shareHintTimeoutRef.current !== null) clearTimeout(shareHintTimeoutRef.current);
+    shareHintTimeoutRef.current = setTimeout(() => {
+      setShareHintVisible(false);
+      shareHintTimeoutRef.current = null;
+    }, 1500);
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -295,6 +309,27 @@ export function LeaderboardMapScreen({
               })
             )}
           </aside>
+
+          <div className="leaderboard-map-actions">
+            <button
+              type="button"
+              className="leaderboard-map-button leaderboard-map-button--ghost"
+              onClick={handleShareClick}
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              className="leaderboard-map-button leaderboard-map-button--primary"
+              onClick={onClose}
+            >
+              Start New Session
+            </button>
+          </div>
+
+          {shareHintVisible && (
+            <div className="leaderboard-map-share-hint">Share coming soon</div>
+          )}
 
           <div className="leaderboard-map-attribution">© OpenStreetMap contributors</div>
         </section>
