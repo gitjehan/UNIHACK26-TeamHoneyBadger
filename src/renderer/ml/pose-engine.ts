@@ -1,5 +1,6 @@
 import { LANDMARKS, POSE_LOOP_INTERVAL } from '@renderer/lib/constants';
 import type { Point, VisionBackend } from '@renderer/lib/types';
+import { getSharedHuman } from './shared-human';
 
 type PoseCallback = (landmarks: Point[], fps: number) => void;
 type StatusCallback = (status: 'active' | 'degraded' | 'inactive') => void;
@@ -175,21 +176,7 @@ export class PoseEngine {
   }
 
   private async initHuman(): Promise<void> {
-    const HumanModule = await import('@vladmandic/human');
-    this.human = new HumanModule.Human({
-      modelBasePath: 'https://vladmandic.github.io/human/models',
-      filter: { enabled: true },
-      body: {
-        enabled: true,
-        maxDetected: 1,
-      },
-      face: { enabled: false },
-      hand: { enabled: false },
-      object: { enabled: false },
-      gesture: { enabled: false },
-    }) as HumanAdapter;
-    await this.human.load();
-    await this.human.warmup();
+    this.human = await getSharedHuman() as unknown as HumanAdapter;
   }
 
   private async initMediaPipe(): Promise<void> {

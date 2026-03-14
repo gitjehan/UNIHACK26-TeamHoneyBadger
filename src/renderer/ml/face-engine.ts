@@ -1,5 +1,6 @@
 import { FACE_LOOP_INTERVAL } from '@renderer/lib/constants';
 import type { Point, VisionBackend } from '@renderer/lib/types';
+import { getSharedHuman } from './shared-human';
 
 type FaceCallback = (
   landmarks: Point[],
@@ -107,24 +108,7 @@ export class FaceEngine {
   }
 
   private async initHuman(): Promise<void> {
-    const HumanModule = await import('@vladmandic/human');
-    this.human = new HumanModule.Human({
-      modelBasePath: 'https://vladmandic.github.io/human/models',
-      filter: { enabled: true },
-      body: { enabled: false },
-      face: {
-        enabled: true,
-        detector: { rotation: true },
-        mesh: { enabled: true },
-        emotion: { enabled: true },
-      },
-      hand: { enabled: false },
-      object: { enabled: false },
-      gesture: { enabled: false },
-    }) as HumanAdapter;
-    await this.human.load();
-    console.log('[FaceEngine] Models loaded, warming up...');
-    await this.human.warmup();
+    this.human = await getSharedHuman() as unknown as HumanAdapter;
   }
 
   private async detectFace(

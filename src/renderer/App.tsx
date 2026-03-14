@@ -103,7 +103,7 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (!webcam.ready) return;
-    const sourceVideo = webcam.processingVideoRef.current ?? webcam.videoRef.current;
+    const sourceVideo = webcam.videoRef.current;
     if (!sourceVideo) return;
     if (poseEngineRef.current || faceEngineRef.current) return;
 
@@ -155,6 +155,7 @@ export default function App(): JSX.Element {
         console.warn('Pose engine init failed', error);
       }
       try {
+        // Sequential: face reuses the same Human instance that pose already loaded
         await face.init(sourceVideo);
       } catch (error) {
         console.warn('Face engine init failed', error);
@@ -167,7 +168,7 @@ export default function App(): JSX.Element {
       poseEngineRef.current = null;
       faceEngineRef.current = null;
     };
-  }, [webcam.ready, webcam.processingVideoRef, webcam.videoRef]);
+  }, [webcam.ready, webcam.videoRef]);
 
   useEffect(() => {
     latestPoseLandmarksRef.current = state.poseLandmarks;
