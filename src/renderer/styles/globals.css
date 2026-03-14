@@ -1367,9 +1367,11 @@ input:focus-visible {
 /* ── Ambient Sound Player ─────────────────────────────── */
 
 .sound-player {
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding-bottom: 28px;
 }
 
 .sound-options {
