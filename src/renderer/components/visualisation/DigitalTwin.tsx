@@ -13,7 +13,14 @@ const UPPER_CONNECTIONS: [number, number][] = [
   [11, 12], // shoulders
   [11, 13], [13, 15], // left arm
   [12, 14], [14, 16], // right arm
-  [11, 23], [12, 24], // torso
+];
+
+/* Landmark indices we actually use for framing */
+const UPPER_LANDMARK_IDS = [
+  LANDMARKS.NOSE, LANDMARKS.LEFT_EAR, LANDMARKS.RIGHT_EAR,
+  LANDMARKS.LEFT_SHOULDER, LANDMARKS.RIGHT_SHOULDER,
+  LANDMARKS.LEFT_ELBOW, LANDMARKS.RIGHT_ELBOW,
+  LANDMARKS.LEFT_WRIST, LANDMARKS.RIGHT_WRIST,
 ];
 
 /* ── colour by score ─────────────────────────────────── */
@@ -100,13 +107,35 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         }
       }
 
-      // Map to canvas coords
-      const pad = 0.08;
-      const dW = W * (1 - 2 * pad);
-      const dH = H * (1 - 2 * pad);
-      const oX = W * pad;
-      const oY = H * pad;
-      const mp = (p: Point) => ({ x: oX + p.x * dW, y: oY + p.y * dH });
+      // Compute bounding box of visible upper-body landmarks to center & scale
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let visCount = 0;
+      for (const id of UPPER_LANDMARK_IDS) {
+        const pt = sm[id];
+        if (!isVis(pt)) continue;
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+        visCount++;
+      }
+      if (visCount < 2) return;
+
+      // Add padding around bounding box (in normalised coords)
+      const bboxPad = 0.06;
+      minX -= bboxPad; maxX += bboxPad;
+      minY -= bboxPad; maxY += bboxPad;
+      const bW = Math.max(maxX - minX, 0.1);
+      const bH = Math.max(maxY - minY, 0.1);
+
+      // Fit bounding box into canvas with uniform scale, centered
+      const canvasPad = 0.08;
+      const drawW = W * (1 - 2 * canvasPad);
+      const drawH = H * (1 - 2 * canvasPad);
+      const scale = Math.min(drawW / bW, drawH / bH);
+      const offsetX = W / 2 - ((minX + maxX) / 2) * scale;
+      const offsetY = H / 2 - ((minY + maxY) / 2) * scale;
+      const mp = (p: Point) => ({ x: offsetX + p.x * scale, y: offsetY + p.y * scale });
 
       // Draw connections
       const drawLine = (a: number, b: number, alpha: number, width: number) => {
@@ -139,7 +168,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         const sMid = mp({ x: (lS.x + rS.x) / 2, y: (lS.y + rS.y) / 2 } as Point);
         const hm = mp(hc as Point);
         const sSpan = Math.abs(rS.x - lS.x);
-        const headR = Math.max(sSpan * dW * 0.28, 12);
+        const headR = Math.max(sSpan * scale * 0.28, 12);
 
         // Neck
         ctx.strokeStyle = color;
@@ -210,7 +239,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ref={canvasRef}
         style={{
           width: '100%',
-          aspectRatio: '5 / 6',
+          aspectRatio: '4 / 3',
           borderRadius: 10,
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
