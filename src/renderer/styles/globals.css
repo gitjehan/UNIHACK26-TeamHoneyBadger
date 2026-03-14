@@ -22,6 +22,7 @@
   --shadow-card-hover: 0 4px 16px rgba(45, 43, 40, 0.12);
   --font-sans: 'DM Sans', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Cormorant Garamond', 'Instrument Serif', Georgia, serif;
+  --font-number: 'Outfit', 'DM Sans', sans-serif;
   --font-serif: 'Georgia', 'Times New Roman', 'Noto Serif', serif;
   --font-mono: 'SF Mono', Menlo, Monaco, monospace;
   --transition-fast: 0.15s ease-out;
@@ -79,7 +80,7 @@ button {
   border-bottom: 1px solid var(--border-card);
   background: var(--bg-primary);
   padding: 16px 24px;
-  padding-left: 24px;
+  padding-left: 72px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -167,15 +168,15 @@ button {
   min-height: 0;
   min-width: 0;
   overflow-y: auto;
-  align-content: start;
+  align-content: stretch;
 }
 
 .dashboard-column--left {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto 1fr;
 }
 
 .dashboard-column--center {
-  grid-template-rows: minmax(260px, 1fr) minmax(160px, auto);
+  grid-template-rows: minmax(260px, 1fr) 160px;
 }
 
 .dashboard-column--center-collapsed {
@@ -183,7 +184,7 @@ button {
 }
 
 .dashboard-column--right {
-  grid-template-rows: auto auto auto auto auto;
+  grid-template-rows: 1fr 1fr auto;
 }
 
 .dashboard-collapse-toggle {
@@ -221,6 +222,18 @@ button {
 .card:hover {
   box-shadow: var(--shadow-card-hover);
   border-color: #DDD9D1;
+}
+
+.bio-pet-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.bio-pet-card .pet-scene {
+  flex: 1;
+  height: auto;
+  min-height: 140px;
+  padding: 16px 0;
 }
 
 .card h3 {
@@ -274,7 +287,7 @@ button {
 }
 
 .metric-value {
-  font-family: var(--font-display);
+  font-family: var(--font-number);
   font-size: 28px;
   font-weight: 500;
   line-height: 1.1;
@@ -317,7 +330,7 @@ button {
 }
 
 .metric-progress-track {
-  height: 3px;
+  height: 5px;
   background: #F4F2ED;
   width: 100%;
 }
@@ -568,6 +581,8 @@ button {
   display: flex;
   gap: 16px;
   min-width: 0;
+  flex: 1;
+  align-items: center;
 }
 
 .session-timeline-body--expanded {
@@ -575,6 +590,7 @@ button {
   gap: 12px;
   flex: 1;
   justify-content: space-evenly;
+  align-items: stretch;
 }
 
 .timeline-row {
@@ -603,7 +619,7 @@ button {
 .timeline-row-value {
   font-size: 18px;
   font-weight: 500;
-  font-family: var(--font-display);
+  font-family: var(--font-number);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -801,7 +817,7 @@ button {
 }
 
 .digital-twin-score {
-  font-family: var(--font-display);
+  font-family: var(--font-number);
   font-size: clamp(28px, 3.2vw, 36px);
   font-weight: 500;
   letter-spacing: -0.02em;
@@ -819,12 +835,16 @@ button {
 
 .overall-gauge-card {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .overall-gauge-svg {
   display: block;
   margin: 0 auto;
-  width: min(100%, 180px);
+  width: min(100%, 240px);
   height: auto;
 }
 
@@ -861,6 +881,9 @@ button {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
+}
+
+.ambient-stats > span {
   color: #A89B8C;
   font-size: 10px;
   font-weight: 500;
@@ -868,8 +891,12 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.ambient-stats > span:last-child {
+  text-align: right;
+}
+
 .ambient-stat-value {
-  font-family: var(--font-display);
+  font-family: var(--font-number);
   font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
@@ -1429,6 +1456,14 @@ input:focus-visible {
   overflow: hidden;
 }
 
+.pomodoro-ring-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0;
+}
+
 .pomodoro-tabs {
   display: flex;
   gap: 4px;
@@ -1462,8 +1497,8 @@ input:focus-visible {
 
 .pomodoro-ring-container {
   position: relative;
-  width: 150px;
-  height: 150px;
+  width: 190px;
+  height: 190px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1483,7 +1518,7 @@ input:focus-visible {
 .pomodoro-time {
   position: relative;
   z-index: 1;
-  font-family: var(--font-display);
+  font-family: var(--font-number);
   font-size: 22px;
   font-weight: 500;
   color: var(--text-primary);
@@ -1565,7 +1600,16 @@ input:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-bottom: 28px;
+  padding-bottom: 64px;
+  position: relative;
+}
+
+.sound-dial-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
 }
 
 .sound-options {
@@ -1660,6 +1704,10 @@ input:focus-visible {
 }
 
 .sound-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  right: 20px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1736,6 +1784,8 @@ input:focus-visible {
   position: relative;
   width: 200px;
   height: 168px;
+  transform: scale(1.3);
+  transform-origin: center center;
   margin: 8px auto 0;
 }
 
@@ -1831,6 +1881,7 @@ input:focus-visible {
   justify-content: center;
   gap: 6px;
   margin-top: 8px;
+  margin-bottom: 16px;
   font-family: var(--font-sans);
   font-size: 11px;
   font-weight: 500;

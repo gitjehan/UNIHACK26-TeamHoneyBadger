@@ -129,7 +129,7 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   ].filter(Boolean).join(' ');
 
   return (
-    <div className="card">
+    <div className="card bio-pet-card">
       <div className="pet-scene">
         <div className={`pet-glow pet-glow--${healthClass}`} />
 
@@ -199,8 +199,10 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
       {/* Meta section */}
       <div className="pet-meta-section">
         <div className="pet-stage-row">
-          <span className="pet-stage-label">Stage {pet.stage}</span>
-          <span className="pet-stage-name">{pet.stageName}</span>
+          <div className="pet-stage-name-stack">
+            <span className="pet-stage-name">{pet.stageName}</span>
+            <span className="pet-stage-label">Stage {pet.stage}</span>
+          </div>
           <span className={`pet-health-pill pet-health-pill--${healthClass}`}>
             <span className={`pet-health-dot pet-health-dot--${healthClass}`} />
             {pet.health}
@@ -225,12 +227,20 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
           <Chip label="Posture" value={postureScore} />
           <Chip label="Focus" value={focusScore} />
           <Chip label="Stress" value={stressScore} />
-          <Chip label="Time" value={`${Math.round(pet.totalLockedInMinutes)}m`} />
+          <Chip label="Time" value={formatLockedTime(pet.totalLockedInMinutes)} />
         </div>
       </div>
     </div>
   );
 });
+
+function formatLockedTime(minutes: number): string {
+  const m = Math.round(minutes);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+}
 
 function Chip({ label, value }: { label: string; value: number | string }) {
   return (
