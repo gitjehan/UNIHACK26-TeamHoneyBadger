@@ -2,6 +2,7 @@ import type { RefObject } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
+import { SystemsPanel } from '@renderer/components/panels/SystemsPanel';
 import { BioPet } from '@renderer/components/pet/BioPet';
 import { DigitalTwin } from '@renderer/components/visualisation/DigitalTwin';
 import { SessionTimeline } from '@renderer/components/visualisation/SessionTimeline';
@@ -33,6 +34,20 @@ export function Dashboard({
           Initializing vision engines — metrics will appear shortly
         </div>
       )}
+
+      {/* Metric pills — full-width horizontal row, first thing to scan */}
+      <div className="metric-grid" style={{ gridColumn: '1 / -1' }}>
+        <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
+        <MetricCard
+          label="Blink Rate"
+          value={snapshot.blink.warmedUp === false ? null : snapshot.blink.rate}
+          unit="bpm"
+          kind="blinkRate"
+        />
+        <MetricCard label="Focus" value={snapshot.focus.score} unit="/100" kind="focus" />
+        <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
+      </div>
+
       <div className="column" style={{ gridTemplateRows: '1fr 1fr' }}>
         <DigitalTwin
           landmarks={state.poseLandmarks}
@@ -48,18 +63,7 @@ export function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto 1fr auto' }}>
-        <div className="metric-grid">
-          <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
-          <MetricCard
-            label="Blink Rate"
-            value={snapshot.blink.warmedUp === false ? null : snapshot.blink.rate}
-            unit="bpm"
-            kind="blinkRate"
-          />
-          <MetricCard label="Focus" value={snapshot.focus.score} unit="/100" kind="focus" />
-          <MetricCard label="Stress" value={snapshot.stress.score} unit="/100" kind="stress" />
-        </div>
+      <div className="column" style={{ gridTemplateRows: '1fr auto' }}>
         <WebcamFeed
           videoRef={videoRef}
           poseFps={state.poseFps}
@@ -68,8 +72,13 @@ export function Dashboard({
         <SessionTimeline data={timeline} />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto auto', alignContent: 'start' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto auto', alignContent: 'start' }}>
         <OverallGauge value={snapshot.overall.score} />
+        <SystemsPanel
+          systems={state.systems}
+          poseBackend={visionBackend.pose}
+          faceBackend={visionBackend.face}
+        />
         <AmbientPanel
           brightness={state.ambient.brightness}
           warmth={state.ambient.warmth}

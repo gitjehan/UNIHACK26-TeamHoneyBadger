@@ -25,9 +25,9 @@ const UPPER_LANDMARK_IDS = [
 
 /* ── colour by score ─────────────────────────────────── */
 function scoreColor(score: number): string {
-  if (score >= 70) return '#3D6B4F';
-  if (score >= 40) return '#C4962C';
-  return '#B85A4D';
+  if (score >= 70) return '#4A7C59';
+  if (score >= 40) return '#B8860B';
+  return '#C0392B';
 }
 
 function isVis(p: Point | undefined): p is Point {
@@ -221,14 +221,14 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
   return (
     <div className="card" style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+        <h3 style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
           Digital Twin
         </h3>
-        <span style={{ fontSize: 11, color: live ? '#3D6B4F' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 11, color: live ? '#4A7C59' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span
             style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: live ? '#3D6B4F' : '#bbb',
+              background: live ? '#4A7C59' : '#bbb',
             }}
           />
           Live
@@ -254,7 +254,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
           <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
             Alignment
           </div>
-          <span style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.02em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 400, color, letterSpacing: '-0.02em' }}>
             {postureScore}
           </span>
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>/100</span>

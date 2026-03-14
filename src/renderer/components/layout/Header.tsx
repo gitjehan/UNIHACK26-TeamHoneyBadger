@@ -37,7 +37,7 @@ export const Header = memo(function Header({ state, onEndSession }: HeaderProps)
         <h1>Kinetic</h1>
         <span>bio-responsive workspace</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <span
           style={{
             fontFamily: 'var(--font-mono)',

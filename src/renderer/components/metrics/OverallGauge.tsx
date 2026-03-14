@@ -5,9 +5,9 @@ interface OverallGaugeProps {
 }
 
 function gaugeColor(score: number): string {
-  if (score >= 70) return '#3D6B4F';
-  if (score >= 40) return '#C4962C';
-  return '#B85A4D';
+  if (score >= 70) return '#4A7C59';
+  if (score >= 40) return '#B8860B';
+  return '#C0392B';
 }
 
 function gradeLabel(score: number): string {
@@ -52,7 +52,7 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
         aria-label={`Overall score: ${clamped} out of 100`}
         style={{ display: 'block', margin: '0 auto' }}
       >
-        <circle cx="90" cy="90" r={radius} stroke="#e4dfd5" strokeWidth="14" fill="none" />
+        <circle cx="90" cy="90" r={radius} stroke="#E8E4DC" strokeWidth="14" fill="none" />
         <circle
           cx="90"
           cy="90"
@@ -66,7 +66,7 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dashoffset 0.6s ease-out, stroke 0.4s ease' }}
         />
-        <text x="90" y="86" textAnchor="middle" fill="var(--text-primary)" fontSize="38" fontWeight={700}>
+        <text x="90" y="86" textAnchor="middle" fill="var(--text-primary)" fontFamily="var(--font-display)" fontSize="42" fontWeight={400}>
           {clamped}
         </text>
         <text x="90" y="106" textAnchor="middle" fill="var(--text-tertiary)" fontSize="12">

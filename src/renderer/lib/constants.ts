@@ -103,9 +103,9 @@ export const RIGHT_EYE = {
 };
 
 export const PET_HEALTH: Record<PetHealthState, { minScore: number; color: string; label: PetHealthState }> = {
-  Thriving: { minScore: 65, color: '#3D6B4F', label: 'Thriving' },
-  Fading: { minScore: 30, color: '#C4962C', label: 'Fading' },
-  Wilting: { minScore: 0, color: '#B85A4D', label: 'Wilting' },
+  Thriving: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
+  Fading: { minScore: 30, color: '#B8860B', label: 'Fading' },
+  Wilting: { minScore: 0, color: '#C0392B', label: 'Wilting' },
 };
 
 export const PET_EVOLUTION = [

@@ -17,7 +17,7 @@ export function WebcamFeed({ videoRef, poseFps, faceFps }: WebcamFeedProps): JSX
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
-          minHeight: 200,
+          minHeight: 140,
           aspectRatio: '4 / 3',
         }}
       >

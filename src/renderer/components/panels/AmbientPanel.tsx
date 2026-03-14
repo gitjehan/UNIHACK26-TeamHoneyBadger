@@ -31,7 +31,7 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
               height: '100%',
               width: `${level}%`,
               borderRadius: 999,
-              background: 'linear-gradient(90deg, #3D6B4F, #C4962C, #B85A4D)',
+              background: 'linear-gradient(90deg, #4A7C59, #B8860B, #C0392B)',
               transition: 'width 0.6s ease-out',
             }}
           />
