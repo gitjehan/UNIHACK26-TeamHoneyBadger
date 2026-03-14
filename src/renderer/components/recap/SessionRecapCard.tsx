@@ -22,14 +22,14 @@ const H = 960;
 
 function overallGrade(score: number): { label: string; color: string; bg1: string; bg2: string; accent: string } {
   if (score >= 80)
-    return { label: 'Exceptional', color: '#2d5a3d', bg1: '#1a3a2a', bg2: '#2d5a3d', accent: '#7bed9f' };
+    return { label: 'Exceptional', color: '#4A7C59', bg1: '#1a3a2a', bg2: '#2d5a3d', accent: '#7bed9f' };
   if (score >= 65)
-    return { label: 'Strong', color: '#3d6b4f', bg1: '#1e3d2d', bg2: '#3d6b4f', accent: '#a8e6cf' };
+    return { label: 'Strong', color: '#4A7C59', bg1: '#1e3d2d', bg2: '#4A7C59', accent: '#a8e6cf' };
   if (score >= 50)
-    return { label: 'Steady', color: '#8a7730', bg1: '#3d3520', bg2: '#6b5c28', accent: '#ffd93d' };
+    return { label: 'Steady', color: '#B8860B', bg1: '#3d3520', bg2: '#6b5c28', accent: '#ffd93d' };
   if (score >= 30)
-    return { label: 'Needs Work', color: '#8a5a30', bg1: '#3d2a18', bg2: '#6b4422', accent: '#ffb347' };
-  return { label: 'Rough Session', color: '#8a3d3d', bg1: '#3d1a1a', bg2: '#6b2d2d', accent: '#ff6b6b' };
+    return { label: 'Needs Work', color: '#B8860B', bg1: '#3d2a18', bg2: '#6b4422', accent: '#ffb347' };
+  return { label: 'Rough Session', color: '#C0392B', bg1: '#3d1a1a', bg2: '#6b2d2d', accent: '#ff6b6b' };
 }
 
 function formatDuration(minutes: number): string {

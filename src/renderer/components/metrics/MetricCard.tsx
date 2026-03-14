@@ -45,11 +45,25 @@ function statusColor(status: 'good' | 'fair' | 'poor'): string {
   return 'var(--red-primary)';
 }
 
+/** Normalise value to 0-100 for the progress bar. */
+function progressPercent(kind: MetricKind, value: number | null): number {
+  if (value === null) return 0;
+  if (kind === 'stress') return Math.max(0, Math.min(100, 100 - value));
+  if (kind === 'blinkRate') {
+    const mid = (STATUS_THRESHOLDS.blinkRate.goodMin + STATUS_THRESHOLDS.blinkRate.goodMax) / 2;
+    const maxDev = STATUS_THRESHOLDS.blinkRate.fairMax - mid;
+    const dev = Math.abs(value - mid);
+    return Math.max(0, Math.min(100, ((maxDev - dev) / maxDev) * 100));
+  }
+  return Math.max(0, Math.min(100, value));
+}
+
 export const MetricCard = memo(function MetricCard({ label, value, unit, kind }: MetricCardProps): JSX.Element {
   const status = resolveStatus(kind, value);
   const statusLabel = status === 'good' ? 'Good' : status === 'fair' ? 'Fair' : 'Poor';
   const prevValueRef = useRef(value);
   const [flash, setFlash] = useState(false);
+  const pct = progressPercent(kind, value);
 
   useEffect(() => {
     if (prevValueRef.current !== value) {
@@ -62,29 +76,44 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
 
   return (
     <div className="card">
-      <h3>
-        <span style={{ marginRight: 4 }}>{KIND_ICON[kind]}</span>
-        {label}
-      </h3>
       {value === null ? (
-        <>
-          <div className="skeleton skeleton-value" />
-          <div className="skeleton skeleton-badge" />
-        </>
+        <div className="metric-pill-body">
+          <div className="metric-pill-left">
+            <div className="skeleton skeleton-value" />
+            <div className="skeleton skeleton-badge" />
+          </div>
+        </div>
       ) : (
         <>
-          <div
-            className="metric-value"
-            style={{
-              color: statusColor(status),
-              transform: flash ? 'scale(1.03)' : 'scale(1)',
-              transition: 'color 0.25s ease, transform 0.2s ease-out',
-            }}
-          >
-            {value}
-            {unit ? <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-tertiary)' }}> {unit}</span> : null}
+          <div className="metric-pill-body">
+            <div className="metric-pill-left">
+              <h3>
+                <span style={{ marginRight: 4 }}>{KIND_ICON[kind]}</span>
+                {label}
+              </h3>
+              <div
+                className="metric-value"
+                style={{
+                  color: statusColor(status),
+                  transform: flash ? 'scale(1.03)' : 'scale(1)',
+                  transition: 'color 0.25s ease, transform 0.2s ease-out',
+                }}
+              >
+                {value}
+                {unit ? <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-tertiary)' }}> {unit}</span> : null}
+              </div>
+            </div>
+            <span className={`status-badge status-${status}`}>{statusLabel}</span>
           </div>
-          <span className={`status-badge status-${status}`}>{statusLabel}</span>
+          <div className="metric-progress-track">
+            <div
+              className="metric-progress-fill"
+              style={{
+                width: `${pct}%`,
+                backgroundColor: statusColor(status),
+              }}
+            />
+          </div>
         </>
       )}
     </div>

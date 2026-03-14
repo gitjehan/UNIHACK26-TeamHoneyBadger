@@ -70,7 +70,7 @@ function initialSnapshot(): ScoreSnapshot {
       neckAngle: 175,
       shoulderSlant: 1,
       trunkSimilarity: 0.98,
-      isSlumping: false,
+      slumpSeverity: 0,
     },
     blink: {
       rate: 17,
@@ -278,7 +278,7 @@ class ScoreEngine {
     this.poseLandmarks = landmarks;
     const posture = scorePosture(landmarks, this.calibration);
     this.postureSmoothing.push(posture.score);
-    const slouchPenalty = posture.isSlumping ? 15 : 0;
+    const slouchPenalty = posture.slumpSeverity * 20;
     const smoothedPosture = clamp(
       Math.round((this.postureSmoothing.average ?? posture.score) - slouchPenalty),
       0,
@@ -289,12 +289,12 @@ class ScoreEngine {
     this.recompute(adjustedPosture);
   }
 
-  updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number): void {
+  updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number, aspectRatio = 4 / 3): void {
     this.faceLandmarks = landmarks;
     this.emotionState = emotionState || 'neutral';
     this.emotionConfidence = emotionConfidence || 0.5;
 
-    const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17);
+    const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17, aspectRatio);
     this.snapshot = { ...this.snapshot, blink: blinkFrame };
     this.fatigueScore = blinkFrame.fatigueScore;
     this.recompute(this.snapshot.posture, blinkFrame);

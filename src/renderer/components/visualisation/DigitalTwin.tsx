@@ -13,20 +13,21 @@ const UPPER_CONNECTIONS: [number, number][] = [
   [11, 12], // shoulders
   [11, 13], [13, 15], // left arm
   [12, 14], [14, 16], // right arm
-  [11, 23], [12, 24], // torso
 ];
 
-const LOWER_CONNECTIONS: [number, number][] = [
-  [23, 24], // hips
-  [23, 25], [25, 27], // left leg
-  [24, 26], [26, 28], // right leg
+/* Landmark indices we actually use for framing */
+const UPPER_LANDMARK_IDS = [
+  LANDMARKS.NOSE, LANDMARKS.LEFT_EAR, LANDMARKS.RIGHT_EAR,
+  LANDMARKS.LEFT_SHOULDER, LANDMARKS.RIGHT_SHOULDER,
+  LANDMARKS.LEFT_ELBOW, LANDMARKS.RIGHT_ELBOW,
+  LANDMARKS.LEFT_WRIST, LANDMARKS.RIGHT_WRIST,
 ];
 
 /* ── colour by score ─────────────────────────────────── */
 function scoreColor(score: number): string {
-  if (score >= 70) return '#3D6B4F';
-  if (score >= 40) return '#C4962C';
-  return '#B85A4D';
+  if (score >= 70) return '#4A7C59';
+  if (score >= 40) return '#B8860B';
+  return '#C0392B';
 }
 
 function isVis(p: Point | undefined): p is Point {
@@ -106,31 +107,35 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         }
       }
 
-      // Derive lower body from shoulders
-      const lS = sm[LANDMARKS.LEFT_SHOULDER];
-      const rS = sm[LANDMARKS.RIGHT_SHOULDER];
-
-      if (isVis(lS) && isVis(rS)) {
-        const mx = (lS.x + rS.x) / 2;
-        const sSpan = Math.abs(rS.x - lS.x);
-        const sY = (lS.y + rS.y) / 2;
-        const below = Math.max(1.0 - sY, 0.25);
-
-        sm[LANDMARKS.LEFT_HIP] = { x: mx - sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_HIP] = { x: mx + sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
-        sm[LANDMARKS.LEFT_KNEE] = { x: mx - sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_KNEE] = { x: mx + sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
-        sm[LANDMARKS.LEFT_ANKLE] = { x: mx - sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_ANKLE] = { x: mx + sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
+      // Compute bounding box of visible upper-body landmarks to center & scale
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      let visCount = 0;
+      for (const id of UPPER_LANDMARK_IDS) {
+        const pt = sm[id];
+        if (!isVis(pt)) continue;
+        if (pt.x < minX) minX = pt.x;
+        if (pt.x > maxX) maxX = pt.x;
+        if (pt.y < minY) minY = pt.y;
+        if (pt.y > maxY) maxY = pt.y;
+        visCount++;
       }
+      if (visCount < 2) return;
 
-      // Map to canvas coords
-      const pad = 0.08;
-      const dW = W * (1 - 2 * pad);
-      const dH = H * (1 - 2 * pad);
-      const oX = W * pad;
-      const oY = H * pad;
-      const mp = (p: Point) => ({ x: oX + p.x * dW, y: oY + p.y * dH });
+      // Add padding around bounding box (in normalised coords)
+      const bboxPad = 0.06;
+      minX -= bboxPad; maxX += bboxPad;
+      minY -= bboxPad; maxY += bboxPad;
+      const bW = Math.max(maxX - minX, 0.1);
+      const bH = Math.max(maxY - minY, 0.1);
+
+      // Fit bounding box into canvas with uniform scale, centered
+      const canvasPad = 0.08;
+      const drawW = W * (1 - 2 * canvasPad);
+      const drawH = H * (1 - 2 * canvasPad);
+      const scale = Math.min(drawW / bW, drawH / bH);
+      const offsetX = W / 2 - ((minX + maxX) / 2) * scale;
+      const offsetY = H / 2 - ((minY + maxY) / 2) * scale;
+      const mp = (p: Point) => ({ x: offsetX + p.x * scale, y: offsetY + p.y * scale });
 
       // Draw connections
       const drawLine = (a: number, b: number, alpha: number, width: number) => {
@@ -147,14 +152,13 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ctx.stroke();
       };
 
-      // Lower body (faded)
-      for (const [a, b] of LOWER_CONNECTIONS) drawLine(a, b, 0.35, 3);
-
       // Upper body
       ctx.globalAlpha = 1;
       for (const [a, b] of UPPER_CONNECTIONS) drawLine(a, b, 1, 4);
 
       // Head - simple circle
+      const lS = sm[LANDMARKS.LEFT_SHOULDER];
+      const rS = sm[LANDMARKS.RIGHT_SHOULDER];
       const headPts = [sm[LANDMARKS.NOSE], sm[LANDMARKS.LEFT_EAR], sm[LANDMARKS.RIGHT_EAR]].filter(isVis);
       if (headPts.length && isVis(lS) && isVis(rS)) {
         const hc = {
@@ -164,7 +168,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         const sMid = mp({ x: (lS.x + rS.x) / 2, y: (lS.y + rS.y) / 2 } as Point);
         const hm = mp(hc as Point);
         const sSpan = Math.abs(rS.x - lS.x);
-        const headR = Math.max(sSpan * dW * 0.28, 12);
+        const headR = Math.max(sSpan * scale * 0.28, 12);
 
         // Neck
         ctx.strokeStyle = color;
@@ -199,24 +203,6 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ctx.fill();
       }
 
-      // Lower joints (faded)
-      ctx.globalAlpha = 0.35;
-      const lowerIds = [
-        LANDMARKS.LEFT_HIP, LANDMARKS.RIGHT_HIP,
-        LANDMARKS.LEFT_KNEE, LANDMARKS.RIGHT_KNEE,
-        LANDMARKS.LEFT_ANKLE, LANDMARKS.RIGHT_ANKLE,
-      ];
-
-      for (const i of lowerIds) {
-        const pt = sm[i];
-        if (!isVis(pt)) continue;
-        const m = mp(pt);
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
       ctx.globalAlpha = 1;
     };
 
@@ -235,14 +221,14 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
   return (
     <div className="card" style={{ display: 'grid', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, fontSize: 13, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
+        <h3 style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
           Digital Twin
         </h3>
-        <span style={{ fontSize: 11, color: live ? '#3D6B4F' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{ fontSize: 11, color: live ? '#4A7C59' : 'var(--text-tertiary)', display: 'flex', alignItems: 'center', gap: 5 }}>
           <span
             style={{
               width: 6, height: 6, borderRadius: '50%',
-              background: live ? '#3D6B4F' : '#bbb',
+              background: live ? '#4A7C59' : '#bbb',
             }}
           />
           Live
@@ -253,7 +239,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ref={canvasRef}
         style={{
           width: '100%',
-          aspectRatio: '5 / 6',
+          aspectRatio: '4 / 3',
           borderRadius: 10,
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
@@ -268,7 +254,7 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
           <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>
             Alignment
           </div>
-          <span style={{ fontSize: 26, fontWeight: 700, color, letterSpacing: '-0.02em' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 400, color, letterSpacing: '-0.02em' }}>
             {postureScore}
           </span>
           <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 2 }}>/100</span>

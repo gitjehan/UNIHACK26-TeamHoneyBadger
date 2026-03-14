@@ -8,7 +8,7 @@ export const SLOUCH_THRESHOLD = 150;
 
 export const EAR_BLINK_THRESHOLD = 0.2;
 export const BLINK_MIN_FRAMES = 1;
-export const BLINK_MAX_FRAMES = 8;
+export const BLINK_MAX_FRAMES = 4;
 export const NORMAL_BLINK_RATE = { min: 15, max: 20 };
 export const EAR_NORMAL_RANGE = { drowsy: 0.18, alert: 0.33 };
 
@@ -48,7 +48,7 @@ export const AMBIENT_MAP = [
   { scoreMin: 0, scoreMax: 20, brightness: [0.2, 0.3], warmth: [0.7, 0.9] },
 ] as const;
 
-export const POSE_FPS = 10;
+export const POSE_FPS = 8;
 export const FACE_FPS = 5;
 export const POSE_LOOP_INTERVAL = Math.round(1000 / POSE_FPS);
 export const FACE_LOOP_INTERVAL = Math.round(1000 / FACE_FPS);
@@ -103,9 +103,9 @@ export const RIGHT_EYE = {
 };
 
 export const PET_HEALTH: Record<PetHealthState, { minScore: number; color: string; label: PetHealthState }> = {
-  Thriving: { minScore: 65, color: '#3D6B4F', label: 'Thriving' },
-  Fading: { minScore: 30, color: '#C4962C', label: 'Fading' },
-  Wilting: { minScore: 0, color: '#B85A4D', label: 'Wilting' },
+  Thriving: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
+  Fading: { minScore: 30, color: '#B8860B', label: 'Fading' },
+  Wilting: { minScore: 0, color: '#C0392B', label: 'Wilting' },
 };
 
 export const PET_EVOLUTION = [

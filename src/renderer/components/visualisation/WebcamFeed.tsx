@@ -17,12 +17,13 @@ export function WebcamFeed({ videoRef, poseFps, faceFps }: WebcamFeedProps): JSX
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
-          minHeight: 0,
+          minHeight: 140,
+          aspectRatio: '4 / 3',
         }}
       >
         <video
           ref={videoRef}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block', position: 'absolute', inset: 0 }}
           muted
           playsInline
           autoPlay

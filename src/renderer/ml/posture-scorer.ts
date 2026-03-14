@@ -106,10 +106,11 @@ export function calculatePostureMetrics(
     neckAngle,
     shoulderSlant,
     trunkSimilarity,
-    isSlumping:
-      neckAngle < SLOUCH_THRESHOLD ||
-      trunkSimilarity < 0.9 ||
-      shoulderSlant > 7,
+    slumpSeverity: Math.max(
+      clamp((SLOUCH_THRESHOLD - neckAngle) / 30, 0, 1),
+      clamp((0.9 - trunkSimilarity) / 0.15, 0, 1),
+      clamp((shoulderSlant - 7) / 8, 0, 1),
+    ),
   };
 }
 

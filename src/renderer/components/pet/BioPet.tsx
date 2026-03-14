@@ -2,21 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { PetHealthState, PetState } from '@renderer/lib/types';
 
-/* ──────────────────────────────────────────────────────────
-   BioPet — Three.js companion that reacts to biometric scores.
-
-   Architecture:
-     Effect 1 (mount-once): creates scene, renderer, camera, lights,
-       floor, petGroup, animation loop. Stores everything in refs.
-       Cleanup disposes everything. Runs exactly ONCE.
-
-     Effect 2 (reactive props): updates existing materials, scale,
-       geometry when pet stage/health changes. Never recreates the scene.
-
-     Animation loop: handles breathing, tilt, and smooth color lerping
-       via refs that are updated by Effect 2.
-   ────────────────────────────────────────────────────────── */
-
 interface BioPetProps {
   pet: PetState;
   postureTilt: number;
@@ -25,37 +10,145 @@ interface BioPetProps {
   stressScore: number;
 }
 
-// ── Health color mapping ──────────────────────────────────
-
 const HEALTH_COLORS: Record<PetHealthState, THREE.Color> = {
-  Thriving: new THREE.Color(0x3d6b4f),
-  Fading: new THREE.Color(0xc4962c),
-  Wilting: new THREE.Color(0xb85a4d),
+  Thriving: new THREE.Color(0x4a7c59),
+  Fading: new THREE.Color(0xb8860b),
+  Wilting: new THREE.Color(0xc0392b),
 };
 
-const HEALTH_EMISSIVE_INTENSITY: Record<PetHealthState, number> = {
-  Thriving: 0.28,
-  Fading: 0.15,
+const HEALTH_EMISSIVE: Record<PetHealthState, number> = {
+  Thriving: 0.2,
+  Fading: 0.12,
   Wilting: 0.05,
 };
 
-const HEALTH_BREATH_AMPLITUDE: Record<PetHealthState, number> = {
-  Thriving: 0.04,
-  Fading: 0.02,
-  Wilting: 0.01,
+const HEALTH_BREATH: Record<PetHealthState, number> = {
+  Thriving: 0.03,
+  Fading: 0.018,
+  Wilting: 0.008,
 };
 
-// Hex values to skip during color lerp (non-body materials)
-const SKIP_COLORS = new Set([
-  0xffffff, 0x222222, 0xf2e8ce, 0x333333, 0x8b0000, 0xe6dfd2,
-  0xf8f4ed, // egg shell
-]);
-
-// Hysteresis: health must be stable for this many ms before committing
+const SKIP_HEX = new Set([0xffffff, 0x222222, 0x333333, 0x8b0000]);
 const HEALTH_HYSTERESIS_MS = 3000;
+const COLOR_LERP = 0.02;
+const PARTICLE_N = 8;
+const H = 260;
 
-// Color lerp speed (0–1 per frame at 60fps ≈ 2s transition)
-const COLOR_LERP_SPEED = 0.02;
+// ── Shared geometry (created once, reused) ─────────────────
+
+let _eggGeo: THREE.LatheGeometry | null = null;
+function eggGeo(): THREE.LatheGeometry {
+  if (_eggGeo) return _eggGeo;
+  const pts: THREE.Vector2[] = [];
+  for (let i = 0; i <= 32; i++) {
+    const t = i / 32;
+    const a = t * Math.PI;
+    pts.push(new THREE.Vector2(
+      Math.sin(a) * (0.44 + 0.14 * Math.cos(a)),
+      t * 1.2 - 0.6,
+    ));
+  }
+  _eggGeo = new THREE.LatheGeometry(pts, 32);
+  return _eggGeo;
+}
+
+// ── Sky gradient texture ───────────────────────────────────
+
+function skyTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 2; c.height = 256;
+  const x = c.getContext('2d')!;
+  const g = x.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#c9dde8');
+  g.addColorStop(0.45, '#dce8e4');
+  g.addColorStop(1, '#efe9df');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 2, 256);
+  return new THREE.CanvasTexture(c);
+}
+
+// ── Pollen sprite texture ──────────────────────────────────
+
+function pollenTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 32;
+  const x = c.getContext('2d')!;
+  const g = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+  g.addColorStop(0, 'rgba(245,220,140,0.9)');
+  g.addColorStop(0.4, 'rgba(240,200,100,0.4)');
+  g.addColorStop(1, 'rgba(230,180,60,0)');
+  x.fillStyle = g;
+  x.fillRect(0, 0, 32, 32);
+  return new THREE.CanvasTexture(c);
+}
+
+// ── Tiny garden flowers + grass ────────────────────────────
+
+const FLOWER_SPOTS = [
+  { x: -1.1, z: 0.4, s: 0.9, hue: 0xf5a0b0 },
+  { x: 1.2, z: 0.2, s: 0.75, hue: 0xfff0ee },
+  { x: -0.6, z: 1.1, s: 0.85, hue: 0xf0b8c8 },
+  { x: 0.8, z: 1.0, s: 0.7, hue: 0xffe8e0 },
+  { x: 0.0, z: -1.1, s: 0.8, hue: 0xf5a0b0 },
+];
+
+function buildGarden(scene: THREE.Scene, gardenGroup: THREE.Group) {
+  const petalGeo = new THREE.SphereGeometry(0.028, 6, 6);
+  const centerGeo = new THREE.SphereGeometry(0.022, 6, 6);
+  const centerMat = new THREE.MeshStandardMaterial({ color: 0xf0c040, roughness: 0.6 });
+  const stemGeo = new THREE.CylinderGeometry(0.008, 0.01, 1, 4);
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x5a8a50, roughness: 0.8 });
+
+  for (const f of FLOWER_SPOTS) {
+    const flower = new THREE.Group();
+    const stem = new THREE.Mesh(stemGeo, stemMat);
+    const stemH = 0.15 * f.s;
+    stem.scale.y = stemH;
+    stem.position.y = -0.55 + stemH * 0.5;
+    flower.add(stem);
+
+    const center = new THREE.Mesh(centerGeo, centerMat);
+    center.position.y = -0.55 + stemH + 0.02;
+    flower.add(center);
+
+    const petalMat = new THREE.MeshStandardMaterial({ color: f.hue, roughness: 0.5 });
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2;
+      const petal = new THREE.Mesh(petalGeo, petalMat);
+      petal.position.set(
+        Math.cos(a) * 0.04,
+        center.position.y,
+        Math.sin(a) * 0.04,
+      );
+      petal.scale.set(1.2, 0.6, 1.2);
+      flower.add(petal);
+    }
+
+    flower.position.set(f.x, 0, f.z);
+    flower.rotation.y = Math.random() * Math.PI * 2;
+    gardenGroup.add(flower);
+  }
+
+  const grassGeo = new THREE.BoxGeometry(0.012, 0.1, 0.006);
+  const grassColors = [0x5a9a5f, 0x4d8850, 0x6aaa6a, 0x72b070];
+  for (let i = 0; i < 12; i++) {
+    const mat = new THREE.MeshStandardMaterial({
+      color: grassColors[i % grassColors.length],
+      roughness: 0.85,
+    });
+    const blade = new THREE.Mesh(grassGeo, mat);
+    const angle = (i / 12) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+    const r = 0.6 + Math.random() * 0.7;
+    blade.position.set(Math.cos(angle) * r, -0.52, Math.sin(angle) * r);
+    blade.rotation.z = (Math.random() - 0.5) * 0.3;
+    blade.scale.y = 0.6 + Math.random() * 0.6;
+    gardenGroup.add(blade);
+  }
+
+  scene.add(gardenGroup);
+}
+
+// ── Component ──────────────────────────────────────────────
 
 export function BioPet({
   pet,
@@ -64,463 +157,463 @@ export function BioPet({
   focusScore,
   stressScore,
 }: BioPetProps): JSX.Element {
-  // ── DOM ref ──
   const mountRef = useRef<HTMLDivElement>(null);
-
-  // ── Three.js lifecycle refs (persisted across renders) ──
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const petGroupRef = useRef<THREE.Group | null>(null);
-  const frameRef = useRef<number>(0);
+  const gardenRef = useRef<THREE.Group | null>(null);
+  const particlesRef = useRef<THREE.Group | null>(null);
+  const frameRef = useRef(0);
   const mountedRef = useRef(false);
 
-  // ── Reactive value refs (read in animation loop without re-running effects) ──
-  const postureTiltRef = useRef(postureTilt);
-  const postureScoreRef = useRef(postureScore);
-  const healthRef = useRef<PetHealthState>(pet.health);
-  const breathAmplitudeRef = useRef(HEALTH_BREATH_AMPLITUDE[pet.health]);
-
-  // ── Health hysteresis refs ──
-  const committedHealthRef = useRef<PetHealthState>(pet.health);
-  const pendingHealthRef = useRef<PetHealthState>(pet.health);
-  const pendingHealthSinceRef = useRef<number>(Date.now());
-
-  // ── Color lerp refs ──
-  const currentColorRef = useRef(HEALTH_COLORS[pet.health].clone());
-  const targetColorRef = useRef(HEALTH_COLORS[pet.health].clone());
-
-  // State-driven committed health so Effect 4 re-runs on health changes
-  // (the ref alone never triggers re-renders when the interval commits a new value)
-  const [committedHealth, setCommittedHealth] = useState<PetHealthState>(pet.health);
-
-  // ── Track current stage for rebuild detection ──
-  const currentStageRef = useRef(pet.stage);
-  const currentEggCrackRef = useRef(pet.eggCrackProgress);
+  const tiltRef = useRef(postureTilt);
+  const scoreRef = useRef(postureScore);
+  const breathRef = useRef(HEALTH_BREATH[pet.health]);
+  const committedRef = useRef<PetHealthState>(pet.health);
+  const pendingRef = useRef<PetHealthState>(pet.health);
+  const pendingSinceRef = useRef(Date.now());
+  const curColorRef = useRef(HEALTH_COLORS[pet.health].clone());
+  const tgtColorRef = useRef(HEALTH_COLORS[pet.health].clone());
+  const [committed, setCommitted] = useState<PetHealthState>(pet.health);
+  const stageRef = useRef(pet.stage);
+  const crackRef = useRef(pet.eggCrackProgress);
   const isEggRef = useRef(pet.stage === 0);
 
-  // Keep tilt/score refs up to date every render (cheap, no effect re-run)
-  postureTiltRef.current = postureTilt;
-  postureScoreRef.current = postureScore;
+  tiltRef.current = postureTilt;
+  scoreRef.current = postureScore;
 
-  // Stabilize accessories reference
-  const accessoriesKeyRef = useRef(pet.accessories.join(','));
-  accessoriesKeyRef.current = pet.accessories.join(',');
+  const accRef = useRef(pet.accessories.join(','));
+  accRef.current = pet.accessories.join(',');
 
-  // ── Build pet geometry ──────────────────────────────────
+  // ── Build pet mesh ───────────────────────────────────────
 
-  const buildPetGeometry = useCallback(
-    (group: THREE.Group, stage: number, health: PetHealthState, eggCrack: number) => {
-      // Clear old children and dispose their geometry/materials
-      while (group.children.length > 0) {
-        const child = group.children[0];
-        group.remove(child);
-        child.traverse((obj) => {
-          if (obj instanceof THREE.Mesh) {
-            obj.geometry?.dispose();
-            if (obj.material instanceof THREE.Material) obj.material.dispose();
-            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+  const buildPet = useCallback(
+    (group: THREE.Group, stage: number, health: PetHealthState, crack: number) => {
+      while (group.children.length) {
+        const c = group.children[0];
+        group.remove(c);
+        c.traverse((o) => {
+          if (o instanceof THREE.Mesh) {
+            o.geometry?.dispose();
+            if (o.material instanceof THREE.Material) o.material.dispose();
+            if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
           }
         });
       }
 
-      const color = HEALTH_COLORS[health];
-      const emissiveIntensity = HEALTH_EMISSIVE_INTENSITY[health];
+      const col = HEALTH_COLORS[health];
+      const ei = HEALTH_EMISSIVE[health];
 
       if (stage === 0) {
         isEggRef.current = true;
 
-        // Egg shell — white/cream colored, proper egg shape (wider at bottom)
-        const eggGroup = new THREE.Group();
-
         const egg = new THREE.Mesh(
-          new THREE.SphereGeometry(0.65, 32, 32),
+          eggGeo(),
           new THREE.MeshStandardMaterial({
-            color: 0xf8f4ed,
-            roughness: 0.3,
-            metalness: 0.0,
-            emissive: new THREE.Color(0xf8f4ed),
-            emissiveIntensity: 0.05,
+            color: 0xfaf5ed,
+            roughness: 0.18,
+            metalness: 0.02,
+            emissive: new THREE.Color(0xf5e8d4),
+            emissiveIntensity: 0.1,
           }),
         );
-        // Egg shape: narrower at top, wider at bottom
-        egg.scale.set(0.72, 1.0, 0.72);
-        eggGroup.add(egg);
+        group.add(egg);
 
-        group.add(eggGroup);
-
-        // Crack rings appear progressively
-        if (eggCrack > 20) {
-          const crack = new THREE.Mesh(
-            new THREE.TorusGeometry(0.4, 0.014, 8, 32),
-            new THREE.MeshStandardMaterial({ color: 0xd4cabb }),
-          );
-          crack.rotation.x = Math.PI / 2.2;
-          crack.position.y = 0.08;
-          group.add(crack);
+        // Warm golden crack lines
+        const crackMat = new THREE.MeshBasicMaterial({ color: 0xd4a050 });
+        if (crack > 20) {
+          const c1 = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.012, 6, 32), crackMat);
+          c1.rotation.x = Math.PI / 2.2;
+          c1.position.y = 0.04;
+          group.add(c1);
         }
-        if (eggCrack > 50) {
-          const crack2 = new THREE.Mesh(
-            new THREE.TorusGeometry(0.34, 0.014, 8, 32),
-            new THREE.MeshStandardMaterial({ color: 0xd4cabb }),
-          );
-          crack2.rotation.x = Math.PI / 1.8;
-          crack2.position.y = -0.12;
-          group.add(crack2);
+        if (crack > 50) {
+          const c2 = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.012, 6, 32), crackMat);
+          c2.rotation.x = Math.PI / 1.8;
+          c2.position.y = -0.14;
+          group.add(c2);
         }
-        if (eggCrack > 80) {
-          const crack3 = new THREE.Mesh(
-            new THREE.TorusGeometry(0.28, 0.014, 8, 32),
-            new THREE.MeshStandardMaterial({ color: 0xd4cabb }),
-          );
-          crack3.rotation.x = Math.PI / 2.6;
-          crack3.rotation.z = Math.PI / 8;
-          crack3.position.y = 0.22;
-          group.add(crack3);
+        if (crack > 80) {
+          const c3 = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.012, 6, 32), crackMat);
+          c3.rotation.x = Math.PI / 2.6;
+          c3.rotation.z = Math.PI / 8;
+          c3.position.y = 0.2;
+          group.add(c3);
         }
         return;
       }
 
+      // ── Hatched pet ────────────────────────────────────
       isEggRef.current = false;
+      const br = 0.7 + stage * 0.05;
 
-      // Hatched pet body
-      const bodyRadius = 0.75 + stage * 0.06;
       const body = new THREE.Mesh(
-        new THREE.SphereGeometry(bodyRadius, 24, 24),
+        new THREE.SphereGeometry(br, 24, 24),
         new THREE.MeshStandardMaterial({
-          color: color.clone(),
-          emissive: color.clone(),
-          emissiveIntensity,
-          roughness: 0.55,
+          color: col.clone(),
+          emissive: col.clone(),
+          emissiveIntensity: ei,
+          roughness: 0.4,
         }),
       );
 
       // Eyes
-      const eyeGeo = new THREE.SphereGeometry(0.07, 12, 12);
-      const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-      const pupilGeo = new THREE.SphereGeometry(0.035, 12, 12);
-      const pupilMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+      const eyeG = new THREE.SphereGeometry(0.085, 10, 10);
+      const eyeM = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 });
+      const pupG = new THREE.SphereGeometry(0.042, 10, 10);
+      const pupM = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.1 });
+      const hiG = new THREE.SphereGeometry(0.014, 6, 6);
+      const hiM = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-      const rightEye = new THREE.Mesh(eyeGeo.clone(), eyeMat.clone());
-      leftEye.position.set(-0.2, 0.15, 0.58);
-      rightEye.position.set(0.2, 0.15, 0.58);
+      const lEye = new THREE.Mesh(eyeG, eyeM);
+      const rEye = new THREE.Mesh(eyeG, eyeM);
+      lEye.position.set(-0.22, 0.18, br * 0.78);
+      rEye.position.set(0.22, 0.18, br * 0.78);
+      lEye.add(new THREE.Mesh(pupG, pupM).translateZ(0.05));
+      rEye.add(new THREE.Mesh(pupG, pupM).translateZ(0.05));
+      lEye.add(new THREE.Mesh(hiG, hiM).translateZ(0.06).translateX(0.02).translateY(0.02));
+      rEye.add(new THREE.Mesh(hiG, hiM).translateZ(0.06).translateX(0.02).translateY(0.02));
+      body.add(lEye, rEye);
 
-      const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
-      const rightPupil = new THREE.Mesh(pupilGeo.clone(), pupilMat.clone());
-      leftPupil.position.set(0, 0, 0.04);
-      rightPupil.position.set(0, 0, 0.04);
-      leftEye.add(leftPupil);
-      rightEye.add(rightPupil);
+      // Blush
+      const blushM = new THREE.MeshBasicMaterial({
+        color: health === 'Thriving' ? 0xf5a0a0 : health === 'Fading' ? 0xf0bb88 : 0xcc9090,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false,
+      });
+      const blG = new THREE.SphereGeometry(0.055, 8, 8);
+      const lBl = new THREE.Mesh(blG, blushM);
+      const rBl = new THREE.Mesh(blG, blushM);
+      lBl.position.set(-0.3, 0.04, br * 0.72);
+      rBl.position.set(0.3, 0.04, br * 0.72);
+      lBl.scale.set(1.3, 0.7, 0.5);
+      rBl.scale.set(1.3, 0.7, 0.5);
+      body.add(lBl, rBl);
 
-      body.add(leftEye, rightEye);
-
-      // Mouth — simple curved line using a tube
+      // Mouth
+      const mouthCol = 0x333333;
       if (health === 'Thriving') {
-        const smileCurve = new THREE.QuadraticBezierCurve3(
-          new THREE.Vector3(-0.12, -0.05, 0.6),
-          new THREE.Vector3(0, -0.12, 0.65),
-          new THREE.Vector3(0.12, -0.05, 0.6),
+        const curve = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(-0.12, -0.06, br * 0.82),
+          new THREE.Vector3(0, -0.13, br * 0.87),
+          new THREE.Vector3(0.12, -0.06, br * 0.82),
         );
-        const smileGeo = new THREE.TubeGeometry(smileCurve, 12, 0.012, 6, false);
-        const smileMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-        body.add(new THREE.Mesh(smileGeo, smileMat));
+        body.add(new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 10, 0.013, 6, false),
+          new THREE.MeshBasicMaterial({ color: mouthCol }),
+        ));
       } else if (health === 'Wilting') {
-        const frownCurve = new THREE.QuadraticBezierCurve3(
-          new THREE.Vector3(-0.1, -0.1, 0.6),
-          new THREE.Vector3(0, -0.04, 0.65),
-          new THREE.Vector3(0.1, -0.1, 0.6),
+        const curve = new THREE.QuadraticBezierCurve3(
+          new THREE.Vector3(-0.1, -0.11, br * 0.82),
+          new THREE.Vector3(0, -0.05, br * 0.87),
+          new THREE.Vector3(0.1, -0.11, br * 0.82),
         );
-        const frownGeo = new THREE.TubeGeometry(frownCurve, 12, 0.012, 6, false);
-        const frownMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-        body.add(new THREE.Mesh(frownGeo, frownMat));
+        body.add(new THREE.Mesh(
+          new THREE.TubeGeometry(curve, 10, 0.013, 6, false),
+          new THREE.MeshBasicMaterial({ color: mouthCol }),
+        ));
       } else {
-        // Neutral straight mouth
-        const lineGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.15, 6);
-        const lineMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-        const mouth = new THREE.Mesh(lineGeo, lineMat);
-        mouth.rotation.z = Math.PI / 2;
-        mouth.position.set(0, -0.07, 0.6);
-        body.add(mouth);
+        const m = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.012, 0.012, 0.14, 6),
+          new THREE.MeshBasicMaterial({ color: mouthCol }),
+        );
+        m.rotation.z = Math.PI / 2;
+        m.position.set(0, -0.07, br * 0.82);
+        body.add(m);
       }
 
-      // Feet (small bumps at bottom)
-      const footGeo = new THREE.SphereGeometry(0.12, 12, 12);
-      const footMat = new THREE.MeshStandardMaterial({
-        color: color.clone().multiplyScalar(0.8),
-        roughness: 0.6,
+      // Feet
+      const fG = new THREE.SphereGeometry(0.12, 10, 10);
+      const fM = new THREE.MeshStandardMaterial({
+        color: col.clone().multiplyScalar(0.75),
+        roughness: 0.55,
       });
-      const leftFoot = new THREE.Mesh(footGeo, footMat);
-      const rightFoot = new THREE.Mesh(footGeo.clone(), footMat.clone());
-      leftFoot.position.set(-0.22, -(bodyRadius - 0.05), 0.1);
-      rightFoot.position.set(0.22, -(bodyRadius - 0.05), 0.1);
-      leftFoot.scale.set(1, 0.6, 1.2);
-      rightFoot.scale.set(1, 0.6, 1.2);
+      const lF = new THREE.Mesh(fG, fM);
+      const rF = new THREE.Mesh(fG, fM);
+      lF.position.set(-0.22, -(br - 0.04), 0.1);
+      rF.position.set(0.22, -(br - 0.04), 0.1);
+      lF.scale.set(1, 0.55, 1.2);
+      rF.scale.set(1, 0.55, 1.2);
 
-      group.add(body, leftFoot, rightFoot);
+      group.add(body, lF, rF);
 
-      // Accessories for higher stages
-      const accessories = accessoriesKeyRef.current.split(',');
-      if (stage >= 3 || accessories.includes('cape')) {
-        const capeGeo = new THREE.PlaneGeometry(0.6, 0.8);
-        const capeMat = new THREE.MeshStandardMaterial({
-          color: 0x8b0000,
-          side: THREE.DoubleSide,
-          roughness: 0.7,
-        });
-        const cape = new THREE.Mesh(capeGeo, capeMat);
-        cape.position.set(0, -0.1, -(bodyRadius - 0.05));
+      const acc = accRef.current.split(',');
+      if (stage >= 3 || acc.includes('cape')) {
+        const cape = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.6, 0.8),
+          new THREE.MeshStandardMaterial({ color: 0x8b0000, side: THREE.DoubleSide, roughness: 0.6 }),
+        );
+        cape.position.set(0, -0.1, -(br - 0.05));
         cape.rotation.x = 0.15;
         group.add(cape);
       }
     },
-    // eslint-disable-next-line
     [],
   );
 
-  // ── EFFECT 1: Mount scene ONCE ──────────────────────────
+  // ── EFFECT 1: Mount ──────────────────────────────────────
 
   useEffect(() => {
-    const mount = mountRef.current;
-    if (!mount || mountedRef.current) return;
+    const el = mountRef.current;
+    if (!el || mountedRef.current) return;
     mountedRef.current = true;
 
-    // Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf5f0e8);
+    scene.background = skyTexture();
     sceneRef.current = scene;
 
-    // Camera — positioned to look at the egg/pet standing upright
-    const camera = new THREE.PerspectiveCamera(45, mount.clientWidth / 220, 0.1, 100);
-    camera.position.set(0, 0.8, 4.2);
-    camera.lookAt(0, 0.3, 0);
-    cameraRef.current = camera;
+    const cam = new THREE.PerspectiveCamera(42, el.clientWidth / H, 0.1, 50);
+    cam.position.set(0, 0.5, 3.6);
+    cam.lookAt(0, 0.0, 0);
+    cameraRef.current = cam;
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(mount.clientWidth, 220);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    mount.appendChild(renderer.domElement);
-    rendererRef.current = renderer;
+    const r = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
+    r.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    r.setSize(el.clientWidth, H);
+    el.appendChild(r.domElement);
+    rendererRef.current = r;
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0xffffff, 0.9);
-    const key = new THREE.DirectionalLight(0xffffff, 0.6);
-    key.position.set(3, 4, 2);
-    key.castShadow = true;
-    const fill = new THREE.DirectionalLight(0xffe4c4, 0.25);
-    fill.position.set(-2, 2, 3);
-    scene.add(ambient, key, fill);
+    // Lighting — warm sunlight + sky fill (only 2 directional + ambient)
+    scene.add(new THREE.AmbientLight(0xfff8f0, 0.7));
+    const sun = new THREE.DirectionalLight(0xfff4e0, 0.9);
+    sun.position.set(3, 5, 2);
+    scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xaac4dd, 0.35);
+    fill.position.set(-2, 3, 3);
+    scene.add(fill);
 
-    // Floor
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(1.8, 32),
-      new THREE.MeshStandardMaterial({ color: 0xe6dfd2 }),
+    // Ground (grass)
+    const ground = new THREE.Mesh(
+      new THREE.CircleGeometry(2, 32),
+      new THREE.MeshStandardMaterial({ color: 0x8cb888, roughness: 0.9 }),
     );
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -0.7;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -0.6;
+    scene.add(ground);
+
+    // Garden flowers + grass blades
+    const garden = new THREE.Group();
+    gardenRef.current = garden;
+    buildGarden(scene, garden);
+
+    // Pollen particles (sprites — cheap billboarded quads)
+    const pGroup = new THREE.Group();
+    const pTex = pollenTexture();
+    const pMat = new THREE.SpriteMaterial({ map: pTex, transparent: true, depthWrite: false, opacity: 0.7 });
+    for (let i = 0; i < PARTICLE_N; i++) {
+      const sp = new THREE.Sprite(pMat);
+      const sz = 0.05 + Math.random() * 0.04;
+      sp.scale.set(sz, sz, sz);
+      const a = (i / PARTICLE_N) * Math.PI * 2;
+      const rad = 0.7 + Math.random() * 0.5;
+      const h = -0.3 + Math.random() * 0.8;
+      sp.position.set(Math.cos(a) * rad, h, Math.sin(a) * rad);
+      sp.userData = { a, rad, h, spd: 0.1 + Math.random() * 0.15, ph: Math.random() * 6.28 };
+      pGroup.add(sp);
+    }
+    scene.add(pGroup);
+    particlesRef.current = pGroup;
 
     // Pet group
-    const petGroup = new THREE.Group();
-    scene.add(petGroup);
-    petGroupRef.current = petGroup;
+    const pg = new THREE.Group();
+    scene.add(pg);
+    petGroupRef.current = pg;
+    buildPet(pg, stageRef.current, committedRef.current, crackRef.current);
 
-    // Build initial pet geometry
-    buildPetGeometry(petGroup, currentStageRef.current, committedHealthRef.current, currentEggCrackRef.current);
-
-    // ── Resize handler ──
+    // Resize
     const onResize = () => {
-      if (!mount || !renderer || !camera) return;
-      const w = mount.clientWidth;
-      renderer.setSize(w, 220);
-      camera.aspect = w / 220;
-      camera.updateProjectionMatrix();
+      const w = el.clientWidth;
+      r.setSize(w, H);
+      cam.aspect = w / H;
+      cam.updateProjectionMatrix();
     };
     window.addEventListener('resize', onResize);
 
-    // ── Animation loop ──
-    const animate = () => {
-      frameRef.current = requestAnimationFrame(animate);
-      const t = performance.now() / 1000;
-      const group = petGroupRef.current;
+    // Animation loop — kept lean
+    const loop = () => {
+      frameRef.current = requestAnimationFrame(loop);
+      const t = performance.now() * 0.001;
+      const g = petGroupRef.current;
 
-      if (group) {
-        // Breathing animation (amplitude driven by committed health)
-        const scaleY = 1 + Math.sin(t * 2) * breathAmplitudeRef.current;
-        group.scale.y = scaleY;
+      if (g) {
+        g.scale.y = 1 + Math.sin(t * 2) * breathRef.current;
+        g.position.y = Math.sin(t * 1.2) * 0.015;
 
-        // Posture tilt response (gentler for egg)
-        const tiltFactor = isEggRef.current ? 0.25 : 0.5;
-        group.rotation.z = THREE.MathUtils.degToRad(postureTiltRef.current * tiltFactor);
+        const tf = isEggRef.current ? 0.08 : 0.35;
+        g.rotation.z += (THREE.MathUtils.degToRad(tiltRef.current * tf) - g.rotation.z) * 0.05;
+        g.rotation.x = isEggRef.current ? 0 : THREE.MathUtils.degToRad(
+          Math.max(-6, Math.min(6, (55 - scoreRef.current) * 0.08)),
+        );
+        g.rotation.y = Math.sin(t * 0.5) * 0.03;
 
-        if (!isEggRef.current) {
-          group.rotation.x = THREE.MathUtils.degToRad(
-            Math.max(-8, Math.min(8, (55 - postureScoreRef.current) * 0.12)),
-          );
-        } else {
-          group.rotation.x = 0;
+        // Color lerp (only during health transitions)
+        const cc = curColorRef.current;
+        const tc = tgtColorRef.current;
+        if (!cc.equals(tc)) {
+          cc.lerp(tc, COLOR_LERP);
+          g.traverse((ch) => {
+            if (ch instanceof THREE.Mesh && ch.material instanceof THREE.MeshStandardMaterial) {
+              const hex = ch.material.color.getHex();
+              if (SKIP_HEX.has(hex) || hex === 0xfaf5ed || hex === 0xd4a050) return;
+              ch.material.color.copy(cc);
+              ch.material.emissive.copy(cc);
+            }
+          });
         }
+      }
 
-        // Gentle idle sway
-        group.rotation.y = Math.sin(t * 0.5) * 0.05;
+      // Orbiting pollen
+      const pg2 = particlesRef.current;
+      if (pg2) {
+        for (let i = 0; i < pg2.children.length; i++) {
+          const s = pg2.children[i];
+          const d = s.userData as { a: number; rad: number; h: number; spd: number; ph: number };
+          d.a += d.spd * 0.006;
+          s.position.x = Math.cos(d.a) * d.rad;
+          s.position.z = Math.sin(d.a) * d.rad;
+          s.position.y = d.h + Math.sin(t * 0.7 + d.ph) * 0.1;
+        }
+      }
 
-        // Smooth color lerp toward target (only for hatched pet, not egg)
-        if (!isEggRef.current) {
-          const current = currentColorRef.current;
-          const target = targetColorRef.current;
-          if (!current.equals(target)) {
-            current.lerp(target, COLOR_LERP_SPEED);
-
-            group.traverse((child) => {
-              if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
-                if (SKIP_COLORS.has(child.material.color.getHex())) return;
-                child.material.color.copy(current);
-                child.material.emissive.copy(current);
-              }
-            });
+      // Gentle flower sway
+      const gg = gardenRef.current;
+      if (gg) {
+        for (let i = 0; i < gg.children.length; i++) {
+          const ch = gg.children[i];
+          if (ch instanceof THREE.Group) {
+            ch.rotation.z = Math.sin(t * 0.8 + i * 1.3) * 0.04;
           }
         }
       }
 
-      renderer.render(scene, camera);
+      r.render(scene, cam);
     };
-    animate();
+    loop();
 
-    // ── Cleanup ──
     return () => {
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener('resize', onResize);
-
-      scene.traverse((obj) => {
-        if (obj instanceof THREE.Mesh) {
-          obj.geometry?.dispose();
-          if (obj.material instanceof THREE.Material) obj.material.dispose();
-          if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+      scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry?.dispose();
+          if (o.material instanceof THREE.Material) o.material.dispose();
+          if (Array.isArray(o.material)) o.material.forEach((m) => m.dispose());
+        }
+        if (o instanceof THREE.Sprite) {
+          o.material.map?.dispose();
+          o.material.dispose();
         }
       });
-      renderer.dispose();
-
-      if (mount.contains(renderer.domElement)) {
-        mount.removeChild(renderer.domElement);
-      }
-
+      r.dispose();
+      if (el.contains(r.domElement)) el.removeChild(r.domElement);
       mountedRef.current = false;
       sceneRef.current = null;
       rendererRef.current = null;
       cameraRef.current = null;
       petGroupRef.current = null;
+      gardenRef.current = null;
+      particlesRef.current = null;
     };
     // eslint-disable-next-line
   }, []);
 
-  // ── EFFECT 2: Health hysteresis + color transition ──────
+  // ── EFFECT 2: Health hysteresis ──────────────────────────
 
   useEffect(() => {
-    const incomingHealth = pet.health;
-
-    if (incomingHealth !== pendingHealthRef.current) {
-      pendingHealthRef.current = incomingHealth;
-      pendingHealthSinceRef.current = Date.now();
+    const h = pet.health;
+    if (h !== pendingRef.current) {
+      pendingRef.current = h;
+      pendingSinceRef.current = Date.now();
     }
-
-    const elapsed = Date.now() - pendingHealthSinceRef.current;
-    if (incomingHealth !== committedHealthRef.current && elapsed >= HEALTH_HYSTERESIS_MS) {
-      committedHealthRef.current = incomingHealth;
-      healthRef.current = incomingHealth;
-      targetColorRef.current = HEALTH_COLORS[incomingHealth].clone();
-      breathAmplitudeRef.current = HEALTH_BREATH_AMPLITUDE[incomingHealth];
-      setCommittedHealth(incomingHealth);
-    }
-
-    if (incomingHealth === committedHealthRef.current) {
-      healthRef.current = incomingHealth;
+    const dt = Date.now() - pendingSinceRef.current;
+    if (h !== committedRef.current && dt >= HEALTH_HYSTERESIS_MS) {
+      committedRef.current = h;
+      tgtColorRef.current = HEALTH_COLORS[h].clone();
+      breathRef.current = HEALTH_BREATH[h];
+      setCommitted(h);
     }
   }, [pet.health]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const pending = pendingHealthRef.current;
-      const committed = committedHealthRef.current;
-      if (pending !== committed) {
-        const elapsed = Date.now() - pendingHealthSinceRef.current;
-        if (elapsed >= HEALTH_HYSTERESIS_MS) {
-          committedHealthRef.current = pending;
-          healthRef.current = pending;
-          targetColorRef.current = HEALTH_COLORS[pending].clone();
-          breathAmplitudeRef.current = HEALTH_BREATH_AMPLITUDE[pending];
-          setCommittedHealth(pending);
-        }
+    const iv = setInterval(() => {
+      const p = pendingRef.current;
+      if (p !== committedRef.current && Date.now() - pendingSinceRef.current >= HEALTH_HYSTERESIS_MS) {
+        committedRef.current = p;
+        tgtColorRef.current = HEALTH_COLORS[p].clone();
+        breathRef.current = HEALTH_BREATH[p];
+        setCommitted(p);
       }
     }, 500);
-    return () => clearInterval(interval);
+    return () => clearInterval(iv);
   }, []);
 
-  // ── EFFECT 3: Rebuild geometry when stage changes ───────
+  // ── EFFECT 3: Rebuild on stage / crack ───────────────────
 
   useEffect(() => {
-    const group = petGroupRef.current;
-    if (!group) return;
-
-    const stageChanged = pet.stage !== currentStageRef.current;
-    const eggCrackCrossedThreshold =
-      pet.stage === 0 &&
-      ((pet.eggCrackProgress > 20 && currentEggCrackRef.current <= 20) ||
-        (pet.eggCrackProgress > 50 && currentEggCrackRef.current <= 50) ||
-        (pet.eggCrackProgress > 80 && currentEggCrackRef.current <= 80));
-
-    if (stageChanged || eggCrackCrossedThreshold) {
-      currentStageRef.current = pet.stage;
-      currentEggCrackRef.current = pet.eggCrackProgress;
-      buildPetGeometry(group, pet.stage, committedHealthRef.current, pet.eggCrackProgress);
-      currentColorRef.current = HEALTH_COLORS[committedHealthRef.current].clone();
-      targetColorRef.current = HEALTH_COLORS[committedHealthRef.current].clone();
+    const g = petGroupRef.current;
+    if (!g) return;
+    const sc = pet.stage !== stageRef.current;
+    const cc = pet.stage === 0 && (
+      (pet.eggCrackProgress > 20 && crackRef.current <= 20) ||
+      (pet.eggCrackProgress > 50 && crackRef.current <= 50) ||
+      (pet.eggCrackProgress > 80 && crackRef.current <= 80)
+    );
+    if (sc || cc) {
+      stageRef.current = pet.stage;
+      crackRef.current = pet.eggCrackProgress;
+      buildPet(g, pet.stage, committedRef.current, pet.eggCrackProgress);
+      curColorRef.current = HEALTH_COLORS[committedRef.current].clone();
+      tgtColorRef.current = HEALTH_COLORS[committedRef.current].clone();
     }
-  }, [pet.stage, pet.eggCrackProgress, buildPetGeometry]);
+  }, [pet.stage, pet.eggCrackProgress, buildPet]);
 
-  // ── EFFECT 4: Update materials on committed health change ──
+  // ── EFFECT 4: Materials on health commit ─────────────────
 
   useEffect(() => {
-    const group = petGroupRef.current;
-    if (!group) return;
-
-    group.traverse((child) => {
-      if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshStandardMaterial) {
-        if (SKIP_COLORS.has(child.material.color.getHex())) return;
-        child.material.emissiveIntensity = HEALTH_EMISSIVE_INTENSITY[committedHealth];
+    const g = petGroupRef.current;
+    if (!g) return;
+    g.traverse((ch) => {
+      if (ch instanceof THREE.Mesh && ch.material instanceof THREE.MeshStandardMaterial) {
+        if (SKIP_HEX.has(ch.material.color.getHex())) return;
+        ch.material.emissiveIntensity = HEALTH_EMISSIVE[committed];
       }
     });
-
-    if (currentStageRef.current > 0) {
-      buildPetGeometry(group, currentStageRef.current, committedHealth, currentEggCrackRef.current);
-      currentColorRef.current = HEALTH_COLORS[committedHealth].clone();
-      targetColorRef.current = HEALTH_COLORS[committedHealth].clone();
+    if (stageRef.current > 0) {
+      buildPet(g, stageRef.current, committed, crackRef.current);
+      curColorRef.current = HEALTH_COLORS[committed].clone();
+      tgtColorRef.current = HEALTH_COLORS[committed].clone();
     }
-  }, [committedHealth, buildPetGeometry]);
+  }, [committed, buildPet]);
 
   // ── Render ──────────────────────────────────────────────
 
-  const healthColor =
+  const hc =
     pet.health === 'Thriving' ? 'var(--green-primary)' : pet.health === 'Fading' ? 'var(--amber-primary)' : 'var(--red-primary)';
-  const healthBg =
+  const hbg =
     pet.health === 'Thriving' ? 'var(--green-bg)' : pet.health === 'Fading' ? 'var(--amber-bg)' : 'var(--red-bg)';
 
-  // Evolution progress toward next stage
   const STAGE_MINS = [0, 10, 30, 120, 300, 600];
-  const nextMin = STAGE_MINS[Math.min(pet.stage + 1, STAGE_MINS.length - 1)];
-  const curMin = STAGE_MINS[pet.stage] ?? 0;
-  const stageProgress = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - curMin) / Math.max(1, nextMin - curMin)) * 100));
+  const nxt = STAGE_MINS[Math.min(pet.stage + 1, STAGE_MINS.length - 1)];
+  const cur = STAGE_MINS[pet.stage] ?? 0;
+  const prog = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - cur) / Math.max(1, nxt - cur)) * 100));
 
   return (
     <div className="card">
       <h3>Bio-Pet</h3>
+
       <div
         ref={mountRef}
-        style={{ width: '100%', height: 220, borderRadius: 10, overflow: 'hidden' }}
+        style={{
+          width: '100%',
+          height: H,
+          borderRadius: 12,
+          overflow: 'hidden',
+          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+        }}
       />
+
       <div className="pet-meta" style={{ marginTop: 12, gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <strong style={{ fontSize: 14 }}>
@@ -531,15 +624,15 @@ export function BioPet({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
-              background: healthBg,
-              color: healthColor,
+              background: hbg,
+              color: hc,
               borderRadius: 999,
               padding: '2px 10px',
               fontSize: 11,
               fontWeight: 600,
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: 3, background: healthColor }} />
+            <span style={{ width: 6, height: 6, borderRadius: 3, background: hc }} />
             {pet.health}
           </span>
         </div>
@@ -548,10 +641,10 @@ export function BioPet({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 3 }}>
               <span>Evolution</span>
-              <span>{stageProgress}%</span>
+              <span>{prog}%</span>
             </div>
             <div style={{ height: 5, background: 'var(--bg-card-muted)', borderRadius: 999, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${stageProgress}%`, borderRadius: 999, background: healthColor, transition: 'width 0.6s ease-out' }} />
+              <div style={{ height: '100%', width: `${prog}%`, borderRadius: 999, background: hc, transition: 'width 0.6s ease-out' }} />
             </div>
           </div>
         )}
@@ -580,7 +673,7 @@ function PetChip({ label, value }: { label: string; value: number | string }) {
         fontVariantNumeric: 'tabular-nums',
       }}
     >
-      {label} <strong style={{ color: 'var(--text-primary)' }}>{value}</strong>
+      {label} <strong style={{ color: 'var(--text-primary)' }}>{typeof value === 'number' ? Math.round(value) : value}</strong>
     </span>
   );
 }

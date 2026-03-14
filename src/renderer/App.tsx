@@ -103,7 +103,7 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (!webcam.ready) return;
-    const sourceVideo = webcam.processingVideoRef.current ?? webcam.videoRef.current;
+    const sourceVideo = webcam.videoRef.current;
     if (!sourceVideo) return;
     if (poseEngineRef.current || faceEngineRef.current) return;
 
@@ -127,13 +127,13 @@ export default function App(): JSX.Element {
     );
 
     face.setCallbacks(
-      (landmarks, emotionState, emotionConfidence, fps) => {
+      (landmarks, emotionState, emotionConfidence, fps, aspectRatio) => {
         scoreEngine.updateFaceFps(fps);
         // Always feed face data through — the blink detector has its own
         // internal check for specific eye-landmark indices and returns
         // graceful fallback values when they're insufficient.
         if (landmarks.length > 0) {
-          scoreEngine.updateFace(landmarks, emotionState, emotionConfidence);
+          scoreEngine.updateFace(landmarks, emotionState, emotionConfidence, aspectRatio);
         }
         const hasFaceMesh = landmarks.length >= 200;
         scoreEngine.setSystemStatus({
@@ -155,6 +155,7 @@ export default function App(): JSX.Element {
         console.warn('Pose engine init failed', error);
       }
       try {
+        // Sequential: face reuses the same Human instance that pose already loaded
         await face.init(sourceVideo);
       } catch (error) {
         console.warn('Face engine init failed', error);
@@ -167,7 +168,7 @@ export default function App(): JSX.Element {
       poseEngineRef.current = null;
       faceEngineRef.current = null;
     };
-  }, [webcam.ready, webcam.processingVideoRef, webcam.videoRef]);
+  }, [webcam.ready, webcam.videoRef]);
 
   useEffect(() => {
     latestPoseLandmarksRef.current = state.poseLandmarks;
@@ -181,7 +182,7 @@ export default function App(): JSX.Element {
     if (stage === 'welcome') return;
     const timer = setInterval(() => {
       setTimeline(scoreEngine.getTimeline());
-    }, 1000);
+    }, 2000);
     return () => clearInterval(timer);
   }, [stage]);
 

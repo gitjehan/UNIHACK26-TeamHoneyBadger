@@ -24,33 +24,15 @@ function describeWebcamError(err: unknown): string {
 
 export interface WebcamState {
   videoRef: RefObject<HTMLVideoElement | null>;
-  processingVideoRef: RefObject<HTMLVideoElement | null>;
   ready: boolean;
   error: string | null;
 }
 
 export function useWebcam(enabled: boolean): WebcamState {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const processingVideoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const ensureProcessingVideo = (): HTMLVideoElement | null => {
-    if (processingVideoRef.current) return processingVideoRef.current;
-    if (typeof document === 'undefined') return null;
-    const video = document.createElement('video');
-    video.muted = true;
-    video.autoplay = true;
-    video.playsInline = true;
-    processingVideoRef.current = video;
-    return video;
-  };
-
-  const attachStream = async (video: HTMLVideoElement, stream: MediaStream) => {
-    if (video.srcObject !== stream) video.srcObject = stream;
-    await video.play();
-  };
 
   useEffect(() => {
     if (!enabled) {
@@ -79,12 +61,10 @@ export function useWebcam(enabled: boolean): WebcamState {
         }
 
         streamRef.current = stream;
-        const processing = ensureProcessingVideo();
-        if (!processing) throw new Error('Unable to create internal video pipeline');
-        await attachStream(processing, stream);
 
         if (videoRef.current) {
-          await attachStream(videoRef.current, stream);
+          if (videoRef.current.srcObject !== stream) videoRef.current.srcObject = stream;
+          await videoRef.current.play();
         }
 
         setReady(true);
@@ -104,10 +84,9 @@ export function useWebcam(enabled: boolean): WebcamState {
         streamRef.current = null;
       }
       if (videoRef.current) videoRef.current.srcObject = null;
-      if (processingVideoRef.current) processingVideoRef.current.srcObject = null;
       setReady(false);
     };
   }, [enabled]);
 
-  return { videoRef, processingVideoRef, ready, error };
+  return { videoRef, ready, error };
 }

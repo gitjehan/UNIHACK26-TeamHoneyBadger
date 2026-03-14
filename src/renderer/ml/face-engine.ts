@@ -1,11 +1,13 @@
 import { FACE_LOOP_INTERVAL } from '@renderer/lib/constants';
 import type { Point, VisionBackend } from '@renderer/lib/types';
+import { getSharedHuman } from './shared-human';
 
 type FaceCallback = (
   landmarks: Point[],
   emotionState: string,
   emotionConfidence: number,
   fps: number,
+  aspectRatio: number,
 ) => void;
 type StatusCallback = (status: 'active' | 'degraded' | 'inactive') => void;
 type BackendCallback = (backend: VisionBackend) => void;
@@ -50,6 +52,8 @@ export class FaceEngine {
 
   private lastDiagTime = 0;
 
+  private hasLoggedMeshFormat = false;
+
   setCallbacks(onFace: FaceCallback, onStatus: StatusCallback, onBackend?: BackendCallback): void {
     this.onFace = onFace;
     this.onStatus = onStatus;
@@ -85,7 +89,10 @@ export class FaceEngine {
           this.fpsFrames = 0;
           this.fpsWindowStart = now;
         }
-        this.onFace?.(landmarks, emotionState, emotionConfidence, this.fps);
+        const aspectRatio = video.videoWidth && video.videoHeight
+          ? video.videoWidth / video.videoHeight
+          : 4 / 3;
+        this.onFace?.(landmarks, emotionState, emotionConfidence, this.fps, aspectRatio);
       } finally {
         this.detecting = false;
       }
@@ -101,24 +108,7 @@ export class FaceEngine {
   }
 
   private async initHuman(): Promise<void> {
-    const HumanModule = await import('@vladmandic/human');
-    this.human = new HumanModule.Human({
-      modelBasePath: 'https://vladmandic.github.io/human/models',
-      filter: { enabled: true },
-      body: { enabled: false },
-      face: {
-        enabled: true,
-        detector: { rotation: true },
-        mesh: { enabled: true },
-        emotion: { enabled: true },
-      },
-      hand: { enabled: false },
-      object: { enabled: false },
-      gesture: { enabled: false },
-    }) as HumanAdapter;
-    await this.human.load();
-    console.log('[FaceEngine] Models loaded, warming up...');
-    await this.human.warmup();
+    this.human = await getSharedHuman() as unknown as HumanAdapter;
   }
 
   private async detectFace(
@@ -135,6 +125,17 @@ export class FaceEngine {
       const face = result?.face?.[0];
       const rawMesh: number[][] | undefined = face?.mesh;
       const emotions: EmotionResult[] = face?.emotion ?? [];
+
+      // One-time coordinate format check — verifies Human is returning pixel coords
+      // (expected: point[0] ≈ 0..videoWidth). If values are 0..1, EAR will be broken.
+      if (!this.hasLoggedMeshFormat && rawMesh?.length) {
+        this.hasLoggedMeshFormat = true;
+        console.log(
+          `[FaceEngine] mesh format check — first point: [${rawMesh[0]?.slice(0, 3).join(', ')}]` +
+          ` | total points: ${rawMesh.length} | video: ${video.videoWidth}×${video.videoHeight}` +
+          ` | expected x range: 0..${video.videoWidth}`,
+        );
+      }
 
       // Diagnostic logging every 5 seconds
       const now = Date.now();

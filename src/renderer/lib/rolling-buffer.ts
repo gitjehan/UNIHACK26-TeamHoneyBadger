@@ -33,6 +33,10 @@ export class RollingAverage {
     return stddev(this.toArray());
   }
 
+  get filledCount(): number {
+    return this.count;
+  }
+
   get items(): number[] {
     return this.toArray();
   }
