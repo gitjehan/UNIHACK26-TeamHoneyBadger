@@ -10,7 +10,8 @@ const checks: Array<{ label: string; optionalWithoutBrightness?: boolean }> = [
   { label: 'Ambient response visibly dims/warms screen on slouch', optionalWithoutBrightness: true },
   { label: 'Pet state changes between Thriving/Fading/Wilting' },
   { label: 'Session timeline charts accumulate data' },
-  { label: 'Ending session opens recap overlay with non-zero stats' },
+  { label: 'Ending session opens Sydney leaderboard map overlay' },
+  { label: 'View Stats closes map and opens recap overlay with non-zero stats' },
   { label: 'Copy and Save buttons work for recap card' },
 ];
 
