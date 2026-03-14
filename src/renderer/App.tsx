@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Dashboard } from '@renderer/components/layout/Dashboard';
 import { Header } from '@renderer/components/layout/Header';
 import { WelcomeScreen } from '@renderer/components/onboarding/WelcomeScreen';
-import { RecapOverlay } from '@renderer/components/recap/RecapOverlay';
+import { LeaderboardMapScreen } from '@renderer/components/recap/LeaderboardMapScreen';
 import { BreakReminder } from '@renderer/components/ui/BreakReminder';
 import { useScores } from '@renderer/hooks/useScores';
 import { useWebcam } from '@renderer/hooks/useWebcam';
@@ -29,7 +29,7 @@ export default function App(): JSX.Element {
   const [nickname, setNickname] = useState('HoneyBadger');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [timeline, setTimeline] = useState<Array<{ timestamp: number; posture: number; focus: number; stress: number }>>([]);
-  const [recap, setRecap] = useState<SessionRecap | null>(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [visionBackend, setVisionBackend] = useState<{ pose: VisionBackend; face: VisionBackend }>({
     pose: 'starting',
     face: 'starting',
@@ -229,7 +229,7 @@ export default function App(): JSX.Element {
   useEffect(() => {
     if (stage !== 'ready') return;
     const interval = setInterval(() => {
-      window.kinetic.storeSet('pet', stateRef.current.pet).catch(() => {});
+      window.kinetic.storeSet('pet', stateRef.current.pet).catch(() => undefined);
     }, 15_000);
     return () => clearInterval(interval);
   }, [stage]);
@@ -252,7 +252,6 @@ export default function App(): JSX.Element {
       const below = leaderboard.filter((entry) => entry.avgOverallScore < sessionRecap.avgOverall).length;
       sessionRecap.percentileRank = Math.round((below / leaderboard.length) * 100);
     }
-    setRecap(sessionRecap);
 
     const sessions = ((await window.kinetic.storeGet('sessions')) as Array<Record<string, unknown>>) ?? [];
     sessions.unshift({
@@ -282,6 +281,7 @@ export default function App(): JSX.Element {
       levelTitle: state.pet.stageName,
     });
 
+    setShowLeaderboard(true);
     sessionIdRef.current = uuidv4();
     scoreEngine.startSession();
   };
@@ -294,11 +294,11 @@ export default function App(): JSX.Element {
       overall: s.snapshot.overall.score,
       petHealth: s.pet.health,
       timelinePoints: timeline.length,
-      recapVisible: Boolean(recap),
+      leaderboardVisible: showLeaderboard,
       systems: s.systems,
       backend: visionBackend,
     };
-  }, [stage, timeline.length, recap, visionBackend]);
+  }, [stage, timeline.length, showLeaderboard, visionBackend]);
 
   const startSession = () => {
     scoreEngine.startSession();
@@ -333,10 +333,13 @@ export default function App(): JSX.Element {
           />
         )}
       </main>
-      <RecapOverlay
-        recap={recap}
-        onClose={() => setRecap(null)}
-      />
+      {showLeaderboard && (
+        <LeaderboardMapScreen
+          entries={leaderboard}
+          currentUserNickname={nickname}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
       <BreakReminder
         visible={state.breakReminderDue}
         onDismiss={() => scoreEngine.dismissBreakReminder()}

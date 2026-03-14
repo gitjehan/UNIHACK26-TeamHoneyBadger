@@ -12,9 +12,10 @@ interface CatSpriteProps {
   col: number;
   scale?: number;
   flip?: boolean;
+  filter?: string;
 }
 
-export function CatSprite({ row, col, scale = 3, flip = false }: CatSpriteProps): JSX.Element {
+export function CatSprite({ row, col, scale = 3, flip = false, filter }: CatSpriteProps): JSX.Element {
   const w = FRAME_W * scale;
   const h = FRAME_H * scale;
   const bgW = SHEET_W * scale;
@@ -33,6 +34,7 @@ export function CatSprite({ row, col, scale = 3, flip = false }: CatSpriteProps)
         backgroundRepeat: 'no-repeat',
         imageRendering: 'pixelated',
         transform: flip ? 'scaleX(-1)' : undefined,
+        filter,
       }}
     />
   );
@@ -85,6 +87,7 @@ interface CalmAction {
 interface AnimatedCatProps {
   health: 'Thriving' | 'Fading' | 'Wilting';
   scale?: number;
+  filter?: string;
 }
 
 const THRIVING_ACTIONS: CalmAction[] = [
@@ -107,7 +110,7 @@ const randomBetween = (min: number, max: number): number => min + Math.random() 
 const randomInt = (min: number, max: number): number => Math.round(randomBetween(min, max));
 const pickRandom = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
-export function AnimatedCat({ health, scale = 3 }: AnimatedCatProps): JSX.Element {
+export function AnimatedCat({ health, scale = 3, filter }: AnimatedCatProps): JSX.Element {
   const [animation, setAnimation] = useState<AnimName>('idleSit');
   const [frame, setFrame] = useState(0);
   const [posX, setPosX] = useState(0);
@@ -262,7 +265,7 @@ export function AnimatedCat({ health, scale = 3 }: AnimatedCatProps): JSX.Elemen
         transition: 'transform 0.05s linear',
       }}
     >
-      <CatSprite row={currentAnim.row} col={frame} scale={scale} />
+      <CatSprite row={currentAnim.row} col={frame} scale={scale} filter={filter} />
     </div>
   );
 }
