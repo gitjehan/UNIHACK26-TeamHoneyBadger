@@ -241,8 +241,7 @@ export function LeaderboardMapScreen({
       <div className="leaderboard-map-shell" style={{ animation: 'slideUp 0.3s ease-out' }} onClick={(event) => event.stopPropagation()}>
         <section className="leaderboard-map-card">
           <div ref={mapContainerRef} className="leaderboard-map-canvas" />
-          <div className="leaderboard-map-vignette" />
-          <div className="leaderboard-map-location">GREATER SYDNEY REGION</div>
+<div className="leaderboard-map-location">GREATER SYDNEY REGION</div>
 
           <aside className="leaderboard-map-hud" aria-label="Top four leaderboard list">
             <div className="leaderboard-map-hud__title">LOCK IN LEADERBOARD</div>
