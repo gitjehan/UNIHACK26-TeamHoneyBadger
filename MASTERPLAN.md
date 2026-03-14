@@ -1,8 +1,8 @@
-# KINETIC — MASTER PLAN (UNIHACK 2026)
+# AXIS — MASTER PLAN (UNIHACK 2026)
 
-**KINETIC** is a bio-responsive ambient workspace. Your webcam watches your posture, fatigue, and emotion using real-time computer vision — then instead of sending you a notification, it subtly shifts your entire digital environment. Real screen brightness, color temperature, ambient audio, and a living pet companion all respond to how you're sitting and feeling. No popups. No interruptions. Your workspace just adapts.
+**AXIS** is a bio-responsive ambient workspace. Your webcam watches your posture, fatigue, and emotion using real-time computer vision — then instead of sending you a notification, it subtly shifts your entire digital environment. Real screen brightness, color temperature, ambient audio, and a living pet companion all respond to how you're sitting and feeling. No popups. No interruptions. Your workspace just adapts.
 
-> **Pitch**: "KINETIC is a Mac desktop app that uses your webcam to track your posture, fatigue, and emotion in real-time — then adapts your actual screen brightness, color temperature, and a virtual pet companion to keep you healthy without ever interrupting you."
+> **Pitch**: "AXIS is a Mac desktop app that uses your webcam to track your posture, fatigue, and emotion in real-time — then adapts your actual screen brightness, color temperature, and a virtual pet companion to keep you healthy without ever interrupting you."
 
 ---
 
@@ -34,49 +34,146 @@ This plan covers technical architecture, execution order, and build phases.
 
 | Tier | Features | Status |
 |------|----------|--------|
-| 1 — MUST SHIP | Posture detection, calibration, Digital Twin, ambient screen response, dashboard + metrics | DONE |
+| 1 — MUST SHIP | Posture detection, calibration, Pomodoro Timer, ambient screen response, dashboard + metrics | DONE |
 | 2 — SHOULD SHIP | Blink/fatigue, stress estimation, focus score, session timeline, Bio-Pet lifecycle, multi-signal ambient, systems panel | DONE |
 | 3 — HIGH IMPACT | Session Recap Card, streak + accessories, Lock In Board (leaderboard), Elasticsearch pipeline | DONE |
 | 4 — NICE TO HAVE | Ambient audio (Tone.js), Elasticsearch analytics, Kibana viz, percentile on recap | PARTIAL — ambient audio shipped, Kibana/analytics TBD |
 
-### Recent Optimizations (Phase 8)
+---
 
-- **Header alignment**: Moved Kinetic branding (logo + "BIO-RESPONSIVE WORKSPACE") far left; reduced `padding-left` from 72px to 24px for a cleaner, left-aligned look
-- **Pomodoro timer UX (tab switching)**:
-  - Clicking Focus/Short Break/Long Break tabs while the timer is **running** no longer stops or resets it — tabs are disabled during an active session
-  - Mode switch only occurs when the timer is paused or stopped
-- **Pomodoro timer — time preservation**: Each mode (Focus, Short Break, Long Break) retains its own remaining time when switching tabs. Switching Focus → Short Break → Focus no longer resets Focus to 25:00; progress is preserved via `timeByMode` state
-- **Pomodoro timer — persistence**: Timer state (mode, time per mode, completed rounds) persists to `localStorage` (`kinetic-pomodoro-state`) so it survives component remounts and app reloads
-- Refactored dashboard responsiveness: replaced fragile nth-child layout rules with explicit column classes + adaptive grid modes (compact/stacked/short)
-- Added compact-window behavior that auto-collapses non-critical panels (webcam + systems/ambient details) while preserving manual expansion
-- Simplified app scroll model to a single main content scroller (`app-content`) to prevent nested-column scroll conflicts on resize
-- Removed unused legacy sprite exports and dead pet-effect logic from `sprite-data.ts` / `PixelSprite.tsx` / `PetEffects.tsx`
-- Merged PoseEngine + FaceEngine into a single shared `@vladmandic/human` instance (halved model memory)
+### Detailed Plans (Phase 8 Fixes & Enhancements)
+
+Each plan below has been diagnosed and scoped. They are ordered by priority for demo readiness.
+
+#### Plan 01 — Fix Posture Tracking Accuracy (`plans/01-posture-tracking-fix.md`) — DONE
+
+**Problem**: Posture scoring felt inconsistent due to compounding issues.
+
+**What was fixed**:
+- [x] Reduced `postureSmoothing` from `RollingAverage(60)` to `RollingAverage(24)` (~3s at 8fps)
+- [x] Removed double-counted `slumpSeverity * 20` penalty
+- [x] Aligned hardcoded angle values in `posture-scorer.ts` with `constants.ts`
+- [x] Added visibility filtering to calibration (skips landmarks with `visibility < 0.3`)
+- [x] Fixed calibration race condition (skip first 500ms, increased sample interval to 150ms, minimum 12 samples)
+
+**Result**: Score reacts within ~3s, feels accurate and consistent with actual posture.
+
+#### Plan 02 — Pet Lifecycle Persistence & Unlocks (`plans/02-pet-lifecycle-logic.md`) — NOT STARTED
+
+**Problem**: Pet progress is fragile and several unlock conditions are unwired.
+
+**What works**: Egg crack progression, health states (Thriving/Fading/Wilting), evolution stages 0–5, health hysteresis with 3s debounce, behavior AI (walk/run/sleep/groom), floating hearts/Zzz effects.
+
+**What's missing**:
+- [ ] Auto-save pet state every 30 seconds (currently only saves on "End Session") — in `App.tsx`
+- [ ] Save pet on window close / cleanup so progress survives force-quit — in `App.tsx`
+- [ ] Track session count in electron-store; check for hat unlock (3 sessions) on `endSession` — in `App.tsx` + `score-engine.ts`
+- [ ] Crown unlock: accept leaderboard rank, unlock if rank === 1 — in `score-engine.ts`
+- [ ] Emit distinct event/flag when evolution or accessory unlock happens — in `score-engine.ts`
+- [ ] Hatch transition animation: scale-bounce from egg to cat instead of instant snap — in `BioPet.tsx`
+- [ ] Visual rendering for all accessories (scarf, hat, glasses, wings, halo, crown) — in `BioPet.tsx`
+- [ ] Wire SweatDrop effect to Fading health state — in `BioPet.tsx`
+
+**Expected outcome**: Pet progress auto-saves, all accessories render visually, hatching has a smooth animation.
+
+#### Plan 03 — UI/UX Polish (`plans/03-improve-ui-ux.md`) — NOT STARTED
+
+General polish pass across the app — responsive layout fixes, hover/focus states, live streak display, empty state improvements. Make everything feel intentional and polished.
+
+#### Plan 04 — Gamification & Pet Celebrations (`plans/04-gamification-pet.md`) — NOT STARTED
+
+**What's missing**: No in-session notifications, no celebrations, no streak-based pet reactions.
+
+**Changes planned**:
+- [ ] Create `Toast.tsx` component — floating notification that slides in from top-right, auto-dismisses after 4s, with "achievement" (gold) and "info" (neutral) variants
+- [ ] Add `notifications` array to score-engine state — push on pet evolution, accessory unlock, streak milestones (10/30/60 min)
+- [ ] Add celebration effect on evolution in `BioPet.tsx` — scale bounce + emissive flash (2s)
+- [ ] Add streak milestone reactions in `BioPet.tsx` — bounce/glow pulse at 10/30/60 min
+- [ ] Read notifications in `App.tsx` and render `<Toast>` for each
+- [ ] Pass leaderboard rank to `endSession()` for crown unlock check
+
+**Expected outcome**: Real-time feedback on milestones, pet visibly celebrates, experience feels rewarding.
+
+#### Plan 05 — Brightness & Screen Warmth Smoother (`plans/05-brightness-warmth-changer.md`) — DONE
+
+**Problem**: Ambient screen changes felt abrupt and jerky.
+
+**What was fixed**:
+- [x] Smoothed ambient targets with rolling average of last 5 values
+- [x] Smoothed fatigueScore with its own rolling average before applying to brightness
+- [x] Added dead zone (0.02) to prevent constant transition restarts
+- [x] Smooth retargeting: updates target mid-transition instead of restarting from step 0
+- [x] Increased transition from 40 to 60 steps (3s instead of 2s)
+- [x] Overlapped AMBIENT_MAP buckets (75–100, 45–80, 15–50, 0–20) to eliminate hard boundaries
+- [x] Loaded and applied user preferences (`brightnessRange`, `warmthIntensity`) from electron-store
+
+**Result**: Smooth, ambient transitions with no flicker or abrupt jumps.
+
+#### Plan 06 — Pet Evolution Names (Cat-Themed) — NOT STARTED
+
+**Problem**: Evolution stage names (Hatchling, Fledgling) are bird-themed but the pet is a ginger cat. Names should match the animal.
+
+**Current names**: Egg → Hatchling → Fledgling → Companion → Guardian → Ascended
+
+**Proposed cat-themed names**: Egg → Kitten → Mouser → Companion → Guardian → Ascended
+
+**Changes needed**:
+- [ ] Update `PET_EVOLUTION` titles in `constants.ts`
+- [ ] Update default `stageName` in `score-engine.ts` and `ipc-handlers.ts`
+- [ ] Update any hardcoded stage name references in `BioPet.tsx` and `elastic-client.ts`
+- [ ] Update MASTERPLAN stage name references
+
+#### Plan 07 — Add Paw Print to Egg (`plans/07-egg-paw-print.md`) — NOT STARTED
+
+**Problem**: The pixel-art egg is plain. Adding a paw print gives it identity and hints that a cat is inside.
+
+**Changes needed**:
+- [ ] Add a `eggPawPrint` overlay grid to `sprite-data.ts` (similar to `eggCracks85` / `eggCracks95` — a small paw silhouette in a contrasting color on the egg surface)
+- [ ] Render the paw overlay in `PixelSprite.tsx` on top of the egg at all times (before crack overlays)
+
+#### Plan 08 — Welcome / Opening Screen Redesign — NOT STARTED
+
+The current welcome screen looks subpar and generic. Needs a full redesign to set the tone — hero visual, better typography, animations, and personality. First thing judges see.
+
+#### Plan 09 — Leaderboard UI Polish — NOT STARTED
+
+The leaderboard works but looks basic. Needs podium for top 3, pet avatars next to entries, rank badges, better styling. Should feel competitive and exciting.
+
+#### Blink Detection — Current State
+
+Blink detection was unreliable and has been **fixed**. Current implementation:
+
+- **EAR (Eye Aspect Ratio)** calculation using `@vladmandic/human` 468-point face mesh
+- Left + right eye EAR averaged, compared against threshold (0.20)
+- Blink detection: EAR drops below 0.20 for 1–5 frames then recovers = blink; >5 frames = prolonged closure (fatigue signal)
+- Blink rate tracked via rolling 60-second window (blinks per minute)
+- Fatigue score derived from: blink rate deviation from baseline (40%), average EAR droopiness (40%), prolonged closure penalty (20%)
+- Runs at 5fps on the shared `@vladmandic/human` instance (merged with pose engine)
+- **What was fixed**: Detection was previously unreliable due to face mesh initialization timing and EAR threshold sensitivity — now stable
+
+**Remaining blink/fatigue concern**: Fatigue-driven brightness adjustment is noisy (Plan 05 addresses this with rolling-average smoothing).
+
+---
+
+### Completed Optimizations (Phase 8)
+
+- **Pomodoro Timer**: Replaced Digital Twin with Pomodoro Timer in left dashboard column (Focus 25m / Short Break 5m / Long Break 15m, posture nudge at <40 score, round counter, localStorage persistence, tab switching disabled while running, per-mode time preservation)
+- **Header alignment**: Moved Axis branding far left; reduced `padding-left` from 72px to 24px
+- Refactored dashboard responsiveness: explicit column classes + adaptive grid modes (compact/stacked/short)
+- Added compact-window behavior: auto-collapses non-critical panels while preserving manual expansion
+- Simplified scroll model: single main content scroller (`app-content`)
+- Merged PoseEngine + FaceEngine into single shared `@vladmandic/human` instance (halved model memory)
 - Eliminated duplicate offscreen `<video>` element — single video for display + ML
-- Refactored Digital Twin to `requestAnimationFrame` loop with refs (decoupled from React re-renders)
 - Removed all `shadowBlur` from Digital Twin canvas (expensive Gaussian blur per draw call)
-- Batched canvas draw calls and cached gradients in Digital Twin
-- Wrapped Digital Twin in `React.memo`
-- Simplified Digital Twin to clean minimalist stick figure (no face features, no decorative overlays)
-- Removed blue speckle dots from Bio-Pet egg
+- Removed unused legacy sprite exports and dead pet-effect logic
 - Disabled Three.js shadow maps + reduced pixel ratio in Bio-Pet renderer
 - Fixed `useScores` hook not returning unsubscribe (memory leak)
 - Reduced face detection from 10fps to 5fps, pose from 10fps to 8fps
 - Slowed timeline polling from 1s to 2s
 - Removed Systems panel from user-facing dashboard (internal debug info)
-- Added `-webkit-app-region: drag` to header (window was not draggable)
-- Fixed app scrolling (`overflow: hidden` was blocking all scroll)
-
-### MUST Fix Before Demo
-
-- [ ] Posture tracking inaccurate — scoring feels inconsistent, needs tuning/recalibration of thresholds and weights
-- [x] Blink rate inaccurate — detection was unreliable, now fixed
-- [x] Pet logic core done — egg crack progression, health states (Thriving/Fading/Wilting), evolution stages, health hysteresis, behavior AI all implemented
-- [ ] Pet still needs: hatch transition animation, accessories rendering, auto-save every 30s, hat/crown unlock wiring
-- [x] Entire app not fitting in viewport — responsive layout and overflow handling fixed across compact/stacked window sizes
-- [x] Improve UI and UX — responsive spacing, collapse controls, and small-window behavior pass completed for core dashboard/onboarding surfaces
-- [ ] Add further gamification through pet — more accessory unlocks, milestone celebrations, streak rewards, visual feedback
-- [ ] Improve brightness and screen warmth changer — smoother transitions, better score-to-ambient mapping, feel less abrupt
+- Added `-webkit-app-region: drag` to header (window draggable)
+- Fixed app scrolling (`overflow: hidden` was blocking scroll)
+- Removed blue speckle dots from Bio-Pet egg
 
 ### Design Decision: Digital Twin → Pomodoro Timer
 
@@ -86,35 +183,61 @@ This plan covers technical architecture, execution order, and build phases.
 - Posture score is passed into the timer — a nudge appears during active Focus sessions when posture drops below 40
 - Timer supports: Focus (25 min), Short Break (5 min), Long Break (15 min); round counter; Start/Pause/Reset controls; round dot progress indicator
 
-### Session Updates (Phase 8 UX Polish)
+---
 
-- [x] **Header alignment**: Kinetic branding (logo + "BIO-RESPONSIVE WORKSPACE") moved far left — reduced `padding-left` from 72px to 24px for stronger left alignment
-- [x] **Pomodoro — tab switching**: Clicking Short Break or Long Break while the timer is **running** no longer stops or switches mode; tabs only respond when the timer is paused (prevents accidental disruption)
-- [x] **Pomodoro — time preservation**: Each mode (Focus, Short Break, Long Break) preserves its own remaining time when switching tabs; switching back to Focus no longer resets to 25:00
-- [x] **Pomodoro — persistence**: Timer state (mode, time per mode, completed rounds) saved to `localStorage` (`kinetic-pomodoro-state`) so progress survives component remounts and page reloads
+### Remaining Work — Prioritized
 
-### Remaining (Phase 8 — Polish & Demo Prep)
+#### Critical for Demo (must do)
 
-- [ ] Demo data seeding (pre-seed pet at Stage 2+ with accessory, pre-seed leaderboard entries)
-- [ ] Test with different lighting / people / postures
-- [ ] Presentation slides (3-5 slides: Problem, Solution, Demo, Tech)
-- [ ] Demo script rehearsal
-- [ ] Kibana dashboard setup (stretch)
-- [ ] Edge case testing (webcam denied, ML fail, Elasticsearch unreachable)
-- [ ] App icon + window title cleanup
+| # | Task | Plan | Files |
+|---|------|------|-------|
+| 1 | Redesign welcome/opening screen — looks subpar, needs visual impact | Plan 08 | `WelcomeScreen.tsx`, `globals.css` |
+| 2 | Auto-save pet state every 30s + on window close | Plan 02 | `App.tsx` |
+| 3 | Rename pet evolution stages to cat-themed (Hatchling → Kitten, Fledgling → Mouser) | Plan 06 | `constants.ts`, `score-engine.ts`, `ipc-handlers.ts` |
+| 4 | Add paw print to egg sprite | Plan 07 | `sprite-data.ts`, `PixelSprite.tsx` |
+
+#### Important for Polish (should do)
+
+| # | Task | Plan | Files |
+|---|------|------|-------|
+| 5 | Leaderboard UI polish — podium for top 3, pet avatars, rank badges, better styling | Plan 09 | `LeaderBoard.tsx`, `globals.css` |
+| 6 | Hatch transition animation (egg → cat) | Plan 02 | `BioPet.tsx` |
+| 7 | Live streak counter in header | Plan 03 | `Header.tsx` |
+| 8 | Toast notifications for milestones | Plan 04 | New `Toast.tsx`, `score-engine.ts`, `App.tsx` |
+| 9 | Hat unlock (3 sessions) + crown unlock (#1 leaderboard) | Plan 02 | `score-engine.ts`, `App.tsx` |
+| 10 | Pet celebration effects on evolution | Plan 04 | `BioPet.tsx` |
+| 11 | Demo data seeding (pet at Stage 2+, leaderboard entries) | — | electron-store seed script |
+
+#### Nice to Have (stretch)
+
+| # | Task | Plan | Files |
+|---|------|------|-------|
+| 12 | Visual rendering for all accessories (scarf, hat, glasses, wings, halo, crown) | Plan 02 | `BioPet.tsx` |
+| 13 | Responsive breakpoint improvements | Plan 03 | `globals.css` |
+| 14 | Timeline empty state shimmer | Plan 03 | `SessionTimeline.tsx` |
+| 15 | Recap canvas font fix | Plan 03 | `SessionRecapCard.tsx` |
+| 16 | Kibana dashboard setup | — | Elastic Cloud |
+| 17 | Presentation slides + demo script + rehearsal | — | External |
 
 ### MVP Completion Assessment (UNIHACK 2026)
 
 | Area | Status | Weight | Done |
 |------|--------|--------|------|
-| **Core product** (Phases 0–7) | All phases complete | 70% | 100% |
-| **Phase 8 polish** | Header alignment, Pomodoro UX (tab behaviour, time preservation, persistence), responsiveness, gamma safety | 15% | ~85% |
-| **Demo prep** | Slides, script, data seeding, rehearsal | 10% | 0% |
-| **Pre-demo fixes** | Posture tuning, pet accessories, ambient smoothing | 5% | ~25% |
+| **Core product** (Phases 0–7) | All phases complete | 50% | 100% |
+| **Phase 8 polish** | Pomodoro UX, responsiveness, gamma safety, header alignment | 8% | ~90% |
+| **Posture accuracy** (Plan 01) | Fixed — smoothing, penalties, calibration | 8% | 100% |
+| **Ambient smoothing** (Plan 05) | Fixed — smooth transitions, no flicker | 5% | 100% |
+| **Welcome screen redesign** (Plan 08) | Current screen is subpar, needs visual impact | 5% | 0% |
+| **Pet names + egg paw** (Plans 06, 07) | Bird names → cat names, paw print on egg | 3% | 0% |
+| **Pet persistence & unlocks** (Plan 02) | Auto-save, accessories, hatch animation pending | 5% | 0% |
+| **Leaderboard UI polish** (Plan 09) | Basic table → podium, avatars, rank badges | 4% | 0% |
+| **Gamification** (Plan 04) | Toasts, celebrations, streak reactions planned | 3% | 0% |
+| **UI/UX polish** (Plan 03) | Streak display, responsive tweaks, empty states | 2% | 0% |
+| **Demo prep** | Slides, script, data seeding, rehearsal | 7% | 0% |
 
-**Overall MVP progress: ~90%**
+**Overall MVP progress: ~85%**
 
-The core product is feature-complete: posture/blink/stress/focus detection, ambient screen control, Bio-Pet lifecycle, Session Recap, leaderboard, and Elasticsearch pipeline all ship. Phase 8 UX polish is largely complete: header left alignment, Pomodoro tab switching (tabs don't interrupt a running timer), per-mode time preservation when switching Focus/Short Break/Long Break, and localStorage persistence for the timer. Remaining work is demo preparation (slides, script, rehearsal), pre-seeding demo data, edge-case testing, and optional tuning (posture thresholds, ambient transitions, pet accessories).
+The core product is feature-complete and the two biggest quality issues are resolved: **posture tracking** now reacts within 3 seconds with accurate scoring (Plan 01 done), and **ambient screen transitions** are smooth with no flicker or abrupt jumps (Plan 05 done). Blink detection is stable. Remaining work focuses on **visual polish and identity**: the welcome screen needs a redesign (looks generic), pet evolution names need to be cat-themed instead of bird-themed (Hatchling/Fledgling → Kitten/Mouser), the egg needs a paw print, the leaderboard needs visual flair (podium, avatars, rank badges), pet state should auto-save, and gamification notifications need wiring. Demo prep (slides, script, data seeding) is also outstanding.
 
 ---
 
@@ -122,7 +245,7 @@ The core product is feature-complete: posture/blink/stress/focus detection, ambi
 
 ### Why a Desktop App (Not a Web App)
 
-The core promise of KINETIC is that your **workspace adapts to you**. A web app can only fake this with CSS filters inside its own tab. An Electron app on macOS can control the **actual screen** — real brightness dimming, real color temperature shifts across your entire display. This is the difference between a demo trick and a real product.
+The core promise of AXIS is that your **workspace adapts to you**. A web app can only fake this with CSS filters inside its own tab. An Electron app on macOS can control the **actual screen** — real brightness dimming, real color temperature shifts across your entire display. This is the difference between a demo trick and a real product.
 
 macOS gives us this for free:
 - **Brightness**: `brightness` CLI tool (one line, `brew install brightness`) or IOKit calls
@@ -305,7 +428,7 @@ kinetic/
 │   │   ├── components/              # React Components
 │   │   │   ├── layout/
 │   │   │   │   ├── Dashboard.tsx     # Main grid layout
-│   │   │   │   ├── Header.tsx        # "Kinetic" branding + state tabs
+│   │   │   │   ├── Header.tsx        # "Axis" branding + state tabs
 │   │   │   │   └── Sidebar.tsx       # Right column (overall, systems, ambient)
 │   │   │   │
 │   │   │   ├── metrics/
@@ -852,7 +975,7 @@ Based on the mockup designs, the dashboard has this grid layout:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Kinetic  bio-responsive workspace     [Upright] [Slouching] [Fatigued]  │
+│  Axis  bio-responsive workspace     [Upright] [Slouching] [Fatigued]  │
 ├──────────────┬──────────────────────────────┬───────────────┤
 │              │  ┌─Posture──┐ ┌─Blink Rate─┐ │   OVERALL    │
 │  POMODORO    │  │  88 /100 │ │  17 bpm    │ │              │
@@ -964,13 +1087,13 @@ Each pet state card shows: Posture score, Focus score, Stress score.
 
 ### 9. Session Recap Card — "Wrapped-Style" Daily Summary
 
-At the end of each session (or when the user clicks "End Session"), KINETIC generates a shareable recap card. Think Spotify Wrapped but for your posture. Something people screenshot and post.
+At the end of each session (or when the user clicks "End Session"), AXIS generates a shareable recap card. Think Spotify Wrapped but for your posture. Something people screenshot and post.
 
 #### What the Card Shows
 
 ```
 ┌──────────────────────────────────────┐
-│         🌿 KINETIC RECAP             │
+│         🌿 AXIS RECAP             │
 │         March 13, 2026               │
 │                                      │
 │    ┌──────────────────────────┐      │
@@ -1063,20 +1186,20 @@ function blinkRateLabel(rate: number): string {
 ## Feature Prioritization
 
 ### Tier 1: MUST SHIP — The Demo-able Core
-1. Webcam posture detection (neck angle + shoulder slant + trunk lean → composite score 0-100)
-2. Calibration flow (sit up straight for 3 seconds → personalized baseline)
-3. ~~Digital Twin — live stick figure~~ → **Pomodoro Timer** (25/5/15 min cycles, posture-aware nudge, round counter)
-4. **Real ambient screen response**: macOS brightness + color temperature shifts driven by posture score
-5. Dashboard with 4 metric cards (Posture, Blink Rate, Focus, Stress) + overall circular gauge
+1. Webcam posture detection (neck angle + shoulder slant + trunk lean → composite score 0-100) — DONE (Plan 01 accuracy fix applied)
+2. Calibration flow (sit up straight for 3 seconds → personalized baseline) — DONE (Plan 01 race condition fixed)
+3. ~~Digital Twin — live stick figure~~ → **Pomodoro Timer** (25/5/15 min cycles, posture-aware nudge, round counter) — DONE
+4. **Real ambient screen response**: macOS brightness + color temperature shifts driven by posture score — DONE (Plan 05 smoothing applied)
+5. Dashboard with 4 metric cards (Posture, Blink Rate, Focus, Stress) + overall circular gauge — DONE
+6. **Blink rate detection** via EAR + fatigue scoring — DONE (fixed, stable at 5fps)
 
 ### Tier 2: SHOULD SHIP — Full Product Feel
-6. Blink rate detection via EAR + fatigue scoring
-7. Stress estimation (affect engine + posture variance + blink deviation)
-8. Focus score (composite of posture stability + inverse fatigue + inverse stress)
-9. Session timeline sparkline charts (Posture, Focus, Stress over time)
-10. **Bio-Pet lifecycle**: Pixel-art ginger cat. Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting) with behavior AI (walk, run, sleep, groom). Slouch = pet sleeps. *(Implemented as 2D sprite sheet, not Three.js)*
-11. Multi-signal ambient response (posture + fatigue both drive brightness/warmth)
-12. Systems status panel + Ambient Response panel
+7. Stress estimation (affect engine + posture variance + blink deviation) — DONE
+8. Focus score (composite of posture stability + inverse fatigue + inverse stress) — DONE
+9. Session timeline sparkline charts (Posture, Focus, Stress over time) — DONE
+10. **Bio-Pet lifecycle**: Pixel-art ginger cat. Egg → hatch → 5 evolution stages. 3 health states (Thriving/Fading/Wilting) with behavior AI (walk, run, sleep, groom). Slouch = pet sleeps. *(Implemented as 2D sprite sheet, not Three.js)* — **needs Plan 02 persistence + unlocks**
+11. Multi-signal ambient response (posture + fatigue both drive brightness/warmth) — DONE (Plan 05 smoothing applied)
+12. Systems status panel + Ambient Response panel — DONE (systems panel removed from user-facing UI)
 
 ### Tier 3: HIGH IMPACT — Shareability & Retention
 13. **Session Recap Card** — Spotify Wrapped-style end-of-session summary. Shareable PNG. Pet visual, stats, percentile rank, milestones.
@@ -1092,8 +1215,12 @@ function blinkRateLabel(rate: number): string {
 
 ### What to CUT if behind:
 - Cut bottom-up (20 → 12)
-- **NEVER cut**: Posture detection, digital twin, real brightness/gamma ambient response, dashboard — these ARE the product
-- If pet takes too long, ship a simple glowing orb that breathes and changes color — but keep the egg → hatch lifecycle, it's one of the most demo-able moments
+- **NEVER cut**: Posture detection, Pomodoro timer, real brightness/gamma ambient response, dashboard — these ARE the product
+- **Priority order for remaining Plans**: Plan 08 (welcome screen) > Plan 06+07 (pet names + egg paw) > Plan 09 (leaderboard) > Plan 02 (pet persistence) > Plan 04 (gamification) > Plan 03 (UI polish)
+- Plan 08 (welcome screen) is the first thing judges see — sets the tone for the entire demo
+- Plans 06+07 (cat names + paw) are quick wins that make the pet feel intentional, not generic
+- Plan 09 (leaderboard) adds competitive visual impact — podium and avatars make it demo-worthy
+- Pet accessories rendering (Plan 02) is visual polish — can ship without it. Auto-save is more critical than accessories.
 - If Elasticsearch isn't ready, the entire app works without it — recap card works locally, leaderboard falls back to local data
 - The recap card is high-priority because it's what gets screenshotted and shared — a built-in growth loop
 
@@ -1147,7 +1274,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 **Risk mitigation**: If cosine similarity doesn't work well, fall back to just neck angle + shoulder slant (two metrics). Two signals is enough.
 
 ### Phase 2: macOS Ambient Control -- DONE
-**Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes KINETIC a real product.
+**Goal**: Posture score drives your actual screen brightness and color temperature. This is what makes AXIS a real product.
 
 - [x] **Brightness helper**:
   - Install `brightness` CLI: `brew install brightness`
@@ -1168,7 +1295,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
 
 **Output**: Slouch → your entire Mac screen slowly dims and warms to amber over 2–3 seconds. Sit up → it gradually returns to normal. Across ALL apps, not just the Electron window.
 
-**Critical**: This phase is what separates KINETIC from every other wellness app. Spend time getting the feel right.
+**Critical**: This phase is what separates AXIS from every other wellness app. Spend time getting the feel right.
 
 ### Phase 3: Dashboard -- DONE
 **Goal**: Build the full dashboard matching the mockup design (see Section 7 in Core Functionality).
@@ -1179,7 +1306,7 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Center middle: Webcam feed with MediaPipe overlay + FPS/landmark count
   - Center bottom: Session Timeline (3 sparkline charts)
   - Right column: Overall gauge + Systems panel + Ambient Response panel
-  - Header: "Kinetic bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
+  - Header: "Axis bio-responsive workspace" + state tabs (Upright / Slouching / Fatigued)
 - [x] **Metric cards**: Reusable card component with: metric name, value, unit, status badge (Good/Fair/Poor). Use threshold table from Section 7.
 - [x] **Overall circular gauge**: Custom SVG arc gauge showing 0–100. Color transitions: green → amber → red. For now, just mirrors posture score (other inputs come in Phase 4).
 - [x] **Session Timeline**: Three Recharts sparkline `AreaChart` components showing Posture, Focus, Stress over session. Rolling buffer of 300 data points (1/sec for 5 min). Use `isAnimationActive={false}` for performance.
@@ -1316,33 +1443,41 @@ Build the riskiest, most uncertain pieces first so you fail fast, and layer poli
   - Shown as a modal overlay when user clicks "End Session" or after a configurable session duration
 - [x] **Share / Save buttons**:
   - **Copy to clipboard**: `nativeImage.createFromDataURL(canvas.toDataURL())` → `clipboard.writeImage()`
-  - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'kinetic-recap.png' })` → write buffer to file
+  - **Save as PNG**: `dialog.showSaveDialog({ defaultPath: 'axis-recap.png' })` → write buffer to file
   - Both exposed via IPC from main process
 - [x] **Percentile calculation**: If Elasticsearch has leaderboard data, compute "better than X% of users" by comparing current user's avg posture to all leaderboard entries. If < 3 entries or Elasticsearch unavailable, omit this line from the card.
 
 **Output**: At end of session, a beautiful shareable card pops up. User can copy it to clipboard or save as PNG. It shows their pet, their stats, and any milestones. Designed to be screenshotted and posted.
 
 ### Phase 8: Polish & Demo Prep -- IN PROGRESS
-**Goal**: Make it demo-ready and beautiful.
+**Goal**: Make it demo-ready and beautiful. Execute Plans 01–05, then prepare for demo.
 
 - [x] **UI polish**:
-  - Landing / onboarding screen explaining KINETIC on first launch
+  - Landing / onboarding screen explaining AXIS on first launch
   - Loading states for webcam/ML initialization (progress bar while models load)
   - Error handling: webcam denied, ML failed to load, Elasticsearch unreachable (graceful degradation — app works without Elastic)
   - App icon, window title, menu bar cleanup
   - Dark theme (ambient brightness effects look much better on dark UI)
-- [x] **Gamma reset safety**: Double-check that gamma always resets to default on:
-  - Normal app quit
-  - Force quit / crash (register signal handlers)
-  - This is critical — you don't want to demo and have the screen stuck amber
+- [x] **Gamma reset safety**: Gamma always resets to default on normal quit, force quit, and crash (signal handlers registered)
+- [x] **Pomodoro Timer**: Replaced Digital Twin with Pomodoro Timer (Focus/Short Break/Long Break, posture nudge, round counter, localStorage persistence, tab-switch protection, per-mode time preservation)
+- [x] **Blink detection fixed**: EAR-based blink detection now stable and reliable
+- [x] **Plan 01 — Posture tracking accuracy**: Fixed smoothing lag (7.5s → 3s), removed double-counted slouch penalty, aligned constants, fixed calibration race condition + visibility filtering
+- [x] **Plan 05 — Ambient smoothing**: Eliminated bucket-edge jumps, fixed transition restarts, smoothed fatigue noise, applied user preferences, overlapped AMBIENT_MAP buckets, increased transition to 3s
+- [ ] **Plan 08 — Welcome screen redesign**: Current opening screen is subpar — needs hero visual, better typography, entrance animations, more inviting Start button
+- [ ] **Plan 06 — Pet evolution names**: Rename bird-themed stages (Hatchling, Fledgling) to cat-themed (Kitten, Mouser)
+- [ ] **Plan 07 — Egg paw print**: Add paw print overlay to the pixel-art egg sprite
+- [ ] **Plan 09 — Leaderboard UI polish**: Add podium for top 3, pet avatars, rank badges, better styling
+- [ ] **Plan 02 — Pet persistence & unlocks**: Auto-save every 30s, save on window close, wire hat/crown unlocks, hatch transition animation, render all accessories, wire SweatDrop to Fading
+- [ ] **Plan 04 — Gamification**: Toast notification component, pet celebration effects, streak milestone reactions, in-session feedback
+- [ ] **Plan 03 — UI/UX polish**: Live streak counter in header, responsive breakpoints, hover states, timeline empty state shimmer, recap font fix
 - [ ] **Demo script**: Plan the exact demo flow: *(not yet done)*
-  1. Launch KINETIC, show onboarding — egg is visible in pet panel (5 sec)
+  1. Launch AXIS, show onboarding — egg is visible in pet panel (5 sec)
   2. Grant webcam, run calibration (10 sec)
   3. Sit up straight — score goes green, egg starts cracking, screen at normal brightness (10 sec)
   4. Show the egg hatching into the creature (pre-load cumulative time so it hatches during demo) (10 sec)
-  5. Slouch — screen dims and warms to amber, pet gets **sick** (droops, shivers, red), score drops (15 sec)
-  6. Sit back up — screen recovers, pet recovers, score climbs (10 sec)
-  7. Show the dashboard with all 4 metrics live + session timeline (10 sec)
+  5. Slouch — screen dims and warms to amber smoothly, pet gets **sick** (sleeps, stops moving, red glow), score drops (15 sec)
+  6. Sit back up — screen recovers gradually, pet recovers, score climbs (10 sec)
+  7. Show the dashboard with all 4 metrics live + session timeline + Pomodoro timer running (10 sec)
   8. Trigger session end — show the Wrapped-style recap card with stats + pet (10 sec)
   9. Show the leaderboard with pet avatars (5 sec)
 - [ ] **Demo prep**: Pre-seed electron-store so the pet is at Stage 2+ with an accessory, and pre-seed 3–4 leaderboard entries. *(not yet done)*
@@ -1495,7 +1630,7 @@ interface LeaderboardEntry {
 
 Run the complete user journey as a single test:
 
-1. Launch KINETIC → assert window opens, welcome/calibration screen appears
+1. Launch AXIS → assert window opens, welcome/calibration screen appears
 2. Complete calibration → assert calibration data saved, dashboard appears
 3. Sit upright for 30 seconds → assert posture score > 70, pet is Thriving, ambient brightness near 1.0
 4. Slouch for 15 seconds → assert posture score < 50, pet transitions to Fading or Wilting, screen brightness dims noticeably (read back via `brightness -l`)

@@ -6,8 +6,8 @@ import { _electron as electron } from 'playwright';
 const appAsar = path.resolve(
   process.cwd(),
   'out',
-  'KINETIC-darwin-arm64',
-  'KINETIC.app',
+  'Axis-darwin-arm64',
+  'Axis.app',
   'Contents',
   'Resources',
   'app.asar',

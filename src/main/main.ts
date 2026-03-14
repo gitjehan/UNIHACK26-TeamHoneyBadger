@@ -33,7 +33,7 @@ function createWindow(): BrowserWindow {
     minWidth: 1024,
     minHeight: 700,
     backgroundColor: '#f6f2ea',
-    title: 'KINETIC',
+    title: 'Axis',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

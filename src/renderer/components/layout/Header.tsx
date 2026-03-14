@@ -40,7 +40,7 @@ export const Header = memo(function Header({ state, onEndSession }: HeaderProps)
           <circle cx="12" cy="12" r="3" fill="#4A7C59" />
         </svg>
         <div className="brand-text">
-          <h1>Kinetic</h1>
+          <h1>Axis</h1>
           <span>bio-responsive workspace</span>
         </div>
       </div>

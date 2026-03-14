@@ -29,7 +29,7 @@ async function run(): Promise<void> {
   const skipped: string[] = [];
   const hasBrightnessSupport = brightnessSupported();
 
-  console.log('KINETIC interactive E2E verification');
+  console.log('Axis interactive E2E verification');
   console.log('Answer y/n/s for each step after running the app. (s = skip)');
   if (!hasBrightnessSupport) {
     console.log('brightness CLI is unavailable on this display, ambient dimming check is optional.');

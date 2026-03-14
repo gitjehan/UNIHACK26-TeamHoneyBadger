@@ -1,4 +1,4 @@
-# KINETIC — Critical Bugfix Tasks
+# Axis — Critical Bugfix Tasks
 
 **Priority**: HACKATHON DEADLINE. Every task below must result in visibly working, smooth behaviour.
 

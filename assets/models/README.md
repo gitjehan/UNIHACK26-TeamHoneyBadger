@@ -4,4 +4,4 @@ The runtime loader in `src/renderer/components/pet/BioPet.tsx` will try to load:
 
 - `assets/models/pet.glb`
 
-If unavailable, KINETIC falls back to the procedural Three.js pet.
+If unavailable, Axis falls back to the procedural Three.js pet.
