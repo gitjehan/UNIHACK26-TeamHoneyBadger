@@ -246,7 +246,11 @@ export function LeaderboardMapScreen({
         spriteContainer.className = 'leaderboard-marker__sprite leaderboard-marker__sprite--pulse';
         wrapper.appendChild(spriteContainer);
 
-        const rankFilter = currentUser ? undefined : RANK_FILTERS[i];
+        const rankFilter = currentUser
+          ? undefined
+          : sameNickname(entry.nickname, 'anubhav')
+            ? 'sepia(1) saturate(5) hue-rotate(150deg)'  // teal
+            : RANK_FILTERS[i];
         const root = createRoot(spriteContainer);
         root.render(
           sameNickname(entry.nickname, currentUserNickname) || i === 0 ? (
