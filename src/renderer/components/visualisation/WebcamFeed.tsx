@@ -8,7 +8,7 @@ interface WebcamFeedProps {
 
 export function WebcamFeed({ videoRef, poseFps, faceFps }: WebcamFeedProps): JSX.Element {
   return (
-    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: 10, minHeight: 0, overflow: 'hidden' }}>
+    <div className="card" style={{ display: 'grid', gridTemplateRows: 'auto auto auto', gap: 10, overflow: 'hidden' }}>
       <h3>Webcam Feed</h3>
       <div
         style={{
@@ -17,7 +17,7 @@ export function WebcamFeed({ videoRef, poseFps, faceFps }: WebcamFeedProps): JSX
           overflow: 'hidden',
           background: 'var(--bg-card-muted)',
           border: '1px solid var(--border-card)',
-          minHeight: 0,
+          aspectRatio: '4 / 3',
         }}
       >
         <video

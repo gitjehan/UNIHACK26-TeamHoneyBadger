@@ -48,7 +48,7 @@ export function Dashboard({
         />
       </div>
 
-      <div className="column" style={{ gridTemplateRows: 'auto 1fr auto' }}>
+      <div className="column" style={{ gridTemplateRows: 'auto auto auto' }}>
         <div className="metric-grid">
           <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
           <MetricCard
