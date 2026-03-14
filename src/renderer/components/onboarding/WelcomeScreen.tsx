@@ -12,38 +12,19 @@ const FEATURES = [
 export function WelcomeScreen({ onStart }: WelcomeScreenProps): JSX.Element {
   return (
     <div className="onboarding">
-      <div className="onboarding-card" style={{ textAlign: 'center' }}>
+      <div className="onboarding-card onboarding-card--welcome">
         <h2>KINETIC</h2>
         <p style={{ margin: '0 auto 24px', textAlign: 'center' }}>
           Your webcam tracks posture, blink fatigue, and stress in real time. KINETIC adapts your screen
           brightness, color warmth, and your Bio-Pet — all without interrupting your flow.
         </p>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 12,
-            margin: '0 auto 28px',
-            maxWidth: 520,
-          }}
-        >
+        <div className="welcome-feature-grid">
           {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              style={{
-                background: 'var(--bg-card-muted)',
-                borderRadius: 12,
-                padding: '14px 16px',
-                textAlign: 'left',
-                border: '1px solid var(--border-card)',
-              }}
-            >
-              <div style={{ fontSize: 22, marginBottom: 4 }}>{f.icon}</div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 2 }}>
-                {f.title}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{f.desc}</div>
+            <div key={f.title} className="welcome-feature-card">
+              <div className="welcome-feature-icon">{f.icon}</div>
+              <div className="welcome-feature-title">{f.title}</div>
+              <div className="welcome-feature-desc">{f.desc}</div>
             </div>
           ))}
         </div>

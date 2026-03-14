@@ -76,11 +76,6 @@
   }
 }
 
-.pet-sprite-wrapper--cat {
-  animation: pet-breathe 2.5s ease-in-out infinite;
-  will-change: transform;
-}
-
 /* ─── Egg Breathing (slightly slower) ───────────────────────── */
 
 @keyframes egg-breathe {
@@ -264,65 +259,6 @@
   animation-delay: 0.6s;
 }
 
-/* ─── Sweat Drop ────────────────────────────────────────────── */
-
-.pet-sweat-drop {
-  position: absolute;
-  top: 58px;
-  left: calc(50% + 20px);
-  pointer-events: none;
-}
-
-@keyframes sweat-bob {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.8;
-  }
-  30% {
-    transform: translateY(2px);
-    opacity: 0.9;
-  }
-  60% {
-    transform: translateY(-1px);
-    opacity: 0.7;
-  }
-}
-
-.pet-sweat-drop svg {
-  animation: sweat-bob 1.5s ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-/* ─── Tail Flick (applied to tail group in SVG) ─────────────── */
-
-@keyframes tail-flick {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(2px);
-  }
-}
-
-.pet-tail-flick {
-  animation: tail-flick 0.3s ease-in-out;
-}
-
-/* ─── Crack Glow Pulse ──────────────────────────────────────── */
-
-@keyframes crack-glow {
-  0%, 100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.pet-crack-glow {
-  animation: crack-glow 1s ease-in-out infinite;
-}
-
 /* ─── Egg Shell Glow (golden inner light when cracking) ─────── */
 
 @keyframes egg-shell-pulse {
@@ -345,14 +281,10 @@
 /* ─── Reduced Motion ────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .pet-sprite-wrapper--cat,
   .pet-sprite-wrapper--egg,
   .pet-sprite-wrapper--egg-wobble,
   .pet-heart,
   .pet-z,
-  .pet-sweat-drop svg,
-  .pet-tail-flick,
-  .pet-crack-glow,
   .egg-shell-glow--hatching {
     animation: none;
   }
@@ -370,6 +302,7 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .pet-stage-label {
@@ -510,4 +443,14 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--pet-text);
+}
+
+@media (max-width: 820px) {
+  .pet-scene {
+    height: 176px;
+  }
+
+  .pet-stage-name {
+    font-size: 16px;
+  }
 }
