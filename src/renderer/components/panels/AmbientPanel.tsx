@@ -17,7 +17,7 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
   return (
     <div className="card ambient-panel">
       <h3>Ambient Response</h3>
-      <p style={{ margin: '0 0 12px', color: '#6B5D4F', fontSize: 12, lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 8px', color: '#6B5D4F', fontSize: 11, lineHeight: 1.4 }}>
         {description(overallScore)}
       </p>
       <div className="ambient-scale">

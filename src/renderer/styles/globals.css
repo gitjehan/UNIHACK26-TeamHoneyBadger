@@ -810,6 +810,10 @@ button {
 
 /* ── Ambient Panel ──────────────────────────────────────── */
 
+.ambient-panel {
+  padding: 14px 16px;
+}
+
 .ambient-scale {
   display: grid;
   gap: 6px;
@@ -833,10 +837,10 @@ button {
 }
 
 .ambient-stats {
-  margin-top: 12px;
+  margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   color: #A89B8C;
   font-size: 10px;
   font-weight: 500;
@@ -846,7 +850,7 @@ button {
 
 .ambient-stat-value {
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-primary);
 }

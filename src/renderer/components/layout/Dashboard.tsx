@@ -134,24 +134,12 @@ export const Dashboard = memo(function Dashboard({
 
       <div className="dashboard-column dashboard-column--right">
         <OverallGauge value={snapshot.overall.score} />
-        <button
-          type="button"
-          className="dashboard-collapse-toggle"
-          onClick={() => setInsightsCollapsed((current) => !current)}
-          aria-expanded={!insightsCollapsed}
-        >
-          {insightsCollapsed ? 'Show system details' : 'Hide system details'}
-        </button>
-        {!insightsCollapsed && (
-          <>
-            <AmbientSoundPlayer />
-            <AmbientPanel
-              brightness={state.ambient.brightness}
-              warmth={state.ambient.warmth}
-              overallScore={snapshot.overall.score}
-            />
-          </>
-        )}
+        <AmbientSoundPlayer />
+        <AmbientPanel
+          brightness={state.ambient.brightness}
+          warmth={state.ambient.warmth}
+          overallScore={snapshot.overall.score}
+        />
       </div>
     </div>
   );
