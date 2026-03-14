@@ -191,15 +191,13 @@ function SkeletonOverlay({ landmarks, postureScore }: { landmarks: Point[]; post
 
 interface WebcamFeedProps {
   videoRef: RefObject<HTMLVideoElement | null>;
-  poseFps: number;
-  faceFps: number;
   landmarks?: Point[];
   postureScore?: number;
   collapsed: boolean;
   onToggle: () => void;
 }
 
-export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
+export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
   return (
     <div
       className="card"
@@ -260,9 +258,6 @@ export function WebcamFeed({ videoRef, poseFps, faceFps, landmarks = [], posture
         )}
       </div>
 
-      <div style={{ display: collapsed ? 'none' : 'block', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-        {poseFps} fps pose · {faceFps} fps face
-      </div>
     </div>
   );
 }

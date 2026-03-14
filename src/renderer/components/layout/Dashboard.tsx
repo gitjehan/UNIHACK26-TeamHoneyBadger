@@ -67,8 +67,6 @@ export function Dashboard({
       <div className="column" style={{ gridTemplateRows: webcamCollapsed ? 'auto 1fr' : '1fr auto' }}>
         <WebcamFeed
           videoRef={videoRef}
-          poseFps={state.poseFps}
-          faceFps={state.faceFps}
           landmarks={state.poseLandmarks}
           postureScore={snapshot.posture.score}
           collapsed={webcamCollapsed}
