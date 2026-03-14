@@ -53,6 +53,14 @@ const LANE_COVE_POSITION = { lng: 151.1689, lat: -33.8149, name: 'Lane Cove' } a
 
 const RANK_COLORS = ['#f8d66d', '#d8dde9', '#d79b6f', '#adb4c8'] as const;
 const RANK_LABELS = ['1st', '2nd', '3rd', '4th'] as const;
+// CSS filters to give each non-self cat a distinct colour theme.
+// Index 0 is reserved for the current user / 1st place (original ginger, no filter).
+const RANK_FILTERS = [
+  undefined,                                                    // 1st / self: original ginger
+  'sepia(1) saturate(4) hue-rotate(185deg)',                    // 2nd: blue
+  'sepia(1) saturate(3) hue-rotate(260deg) brightness(1.2)',   // 3rd: purple
+  'sepia(1) saturate(3) hue-rotate(90deg)',                     // 4th: green
+] as const;
 const RANK_HEALTH: Array<'Thriving' | 'Fading' | 'Wilting'> = ['Thriving', 'Thriving', 'Fading', 'Wilting'];
 const RANK_SPRITE_POSES = [
   { row: 0, col: 2, flip: false },
@@ -235,16 +243,18 @@ export function LeaderboardMapScreen({
         spriteContainer.className = 'leaderboard-marker__sprite leaderboard-marker__sprite--pulse';
         wrapper.appendChild(spriteContainer);
 
+        const rankFilter = currentUser ? undefined : RANK_FILTERS[i];
         const root = createRoot(spriteContainer);
         root.render(
           sameNickname(entry.nickname, currentUserNickname) || i === 0 ? (
-            <AnimatedCat health={RANK_HEALTH[i]} scale={rankToScale(targetSize)} />
+            <AnimatedCat health={RANK_HEALTH[i]} scale={rankToScale(targetSize)} filter={rankFilter} />
           ) : (
             <CatSprite
               row={RANK_SPRITE_POSES[i].row}
               col={RANK_SPRITE_POSES[i].col}
               flip={RANK_SPRITE_POSES[i].flip}
               scale={rankToScale(targetSize)}
+              filter={rankFilter}
             />
           ),
         );
