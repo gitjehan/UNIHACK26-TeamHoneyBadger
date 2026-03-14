@@ -2,7 +2,6 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { StateTabs } from '@renderer/components/metrics/StateTabs';
 import { scoreEngine } from '@renderer/ml/score-engine';
 import type { OverallState } from '@renderer/lib/types';
-import logoSrc from '@renderer/assets/logo.png';
 
 interface HeaderProps {
   state: OverallState;
@@ -35,7 +34,11 @@ export const Header = memo(function Header({ state, onEndSession }: HeaderProps)
   return (
     <header className="top-header">
       <div className="brand">
-        <img src={logoSrc} alt="Kinetic logo" className="brand-logo" />
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="brand-logo">
+          <circle cx="12" cy="12" r="11" stroke="#4A7C59" strokeWidth="1.5" />
+          <circle cx="12" cy="12" r="7" stroke="#6B9E7A" strokeWidth="1.5" />
+          <circle cx="12" cy="12" r="3" fill="#4A7C59" />
+        </svg>
         <div className="brand-text">
           <h1>Kinetic</h1>
           <span>bio-responsive workspace</span>

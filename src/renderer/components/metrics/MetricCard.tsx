@@ -88,7 +88,7 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
           <div className="metric-pill-body">
             <div className="metric-pill-left">
               <h3>
-                <span style={{ marginRight: 4 }}>{KIND_ICON[kind]}</span>
+                <span style={{ marginRight: 4, fontSize: 12, lineHeight: 1 }}>{KIND_ICON[kind]}</span>
                 {label}
               </h3>
               <div
@@ -99,8 +99,8 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
                   transition: 'color 0.25s ease, transform 0.2s ease-out',
                 }}
               >
-                {value}
-                {unit ? <span style={{ fontSize: 14, fontWeight: 400, color: 'var(--text-tertiary)' }}> {unit}</span> : null}
+                <span>{value}</span>
+                {unit ? <span style={{ fontSize: 11, fontWeight: 400, color: '#A89B8C' }}>{unit}</span> : null}
               </div>
             </div>
             <span className={`status-badge status-${status}`}>{statusLabel}</span>

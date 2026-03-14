@@ -11,11 +11,9 @@ function gaugeColor(score: number): string {
 }
 
 function gradeLabel(score: number): string {
-  if (score >= 80) return 'Excellent';
-  if (score >= 65) return 'Strong';
-  if (score >= 50) return 'Steady';
-  if (score >= 35) return 'Fair';
-  return 'Needs Focus';
+  if (score >= 70) return 'Good';
+  if (score >= 40) return 'Fair';
+  return 'Poor';
 }
 
 export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugeProps): JSX.Element {
@@ -52,27 +50,27 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
         aria-label={`Overall score: ${clamped} out of 100`}
         style={{ display: 'block', margin: '0 auto' }}
       >
-        <circle cx="90" cy="90" r={radius} stroke="#E8E4DC" strokeWidth="14" fill="none" />
+        <circle cx="90" cy="90" r={radius} stroke="#F4F2ED" strokeWidth="5" fill="none" />
         <circle
           cx="90"
           cy="90"
           r={radius}
           stroke={color}
-          strokeWidth="14"
+          strokeWidth="5"
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
           transform="rotate(-90 90 90)"
-          style={{ transition: 'stroke-dashoffset 0.6s ease-out, stroke 0.4s ease' }}
+          style={{ transition: 'stroke-dasharray 1s ease, stroke 1s ease, stroke-dashoffset 1s ease' }}
         />
-        <text x="90" y="86" textAnchor="middle" fill="var(--text-primary)" fontFamily="var(--font-display)" fontSize="42" fontWeight={400}>
+        <text x="90" y="82" textAnchor="middle" fill={color} fontFamily="var(--font-display)" fontSize="33" fontWeight={400}>
           {clamped}
         </text>
-        <text x="90" y="106" textAnchor="middle" fill="var(--text-tertiary)" fontSize="12">
+        <text x="90" y="98" textAnchor="middle" fill="var(--text-tertiary)" fontSize="12">
           /100
         </text>
-        <text x="90" y="126" textAnchor="middle" fill={color} fontSize="13" fontWeight={600}>
+        <text x="90" y="116" textAnchor="middle" fill={color} fontSize="13" fontWeight={400}>
           {grade}
         </text>
       </svg>

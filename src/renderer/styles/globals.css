@@ -11,11 +11,11 @@
   --text-secondary: #6b6158;
   --text-tertiary: #9a8f84;
   --green-primary: #4A7C59;
-  --green-bg: #EDF3EF;
+  --green-bg: #EAF2EC;
   --amber-primary: #B8860B;
-  --amber-bg: #FBF4E4;
+  --amber-bg: #FDF6E3;
   --red-primary: #C0392B;
-  --red-bg: #FCEAE8;
+  --red-bg: #FDF0EE;
   --border-card: #E8E4DC;
   --accent: #4A7C59;
   --shadow-card: 0 1px 4px rgba(45, 43, 40, 0.08);
@@ -93,33 +93,27 @@ button {
 }
 
 .brand-logo {
-  height: 32px;
-  width: auto;
-  object-fit: contain;
   flex-shrink: 0;
 }
 
 .brand-text {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .brand h1 {
   margin: 0;
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 400;
-  letter-spacing: 0.5px;
-  line-height: 1.1;
-  background: linear-gradient(135deg, var(--green-primary) 0%, #6B9E7A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
 }
 
 .brand span {
-  color: var(--text-tertiary);
+  color: #A89B8C;
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -189,7 +183,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 14px 18px;
   gap: 8px;
 }
 
@@ -206,6 +200,8 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
 }
 
 .metric-value {
@@ -216,6 +212,9 @@ button {
   letter-spacing: -0.3px;
   transition: color var(--transition-normal);
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
 }
 
 .status-badge {
@@ -223,8 +222,8 @@ button {
   align-items: center;
   justify-content: center;
   border-radius: 20px;
-  padding: 4px 12px;
-  font-size: 11px;
+  padding: 3px 10px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -250,13 +249,13 @@ button {
 
 .metric-progress-track {
   height: 3px;
-  background: var(--bg-card-muted);
+  background: #F4F2ED;
   width: 100%;
 }
 
 .metric-progress-fill {
   height: 100%;
-  border-radius: 0 2px 2px 0;
+  border-radius: 2px;
   transition: width 0.4s ease-out, background-color 0.25s ease-out;
 }
 
@@ -324,16 +323,15 @@ button {
 .state-tabs {
   display: inline-flex;
   gap: 2px;
-  background: var(--bg-card-muted);
-  border: 1px solid var(--border-card);
+  background: #F4F2ED;
   border-radius: 10px;
-  padding: 4px;
+  padding: 3px;
 }
 
 .state-tab {
-  border: 1px solid transparent;
+  border: none;
   background: transparent;
-  color: var(--text-tertiary);
+  color: #A89B8C;
   border-radius: 8px;
   padding: 7px 16px;
   font-size: 13px;
@@ -347,11 +345,10 @@ button {
 }
 
 .state-tab.active {
-  border-color: var(--border-card);
   background: #ffffff;
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 4px rgba(44, 36, 22, 0.08);
 }
 
 /* ── Onboarding ────────────────────────────────────────── */
@@ -440,14 +437,13 @@ button {
 }
 
 .btn-secondary {
-  background: var(--bg-card-muted);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--text-tertiary);
   border: 1px solid var(--border-card);
 }
 
 .btn-secondary:hover {
-  background: #ECEAE5;
-  border-color: #DDD9D1;
+  background: var(--bg-card-muted);
 }
 
 /* ── Timeline ──────────────────────────────────────────── */
@@ -686,11 +682,12 @@ input:focus-visible {
   }
 
   .brand h1 {
-    font-size: 18px;
+    font-size: 14px;
   }
 
   .brand-logo {
-    height: 26px;
+    width: 20px;
+    height: 20px;
   }
 }
 
