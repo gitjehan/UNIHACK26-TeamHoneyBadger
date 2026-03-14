@@ -15,17 +15,17 @@ function description(score: number): string {
 export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, overallScore }: AmbientPanelProps): JSX.Element {
   const level = Math.round(((warmth + (1 - brightness)) / 2) * 100);
   return (
-    <div className="card">
+    <div className="card ambient-panel">
       <h3>Ambient Response</h3>
       <p style={{ margin: '0 0 12px', color: '#6B5D4F', fontSize: 12, lineHeight: 1.5 }}>
         {description(overallScore)}
       </p>
-      <div style={{ display: 'grid', gap: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#A89B8C', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+      <div className="ambient-scale">
+        <div className="ambient-scale-labels">
           <span>calm</span>
           <span>elevated</span>
         </div>
-        <div style={{ height: 8, background: 'var(--border-card)', borderRadius: 999, overflow: 'hidden' }}>
+        <div className="ambient-scale-track">
           <div
             style={{
               height: '100%',
@@ -37,20 +37,15 @@ export const AmbientPanel = memo(function AmbientPanel({ brightness, warmth, ove
           />
         </div>
       </div>
-      <div
-        style={{
-          marginTop: 12,
-          display: 'flex',
-          gap: 16,
-          color: '#A89B8C',
-          fontSize: 10,
-          fontWeight: 500,
-          letterSpacing: '0.04em',
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        <span>Brightness <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{Math.round(brightness * 100)}%</span></span>
-        <span>Warmth <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 500, color: 'var(--text-primary)' }}>{Math.round(warmth * 100)}%</span></span>
+      <div className="ambient-stats">
+        <span>
+          Brightness{' '}
+          <span className="ambient-stat-value">{Math.round(brightness * 100)}%</span>
+        </span>
+        <span>
+          Warmth{' '}
+          <span className="ambient-stat-value">{Math.round(warmth * 100)}%</span>
+        </span>
       </div>
     </div>
   );

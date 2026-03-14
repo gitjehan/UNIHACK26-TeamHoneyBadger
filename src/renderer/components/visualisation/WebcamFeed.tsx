@@ -199,55 +199,25 @@ interface WebcamFeedProps {
 
 export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collapsed, onToggle }: WebcamFeedProps): JSX.Element {
   return (
-    <div
-      className="card"
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: collapsed ? 0 : 10,
-        padding: collapsed ? '8px 14px' : undefined,
-        minHeight: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0 }}>Webcam Feed</h3>
+    <div className={`card webcam-card${collapsed ? ' webcam-card--collapsed' : ''}`}>
+      <div className="webcam-card__header">
+        <h3 className="webcam-card__title">Webcam Feed</h3>
         <button
+          type="button"
           onClick={onToggle}
-          style={{
-            background: 'none',
-            border: '1px solid var(--border-card)',
-            cursor: 'pointer',
-            padding: '3px 8px',
-            borderRadius: 6,
-            color: 'var(--text-tertiary)',
-            fontSize: 11,
-            lineHeight: 1.4,
-            letterSpacing: '0.04em',
-          }}
+          className="webcam-toggle"
           title={collapsed ? 'Show webcam' : 'Hide webcam'}
+          aria-expanded={!collapsed}
         >
-          {collapsed ? '▼' : '▲'}
+          {collapsed ? 'Show' : 'Hide'}
         </button>
       </div>
 
       {/* Always mounted — only hidden via CSS so the MediaStream stays attached */}
-      <div
-        style={{
-          display: collapsed ? 'none' : 'block',
-          position: 'relative',
-          borderRadius: 12,
-          overflow: 'hidden',
-          background: 'var(--bg-card-muted)',
-          border: '1px solid var(--border-card)',
-          aspectRatio: '4 / 3',
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
+      <div className={`webcam-stage${collapsed ? ' webcam-stage--hidden' : ''}`}>
         <video
           ref={videoRef}
-          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block', position: 'absolute', inset: 0 }}
+          className="webcam-video"
           muted
           playsInline
           autoPlay
@@ -256,7 +226,6 @@ export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collaps
           <SkeletonOverlay landmarks={landmarks} postureScore={postureScore} />
         )}
       </div>
-
     </div>
   );
 }

@@ -44,17 +44,8 @@ export const Header = memo(function Header({ state, onEndSession }: HeaderProps)
           <span>bio-responsive workspace</span>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 13,
-            color: 'var(--text-tertiary)',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {formatElapsed(elapsed)}
-        </span>
+      <div className="header-actions">
+        <span className="session-timer">{formatElapsed(elapsed)}</span>
         <StateTabs state={state} />
         <button className="btn btn-secondary" type="button" onClick={onEndSession}>
           End Session

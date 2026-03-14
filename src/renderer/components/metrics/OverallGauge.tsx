@@ -40,15 +40,15 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
   const grade = gradeLabel(clamped);
 
   return (
-    <div className="card" style={{ textAlign: 'center' }}>
+    <div className="card overall-gauge-card">
       <h3>Overall</h3>
       <svg
         width="180"
         height="180"
+        className="overall-gauge-svg"
         viewBox="0 0 180 180"
         role="img"
         aria-label={`Overall score: ${clamped} out of 100`}
-        style={{ display: 'block', margin: '0 auto' }}
       >
         <circle cx="90" cy="90" r={radius} stroke="#E8E4DC" strokeWidth="4" fill="none" />
         <circle

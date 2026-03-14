@@ -8,7 +8,6 @@ import './pet-animations.css';
 
 interface BioPetProps {
   pet: PetState;
-  postureTilt?: number;
   postureScore: number;
   focusScore: number;
   stressScore: number;
@@ -47,8 +46,7 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   }, []);
 
   const healthClass = committed.toLowerCase();
-  const [devSkipEgg, setDevSkipEgg] = useState(false);
-  const isEgg = pet.stage === 0 && !devSkipEgg;
+  const isEgg = pet.stage === 0;
 
   // Egg wobble — fires periodically, more often as hatching approaches
   const [wobbling, setWobbling] = useState(false);
@@ -87,10 +85,7 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   const next = stages[Math.min(pet.stage + 1, stages.length - 1)];
   const curr = stages[pet.stage] ?? 0;
   const prog = pet.stage >= 5 ? 100 : Math.min(100, Math.round(((pet.totalLockedInMinutes - curr) / Math.max(1, next - curr)) * 100));
-  const previewCatMode = pet.stage === 0 && devSkipEgg;
-  const displayStage = previewCatMode ? 1 : pet.stage;
-  const displayStageName = previewCatMode ? 'Cat (Preview)' : pet.stageName;
-  const showEvolution = !previewCatMode && pet.stage < 5;
+  const showEvolution = pet.stage < 5;
 
   return (
     <div className="card">
@@ -120,29 +115,13 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
         </div>
 
         {!isEgg && <PetHealthEffect health={committed} />}
-
-        {/* DEV: skip egg button */}
-        {pet.stage === 0 && (
-          <button
-            onClick={() => setDevSkipEgg(v => !v)}
-            style={{
-              position: 'absolute', bottom: 6, right: 6,
-              fontSize: 10, padding: '2px 6px', opacity: 0.4,
-              background: 'none', border: '1px solid #aaa',
-              borderRadius: 4, cursor: 'pointer', color: '#666',
-              zIndex: 10,
-            }}
-          >
-            {devSkipEgg ? 'egg' : 'cat'}
-          </button>
-        )}
       </div>
 
       {/* Meta section */}
       <div className="pet-meta-section">
         <div className="pet-stage-row">
-          <span className="pet-stage-label">Stage {displayStage}</span>
-          <span className="pet-stage-name">{displayStageName}</span>
+          <span className="pet-stage-label">Stage {pet.stage}</span>
+          <span className="pet-stage-name">{pet.stageName}</span>
           <span className={`pet-health-pill pet-health-pill--${healthClass}`}>
             <span className={`pet-health-dot pet-health-dot--${healthClass}`} />
             {pet.health}

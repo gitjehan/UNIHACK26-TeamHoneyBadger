@@ -41,6 +41,10 @@ This plan covers technical architecture, execution order, and build phases.
 
 ### Recent Optimizations (Phase 8)
 
+- Refactored dashboard responsiveness: replaced fragile nth-child layout rules with explicit column classes + adaptive grid modes (compact/stacked/short)
+- Added compact-window behavior that auto-collapses non-critical panels (webcam + systems/ambient details) while preserving manual expansion
+- Simplified app scroll model to a single main content scroller (`app-content`) to prevent nested-column scroll conflicts on resize
+- Removed unused legacy sprite exports and dead pet-effect logic from `sprite-data.ts` / `PixelSprite.tsx` / `PetEffects.tsx`
 - Merged PoseEngine + FaceEngine into a single shared `@vladmandic/human` instance (halved model memory)
 - Eliminated duplicate offscreen `<video>` element — single video for display + ML
 - Refactored Digital Twin to `requestAnimationFrame` loop with refs (decoupled from React re-renders)
@@ -63,8 +67,8 @@ This plan covers technical architecture, execution order, and build phases.
 - [x] Blink rate inaccurate — detection was unreliable, now fixed
 - [x] Pet logic core done — egg crack progression, health states (Thriving/Fading/Wilting), evolution stages, health hysteresis, behavior AI all implemented
 - [ ] Pet still needs: hatch transition animation, accessories rendering, auto-save every 30s, hat/crown unlock wiring
-- [ ] Entire app not fitting in viewport — layout overflow issues on smaller screens or certain resolutions
-- [ ] Improve UI and UX — general polish pass on spacing, typography, responsiveness, interaction feedback
+- [x] Entire app not fitting in viewport — responsive layout and overflow handling fixed across compact/stacked window sizes
+- [x] Improve UI and UX — responsive spacing, collapse controls, and small-window behavior pass completed for core dashboard/onboarding surfaces
 - [ ] Add further gamification through pet — more accessory unlocks, milestone celebrations, streak rewards, visual feedback
 - [ ] Improve brightness and screen warmth changer — smoother transitions, better score-to-ambient mapping, feel less abrupt
 

@@ -33,29 +33,14 @@ function Sparkline({
   expanded?: boolean;
 }) {
   const latest = data.length > 0 ? Math.round(data[data.length - 1][dataKey as keyof TimelinePoint] as number) : 0;
-  const values = data.map(d => d[dataKey as keyof TimelinePoint] as number);
-  const min = values.length ? Math.round(Math.min(...values)) : 0;
-  const max = values.length ? Math.round(Math.max(...values)) : 0;
   const gradientId = `spark-${dataKey}`;
   const chartHeight = expanded ? 72 : 32;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-      <span
-        style={{
-          fontSize: 10,
-          fontWeight: 600,
-          color: '#A89B8C',
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase' as const,
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}
-      >
-        {label}
-      </span>
+    <div className="timeline-row">
+      <span className="timeline-row-label">{label}</span>
 
-      <div style={{ flex: 1, height: chartHeight, minWidth: 0 }}>
+      <div className="timeline-row-chart" style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 4, right: 0, bottom: 4, left: 0 }}>
             <defs>
@@ -80,20 +65,7 @@ function Sparkline({
         </ResponsiveContainer>
       </div>
 
-      <span
-        style={{
-          fontSize: 18,
-          fontWeight: 500,
-          color,
-          fontFamily: 'var(--font-display)',
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing: '-0.02em',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-          minWidth: 24,
-          textAlign: 'right',
-        }}
-      >
+      <span className="timeline-row-value" style={{ color }}>
         {latest}
       </span>
     </div>
@@ -101,46 +73,21 @@ function Sparkline({
 }
 
 export const SessionTimeline = memo(function SessionTimeline({ data, expanded = false }: SessionTimelineProps): JSX.Element {
+  const cardClassName = `card session-timeline${expanded ? ' session-timeline--expanded' : ''}`;
+
   if (!data.length) {
     return (
-      <div className="card" style={{ flex: expanded ? 1 : undefined, minHeight: 0 }}>
-        <h3>Session Analytics</h3>
-        <div
-          className="timeline"
-          style={{
-            display: 'grid',
-            placeItems: 'center',
-            color: 'var(--text-tertiary)',
-            fontSize: 13,
-          }}
-        >
-          Collecting data...
-        </div>
+      <div className={cardClassName}>
+        <h3 className="session-timeline-title">Session Analytics</h3>
+        <div className="timeline timeline--loading">Collecting data...</div>
       </div>
     );
   }
 
   return (
-    <div
-      className="card"
-      style={{
-        flex: expanded ? 1 : undefined,
-        minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: expanded ? 14 : 10,
-      }}
-    >
-      <h3 style={{ margin: 0 }}>Session Analytics</h3>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: expanded ? 'column' : 'row',
-          gap: expanded ? 12 : 16,
-          flex: expanded ? 1 : undefined,
-          justifyContent: expanded ? 'space-evenly' : undefined,
-        }}
-      >
+    <div className={cardClassName}>
+      <h3 className="session-timeline-title">Session Analytics</h3>
+      <div className={`session-timeline-body${expanded ? ' session-timeline-body--expanded' : ''}`}>
         {METRICS.map((m) => (
           <Sparkline key={m.key} data={data} dataKey={m.key} label={m.label} color={m.color} expanded={expanded} />
         ))}
