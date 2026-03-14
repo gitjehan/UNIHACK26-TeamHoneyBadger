@@ -1400,6 +1400,7 @@ input:focus-visible {
 .sound-option--active {
   border-color: var(--green-primary);
   background: var(--green-bg);
+  padding: 10px 20px 10px 14px;
 }
 
 .sound-option--active:hover {
@@ -1432,6 +1433,8 @@ input:focus-visible {
   align-items: flex-end;
   gap: 2px;
   height: 14px;
+  flex-shrink: 0;
+  margin-inline-start: 4px;
 }
 
 .sound-option-eq span {
@@ -1464,7 +1467,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding-top: 4px;
+  padding-top: 10px;
   animation: fadeIn var(--transition-normal);
 }
 
