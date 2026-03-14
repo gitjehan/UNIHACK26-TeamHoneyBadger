@@ -14,8 +14,12 @@ export interface BlinkFrame extends BlinkData {
   /** True once we have enough elapsed time for the blink rate to be meaningful. */
   warmedUp: boolean;
 }
-
-const BLINK_WINDOW_MS = 60_000;
+/**
+ * Number of most recent blinks to use when computing the blink rate.
+ * Using a count-based window makes the rate depend on actual observed
+ * blinks rather than an arbitrary time slice.
+ */
+const BLINK_WINDOW_COUNT = 15;
 
 /**
  * Minimum elapsed tracking time before we consider the blink rate reliable.
@@ -160,7 +164,6 @@ export class BlinkDetector {
 
   /** Timestamp of the first frame that actually processed eye data. */
   private firstFrameMs = 0;
-
   /** Continuously updated open-eye baseline (average of both eyes, for fatigue scoring). */
   private baselineOpenEar = 0;
 
@@ -314,26 +317,37 @@ export class BlinkDetector {
     if (now - this.lastCacheTime >= 500) {
       this.lastCacheTime = now;
 
-      const blinkCutoff = now - BLINK_WINDOW_MS;
       const closureCutoff = now - CLOSURE_WINDOW_MS;
-
-      this.pruneOlderThan(this.blinkTimes, blinkCutoff);
       this.pruneOlderThan(this.closureTimes, closureCutoff);
 
-      // Extrapolate blink rate to blinks-per-minute.
-      // If the window isn't full yet (< 60s elapsed), scale up proportionally
-      // so we don't report an artificially low rate during the first minute.
-      const elapsed = this.firstFrameMs > 0 ? now - this.firstFrameMs : 0;
-      const windowMs = Math.min(elapsed, BLINK_WINDOW_MS);
-      if (windowMs >= 1000) {
-        // Scale raw count to per-minute rate
-        this.cachedBlinkRate = Math.round(this.blinkTimes.length * (BLINK_WINDOW_MS / windowMs));
+      // Compute blink rate from the last N blinks (count-based window).
+      const blinkCount = this.blinkTimes.length;
+      if (blinkCount > 0) {
+        const recent = this.blinkTimes.slice(-BLINK_WINDOW_COUNT);
+        if (recent.length === 1) {
+          // With only a single observed blink, fall back to the user's
+          // baseline rate rather than deriving an unstable estimate from
+          // a sub-second span.
+          this.cachedBlinkRate = baselineBlinkRate || this.cachedBlinkRate || 0;
+        } else {
+          const first = recent[0]!;
+          const last = recent[recent.length - 1]!;
+          const windowMs = Math.max(1, last - first);
+          // Require at least 1s of span to avoid huge rates from nearly-coincident timestamps.
+          if (windowMs >= 1000) {
+            this.cachedBlinkRate = Math.round(recent.length * (60_000 / windowMs));
+          } else {
+            this.cachedBlinkRate = 0;
+          }
+        }
       } else {
         this.cachedBlinkRate = 0;
       }
       this.cachedClosureCount = this.closureTimes.length;
     }
 
+    // Warmup is still based on elapsed tracking time: until 15s of activity
+    // have passed, downstream consumers can treat the rate as less reliable.
     const warmedUp = this.firstFrameMs > 0 && (now - this.firstFrameMs) >= WARMUP_MS;
 
     const fatigueScore = this.computeFatigue(
