@@ -73,7 +73,7 @@ button {
   border-bottom: 1px solid var(--border-card);
   background: var(--bg-primary);
   padding: 16px 24px;
-  padding-left: 80px; /* clear macOS traffic lights */
+  padding-left: 72px; /* clear macOS traffic lights */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -88,15 +88,30 @@ button {
 
 .brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
+}
+
+.brand-logo {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 400;
   letter-spacing: 0.5px;
+  line-height: 1.1;
   background: linear-gradient(135deg, var(--green-primary) 0%, #6B9E7A 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -105,9 +120,10 @@ button {
 
 .brand span {
   color: var(--text-tertiary);
-  font-size: 12px;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 /* ── Dashboard Grid ────────────────────────────────────── */
@@ -670,7 +686,11 @@ input:focus-visible {
   }
 
   .brand h1 {
-    font-size: 22px;
+    font-size: 18px;
+  }
+
+  .brand-logo {
+    height: 26px;
   }
 }
 
