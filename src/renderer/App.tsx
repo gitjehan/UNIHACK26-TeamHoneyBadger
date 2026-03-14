@@ -102,7 +102,9 @@ export default function App(): JSX.Element {
     pose.setCallbacks(
       (landmarks, fps) => {
         scoreEngine.updatePoseFps(fps);
-        if (landmarks.length >= 25) {
+        const hasPerson = landmarks.length >= 25;
+        scoreEngine.reportPersonFrame(hasPerson);
+        if (hasPerson) {
           scoreEngine.updatePosture(landmarks);
         }
       },

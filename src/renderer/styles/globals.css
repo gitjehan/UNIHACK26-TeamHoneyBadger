@@ -662,8 +662,8 @@ button {
 }
 
 .webcam-stage--dimmed .webcam-video {
-  opacity: 0.35;
-  filter: grayscale(0.3);
+  opacity: 0.3;
+  filter: blur(8px) grayscale(0.5) brightness(0.6);
 }
 
 /* ── No-Person Positioning Prompt ──────────────────────── */

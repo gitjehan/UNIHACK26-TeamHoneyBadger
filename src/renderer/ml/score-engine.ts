@@ -32,6 +32,7 @@ export interface EngineState {
   faceLandmarks: Point[];
   poseFps: number;
   faceFps: number;
+  personDetected: boolean;
 }
 
 export interface SessionStats {
@@ -152,6 +153,37 @@ class ScoreEngine {
 
   private sessionNewAccessories = new Set<string>();
 
+  private _personDetected = false;
+  private consecutiveMissed = 0;
+  private consecutiveFound = 0;
+  private readonly MISS_THRESHOLD = 6;
+  private readonly FOUND_THRESHOLD = 3;
+
+  get personDetected(): boolean {
+    return this._personDetected;
+  }
+
+  reportPersonFrame(detected: boolean): void {
+    if (detected) {
+      this.consecutiveFound += 1;
+      this.consecutiveMissed = 0;
+      if (!this._personDetected && this.consecutiveFound >= this.FOUND_THRESHOLD) {
+        this._personDetected = true;
+        this.lastTick = Date.now();
+        this.emit();
+      }
+    } else {
+      this.consecutiveMissed += 1;
+      this.consecutiveFound = 0;
+      if (this._personDetected && this.consecutiveMissed >= this.MISS_THRESHOLD) {
+        this._personDetected = false;
+        this.poseLandmarks = [];
+        this.faceLandmarks = [];
+        this.emit();
+      }
+    }
+  }
+
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     listener(this.state);
@@ -163,12 +195,13 @@ class ScoreEngine {
       snapshot: this.snapshot,
       systems: this.systems,
       pet: this.pet,
-      ambient: this.getAmbientTarget(),
+      ambient: this._personDetected ? this.getAmbientTarget() : { brightness: 1, warmth: 0 },
       fatigueScore: this.fatigueScore,
       poseLandmarks: this.poseLandmarks,
       faceLandmarks: this.faceLandmarks,
       poseFps: this.poseFps,
       faceFps: this.faceFps,
+      personDetected: this._personDetected,
     };
   }
 
@@ -270,6 +303,7 @@ class ScoreEngine {
 
   updatePosture(landmarks: Point[]): void {
     this.poseLandmarks = landmarks;
+    if (!this._personDetected) return;
     const posture = scorePosture(landmarks);
     this.postureSmoothing.push(posture.score);
     const slouchPenalty = posture.slumpSeverity * 35;
@@ -285,6 +319,7 @@ class ScoreEngine {
 
   updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number, aspectRatio = 4 / 3): void {
     this.faceLandmarks = landmarks;
+    if (!this._personDetected) return;
     this.emotionState = emotionState || 'neutral';
     this.emotionConfidence = emotionConfidence || 0.5;
 
