@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the Digital Twin stick-figure canvas in the left dashboard column with a high-quality, aesthetically pleasing Pomodoro Timer component. The timer must match the reference design (circular arc progress ring, warm salmon tones, white text/controls) and integrate seamlessly with the existing KINETIC UI, color palette, and score engine. No existing logic should be broken.
+Replace the Digital Twin stick-figure canvas in the left dashboard column with a high-quality, aesthetically pleasing Pomodoro Timer component. The timer must match the reference design (circular arc progress ring, warm salmon tones, white text/controls) and integrate seamlessly with the existing Axis UI, color palette, and score engine. No existing logic should be broken.
 
 ---
 

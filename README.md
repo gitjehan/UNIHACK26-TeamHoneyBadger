@@ -1,4 +1,4 @@
-# KINETIC
+# Axis
 
 Bio-responsive ambient workspace desktop app for UNIHACK 2026.
 

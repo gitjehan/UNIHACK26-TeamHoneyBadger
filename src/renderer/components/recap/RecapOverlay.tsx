@@ -36,7 +36,7 @@ export function RecapOverlay({ recap, onClose }: RecapOverlayProps): JSX.Element
 
   const save = async (dataUrl: string) => {
     try {
-      const filename = `kinetic-recap-${new Date().toISOString().slice(0, 10)}.png`;
+      const filename = `axis-recap-${new Date().toISOString().slice(0, 10)}.png`;
       await window.kinetic.exportRecapPng(dataUrl, filename);
     } catch (err) {
       console.error('Failed to save recap image', err);

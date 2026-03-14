@@ -107,7 +107,7 @@ export function SessionRecapCard({
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.font = '600 13px system-ui, -apple-system, sans-serif';
     ctx.letterSpacing = '3px';
-    ctx.fillText('KINETIC', 40, 48);
+    ctx.fillText('AXIS', 40, 48);
     ctx.letterSpacing = '0px';
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
@@ -359,7 +359,7 @@ export function SessionRecapCard({
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.font = '500 12px system-ui, -apple-system, sans-serif';
-    ctx.fillText('KINETIC', 40, H - 30);
+    ctx.fillText('AXIS', 40, H - 30);
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.font = '400 11px system-ui, -apple-system, sans-serif';

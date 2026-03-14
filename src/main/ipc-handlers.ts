@@ -98,7 +98,7 @@ export function registerIpcHandlers(): void {
     if (AUTO_TEST) {
       try {
         const base64 = dataUrl.replace(/^data:image\/png;base64,/, '');
-        const target = path.resolve(process.cwd(), 'out', 'kinetic-recap-autotest.png');
+        const target = path.resolve(process.cwd(), 'out', 'axis-recap-autotest.png');
         await fs.mkdir(path.dirname(target), { recursive: true });
         await fs.writeFile(target, base64, { encoding: 'base64' });
         return { ok: true, filePath: target };
@@ -109,7 +109,7 @@ export function registerIpcHandlers(): void {
     }
 
     const { canceled, filePath } = await dialog.showSaveDialog({
-      defaultPath: filename || 'kinetic-recap.png',
+      defaultPath: filename || 'axis-recap.png',
       filters: [{ name: 'PNG', extensions: ['png'] }],
     });
     if (canceled || !filePath) return { ok: false };
