@@ -78,6 +78,7 @@
 
 .pet-sprite-wrapper--cat {
   animation: pet-breathe 2.5s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* ─── Egg Breathing (slightly slower) ───────────────────────── */
@@ -93,6 +94,7 @@
 
 .pet-sprite-wrapper--egg {
   animation: egg-breathe 3s ease-in-out infinite;
+  will-change: transform;
 }
 
 /* ─── Egg Wobble ────────────────────────────────────────────── */
@@ -130,6 +132,7 @@
 .pet-heart {
   position: absolute;
   opacity: 0.85;
+  will-change: transform, opacity;
 }
 
 @keyframes heart-float-1 {
@@ -204,6 +207,7 @@
   color: var(--pet-text-muted);
   opacity: 0.5;
   line-height: 1;
+  will-change: transform, opacity;
 }
 
 @keyframes zzz-bob-1 {
@@ -286,6 +290,7 @@
 
 .pet-sweat-drop svg {
   animation: sweat-bob 1.5s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 /* ─── Tail Flick (applied to tail group in SVG) ─────────────── */
@@ -318,6 +323,25 @@
   animation: crack-glow 1s ease-in-out infinite;
 }
 
+/* ─── Egg Shell Glow (golden inner light when cracking) ─────── */
+
+@keyframes egg-shell-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255, 210, 80, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 9px rgba(255, 210, 80, 0.85));
+  }
+}
+
+.egg-shell-glow--cracking {
+  filter: drop-shadow(0 0 4px rgba(255, 210, 80, 0.45));
+}
+
+.egg-shell-glow--hatching {
+  animation: egg-shell-pulse 0.9s ease-in-out infinite;
+}
+
 /* ─── Reduced Motion ────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -328,7 +352,8 @@
   .pet-z,
   .pet-sweat-drop svg,
   .pet-tail-flick,
-  .pet-crack-glow {
+  .pet-crack-glow,
+  .egg-shell-glow--hatching {
     animation: none;
   }
 }

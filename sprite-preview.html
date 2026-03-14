@@ -1,83 +1,75 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Cat Sprite Sheet Preview</title>
+  <title>Ginger Cat Animations</title>
   <style>
-    body { font-family: system-ui; background: #333; color: #fff; padding: 40px; }
-    h1 { color: #E8AA6A; text-align: center; }
-    h2 { color: #C4864A; margin-top: 30px; }
-    .grid { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-    .card { background: #fff; padding: 20px; border-radius: 12px; text-align: center; }
-    .card h3 { color: #5C3A1E; font-size: 14px; margin-bottom: 10px; }
-    .sprite { 
-      width: 96px; height: 96px; 
-      background-image: url('src/renderer/assets/cat-sprites.png');
-      background-size: 480px auto;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
+    body { font-family: system-ui; background: #fafaf7; padding: 30px; max-width: 900px; margin: 0 auto; }
+    h1 { color: #2C2416; }
+    h2 { color: #5C3A1E; margin: 30px 0 15px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 16px; }
+    .sprite-box {
+      background: white; padding: 16px; border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; min-width: 100px;
+    }
+    .sprite-box label { display: block; font-size: 11px; color: #888; margin-top: 6px; }
+    .sprite-box .name { font-weight: 600; color: #5C3A1E; font-size: 13px; }
+    .cat {
+      width: 64px; height: 128px;
+      background-image: url('src/renderer/assets/ginger-cat.png');
+      background-repeat: no-repeat;
+      background-size: 1408px 6784px;
+      image-rendering: pixelated; image-rendering: crisp-edges;
       margin: 0 auto;
     }
-    .scene { background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%); padding: 10px; border-radius: 8px; }
-    
-    /* Frame positions (32px frames at 3x scale = 96px steps in background) */
-    .sit1 { background-position: 0 0; }
-    .sit2 { background-position: -96px 0; }
-    .sit3 { background-position: -192px 0; }
-    .sit4 { background-position: -288px 0; }
-    .sit5 { background-position: 0 -96px; }
-    .sit6 { background-position: -96px -96px; }
-    
-    .side1 { background-position: 0 -192px; }
-    .side2 { background-position: -96px -192px; }
-    .side3 { background-position: -192px -192px; }
-    
-    .walk1 { background-position: 0 -384px; }
-    .walk2 { background-position: -96px -384px; }
-    .walk3 { background-position: -192px -384px; }
-    .walk4 { background-position: -288px -384px; }
-    
-    .sleep1 { background-position: 0 -480px; }
-    .sleep2 { background-position: -96px -480px; }
-    .sleep3 { background-position: -192px -480px; }
-    
-    .animated { animation: breathe 2s ease-in-out infinite; }
-    @keyframes breathe {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-3px); }
-    }
+    @keyframes breathe { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
   </style>
 </head>
 <body>
-  <h1>Cat Sprite Sheet - Direct PNG Usage</h1>
-  
-  <h2>Sitting (Front)</h2>
-  <div class="grid">
-    <div class="card"><h3>Sit 1</h3><div class="scene"><div class="sprite sit1 animated"></div></div></div>
-    <div class="card"><h3>Sit 2</h3><div class="scene"><div class="sprite sit2"></div></div></div>
-    <div class="card"><h3>Sit 3</h3><div class="scene"><div class="sprite sit3"></div></div></div>
-    <div class="card"><h3>Sit 4</h3><div class="scene"><div class="sprite sit4"></div></div></div>
-  </div>
-  
-  <h2>Side View</h2>
-  <div class="grid">
-    <div class="card"><h3>Side 1</h3><div class="scene"><div class="sprite side1"></div></div></div>
-    <div class="card"><h3>Side 2</h3><div class="scene"><div class="sprite side2"></div></div></div>
-    <div class="card"><h3>Side 3</h3><div class="scene"><div class="sprite side3"></div></div></div>
-  </div>
-  
-  <h2>Walking</h2>
-  <div class="grid">
-    <div class="card"><h3>Walk 1</h3><div class="scene"><div class="sprite walk1"></div></div></div>
-    <div class="card"><h3>Walk 2</h3><div class="scene"><div class="sprite walk2"></div></div></div>
-    <div class="card"><h3>Walk 3</h3><div class="scene"><div class="sprite walk3"></div></div></div>
-    <div class="card"><h3>Walk 4</h3><div class="scene"><div class="sprite walk4"></div></div></div>
-  </div>
-  
-  <h2>Sleeping</h2>
-  <div class="grid">
-    <div class="card"><h3>Sleep 1</h3><div class="scene"><div class="sprite sleep1"></div></div></div>
-    <div class="card"><h3>Sleep 2</h3><div class="scene"><div class="sprite sleep2"></div></div></div>
-    <div class="card"><h3>Sleep 3</h3><div class="scene"><div class="sprite sleep3"></div></div></div>
-  </div>
+  <h1>Ginger Cat - Live Animations</h1>
+  <div class="grid" id="anims"></div>
+  <script>
+    const FW = 64, FH = 128;
+    const anims = [
+      { name: 'Idle Sit',     row: 0,  frames: 6, speed: 350 },
+      { name: 'Idle Stand',   row: 1,  frames: 6, speed: 350 },
+      { name: 'Rest Crouch',  row: 2,  frames: 5, speed: 400 },
+      { name: 'Rest Lie',     row: 3,  frames: 5, speed: 400 },
+      { name: 'Walk Right',   row: 6,  frames: 5, speed: 150 },
+      { name: 'Walk Left',    row: 7,  frames: 5, speed: 150 },
+      { name: 'Walk Front',   row: 8,  frames: 5, speed: 150 },
+      { name: 'Walk Back',    row: 9,  frames: 5, speed: 150 },
+      { name: 'Sleep Curl',   row: 12, frames: 2, speed: 800 },
+      { name: 'Sleep Flat',   row: 16, frames: 2, speed: 800 },
+      { name: 'Sleep Belly',  row: 17, frames: 2, speed: 800 },
+      { name: 'Eat Front',    row: 20, frames: 5, speed: 250 },
+      { name: 'Meow Sit',     row: 28, frames: 3, speed: 300 },
+      { name: 'Yawn Sit',     row: 32, frames: 5, speed: 250 },
+      { name: 'Wash Sit',     row: 36, frames: 5, speed: 250 },
+      { name: 'Scratch',      row: 39, frames: 5, speed: 200 },
+      { name: 'Hiss',         row: 41, frames: 2, speed: 400 },
+    ];
+    const c = document.getElementById('anims');
+    anims.forEach(a => {
+      const box = document.createElement('div');
+      box.className = 'sprite-box';
+      const sprite = document.createElement('div');
+      sprite.className = 'cat';
+      sprite.style.backgroundPosition = `0 ${-a.row * FH}px`;
+      if (!a.name.startsWith('Sleep')) sprite.style.animation = 'breathe 2.5s ease-in-out infinite';
+      box.appendChild(sprite);
+      const nm = document.createElement('label');
+      nm.className = 'name'; nm.textContent = a.name;
+      box.appendChild(nm);
+      const info = document.createElement('label');
+      info.textContent = `Row ${a.row} · ${a.frames}f · ${a.speed}ms`;
+      box.appendChild(info);
+      c.appendChild(box);
+      let f = 0;
+      setInterval(() => {
+        f = (f + 1) % a.frames;
+        sprite.style.backgroundPosition = `${-f * FW}px ${-a.row * FH}px`;
+      }, a.speed);
+    });
+  </script>
 </body>
 </html>

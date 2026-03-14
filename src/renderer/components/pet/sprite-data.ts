@@ -33,6 +33,7 @@ export const eggPalette: Record<string, string> = {
   b: '#F5EDE4',
   s: '#E0D4C4',
   h: '#FFFDF8',
+  x: '#C8A882',  // warm speckle/freckle
 };
 
 export const cushionPalette: Record<string, string> = {
@@ -66,13 +67,13 @@ export const eggGrid: string[] = [
   '....ohhhbbbbbbbbo...',
   '...ohhbbbbbbbbbbbo..',
   '...ohbbbbbbbbbbbbo..',
-  '..ohbbbbbbbbbbbbbo..',
+  '..ohbbbbbbxbbbbbbo..',  // speckle top-right area
   '..obbbbbbbbbbbbbbo..',
+  '..obbxbbbbbbbbbbbo..',  // speckle left-mid area
   '..obbbbbbbbbbbbbbo..',
+  '..obbbbbbbbbbxbbbo..',  // speckle right-mid area
   '..obbbbbbbbbbbbbbo..',
-  '..obbbbbbbbbbbbbbo..',
-  '..obbbbbbbbbbbbbbo..',
-  '..obbbbbbbbbbbbbo...',
+  '..obbbbbbxbbbbbo...',   // speckle lower-left area
   '...obbbbbbbbbbbo....',
   '...obbbbbbbsssbo....',
   '....obbbbsssso......',

@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { memo, type RefObject, useMemo } from 'react';
 import { MetricCard } from '@renderer/components/metrics/MetricCard';
 import { OverallGauge } from '@renderer/components/metrics/OverallGauge';
 import { AmbientPanel } from '@renderer/components/panels/AmbientPanel';
@@ -17,7 +17,7 @@ interface DashboardProps {
   visionBackend: { pose: VisionBackend; face: VisionBackend };
 }
 
-export function Dashboard({
+export const Dashboard = memo(function Dashboard({
   state,
   videoRef,
   timeline,
@@ -25,6 +25,11 @@ export function Dashboard({
 }: DashboardProps): JSX.Element {
   const { snapshot } = state;
   const enginesInitializing = visionBackend.pose === 'starting' || visionBackend.face === 'starting';
+
+  const blinkValue = useMemo(
+    () => (snapshot.blink.warmedUp === false ? null : snapshot.blink.rate),
+    [snapshot.blink.warmedUp, snapshot.blink.rate],
+  );
 
   return (
     <div className="dashboard-grid">
@@ -40,7 +45,7 @@ export function Dashboard({
         <MetricCard label="Posture" value={snapshot.posture.score} unit="/100" kind="posture" />
         <MetricCard
           label="Blink Rate"
-          value={snapshot.blink.warmedUp === false ? null : snapshot.blink.rate}
+          value={blinkValue}
           unit="bpm"
           kind="blinkRate"
         />
@@ -87,4 +92,4 @@ export function Dashboard({
       </div>
     </div>
   );
-}
+});

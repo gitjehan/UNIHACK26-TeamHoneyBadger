@@ -188,16 +188,10 @@ export default function App(): JSX.Element {
     };
   }, [state.poseLandmarks, state.snapshot.posture.neckAngle, state.snapshot.posture.shoulderSlant]);
 
-  useEffect(() => {
-    if (stage === 'welcome') return;
-    const timer = setInterval(() => {
-      setTimeline(scoreEngine.getTimeline());
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [stage]);
-
+  // Consolidated ambient + timeline ticker (reduces 3 intervals to 1)
   useEffect(() => {
     if (stage !== 'ready') return;
+
     const applyAmbient = () => {
       const { brightness, warmth } = stateRef.current.ambient;
       const [minB, maxB] = brightnessRangeRef.current;
@@ -205,20 +199,23 @@ export default function App(): JSX.Element {
       const adjustedWarmth = Math.min(1, Math.max(0, warmth * warmthIntensityRef.current));
       window.kinetic.updateAmbient({ brightness: adjustedBrightness, warmth: adjustedWarmth });
     };
+
     scoreEngine.setAmbientStatus('active');
     applyAmbient();
-    const interval = setInterval(applyAmbient, 1000);
-    return () => clearInterval(interval);
-  }, [stage]);
+    ambientAudio.update(stateRef.current.snapshot.overall.score, stateRef.current.snapshot.stress.score);
 
-  useEffect(() => {
-    if (stage !== 'ready') return;
-    const s = stateRef.current;
-    ambientAudio.update(s.snapshot.overall.score, s.snapshot.stress.score);
+    let tick = 0;
     const interval = setInterval(() => {
-      const latest = stateRef.current;
-      ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
-    }, 2000);
+      tick++;
+      // Ambient light every 1s (every tick)
+      applyAmbient();
+      // Audio + timeline every 2s (every other tick)
+      if (tick % 2 === 0) {
+        const latest = stateRef.current;
+        ambientAudio.update(latest.snapshot.overall.score, latest.snapshot.stress.score);
+        setTimeline(scoreEngine.getTimeline());
+      }
+    }, 1000);
     return () => clearInterval(interval);
   }, [stage]);
 

@@ -1,145 +1,193 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import catSpriteSheet from '@renderer/assets/cat-sprites.png';
-import './cat-sprite.css';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import gingerCatSheet from '@renderer/assets/ginger-cat.png';
+import './pet-animations.css';
 
-// Sprite sheet layout (32x32 per frame, 5 cols x 8 rows)
-const FRAME_SIZE = 32;
-const COLS = 5;
-
-// Frame positions [row, col] - 0-indexed
-const FRAMES = {
-  // Sitting front view
-  sitFront1: [0, 0],
-  sitFront2: [0, 1],
-  sitFront3: [0, 2],
-  sitFront4: [0, 3],
-  sitFront5: [1, 0],
-  sitFront6: [1, 1],
-  
-  // Side sitting
-  sitSide1: [2, 0],
-  sitSide2: [2, 1],
-  sitSide3: [2, 2],
-  sitSide4: [3, 0],
-  sitSide5: [3, 1],
-  sitSide6: [3, 2],
-  
-  // Walking
-  walk1: [4, 0],
-  walk2: [4, 1],
-  walk3: [4, 2],
-  walk4: [4, 3],
-  walk5: [4, 4],
-  
-  // Sleeping/lying
-  sleep1: [5, 0],
-  sleep2: [5, 1],
-  sleep3: [5, 2],
-  sleep4: [5, 3],
-  
-  // More walking
-  run1: [6, 0],
-  run2: [6, 1],
-  run3: [6, 2],
-  run4: [6, 3],
-  run5: [7, 0],
-  run6: [7, 1],
-  run7: [7, 2],
-  run8: [7, 3],
-} as const;
-
-type FrameName = keyof typeof FRAMES;
+const FRAME_W = 16;
+const FRAME_H = 32;
+const SHEET_W = 352;
+const SHEET_H = 1696;
 
 interface CatSpriteProps {
-  frame: FrameName;
+  row: number;
+  col: number;
   scale?: number;
-  className?: string;
   flip?: boolean;
 }
 
-export function CatSprite({ frame, scale = 3, className = '', flip = false }: CatSpriteProps): JSX.Element {
-  const [row, col] = FRAMES[frame];
-  const x = -col * FRAME_SIZE * scale;
-  const y = -row * FRAME_SIZE * scale;
-  
+export function CatSprite({ row, col, scale = 4, flip = false }: CatSpriteProps): JSX.Element {
+  const w = FRAME_W * scale;
+  const h = FRAME_H * scale;
+  const bgW = SHEET_W * scale;
+  const bgH = SHEET_H * scale;
+  const x = -col * FRAME_W * scale;
+  const y = -row * FRAME_H * scale;
+
   return (
     <div
-      className={`cat-sprite ${className} ${flip ? 'cat-sprite--flip' : ''}`}
       style={{
-        width: FRAME_SIZE * scale,
-        height: FRAME_SIZE * scale,
-        backgroundImage: `url(${catSpriteSheet})`,
+        width: w,
+        height: h,
+        backgroundImage: `url(${gingerCatSheet})`,
         backgroundPosition: `${x}px ${y}px`,
-        backgroundSize: `${COLS * FRAME_SIZE * scale}px auto`,
+        backgroundSize: `${bgW}px ${bgH}px`,
+        backgroundRepeat: 'no-repeat',
+        imageRendering: 'pixelated',
+        transform: flip ? 'scaleX(-1)' : undefined,
       }}
     />
   );
 }
 
-// Animated cat component
+/*
+ * Animation map for 352x1696 ginger cat sheet (16x32 frames, 22 cols x 53 rows)
+ *
+ * REST      0-5    idle sitting, standing, crouching, lying, back views
+ * WALK      6-11   right, left, front, back, diag-left, diag-right
+ * SLEEP     12-19  curled, compact, side, belly-up, stretched (2 frames each)
+ * EAT       20-27  down, up, right, left, front, back, diag (5 frames each)
+ * MEOW      28-31  sitting, standing, side, lying (3 frames each)
+ * YAWN      32-35  sitting, standing, back, lying (5 frames each)
+ * WASH      36-38  sitting, standing, lying (5 frames each)
+ * SCRATCH   39-40  sitting, standing (5 frames each)
+ * HISS      41-42  standing, crouching (2 frames each)
+ * PAW ATK   44+    various directions
+ */
+
+const ANIMS = {
+  idleSit:    { row: 0,  frames: 6, speed: 350 },
+  idleStand:  { row: 1,  frames: 6, speed: 350 },
+  restCrouch: { row: 2,  frames: 5, speed: 400 },
+  restLie:    { row: 3,  frames: 5, speed: 400 },
+  walkRight:  { row: 6,  frames: 5, speed: 150 },
+  walkLeft:   { row: 7,  frames: 5, speed: 150 },
+  walkFront:  { row: 8,  frames: 5, speed: 150 },
+  walkBack:   { row: 9,  frames: 5, speed: 150 },
+  sleepCurl1: { row: 12, frames: 2, speed: 800 },
+  sleepCurl2: { row: 13, frames: 2, speed: 800 },
+  sleepFlat:  { row: 16, frames: 2, speed: 800 },
+  sleepBelly: { row: 17, frames: 2, speed: 800 },
+  eatFront:   { row: 20, frames: 5, speed: 250 },
+  meowSit:    { row: 28, frames: 3, speed: 300 },
+  meowStand:  { row: 29, frames: 3, speed: 300 },
+  yawnSit:    { row: 32, frames: 5, speed: 250 },
+  washSit:    { row: 36, frames: 5, speed: 250 },
+  scratchSit: { row: 39, frames: 5, speed: 200 },
+  hiss:       { row: 41, frames: 2, speed: 400 },
+} as const;
+
+type AnimName = keyof typeof ANIMS;
+
 interface AnimatedCatProps {
-  state: 'idle' | 'happy' | 'sleep' | 'worried';
+  health: 'Thriving' | 'Fading' | 'Wilting';
   scale?: number;
 }
 
-export function AnimatedCat({ state, scale = 3 }: AnimatedCatProps): JSX.Element {
-  const [frameIndex, setFrameIndex] = useState(0);
-  const [isBlinking, setIsBlinking] = useState(false);
-  const blinkTimeoutRef = useRef<number>(0);
+const THRIVING_ACTIONS: { anim: AnimName; duration: number; moving?: boolean }[] = [
+  { anim: 'walkRight', duration: 2500, moving: true },
+  { anim: 'walkLeft', duration: 2500, moving: true },
+  { anim: 'yawnSit', duration: 1500 },
+  { anim: 'washSit', duration: 2000 },
+  { anim: 'scratchSit', duration: 1500 },
+  { anim: 'meowSit', duration: 1200 },
+  { anim: 'idleStand', duration: 2000 },
+  { anim: 'restCrouch', duration: 2000 },
+];
 
-  // Idle animation frames
-  const idleFrames: FrameName[] = ['sitFront1', 'sitFront2'];
-  const sleepFrames: FrameName[] = ['sleep1', 'sleep2', 'sleep3'];
-  const happyFrames: FrameName[] = ['sitFront1', 'sitFront3', 'sitFront4'];
+const FADING_ACTIONS: { anim: AnimName; duration: number; moving?: boolean }[] = [
+  { anim: 'walkRight', duration: 2000, moving: true },
+  { anim: 'yawnSit', duration: 1500 },
+  { anim: 'restLie', duration: 2500 },
+  { anim: 'restCrouch', duration: 2000 },
+];
 
-  // Get current frames based on state
-  const getFrames = (): FrameName[] => {
-    switch (state) {
-      case 'sleep': return sleepFrames;
-      case 'happy': return happyFrames;
-      case 'worried': return idleFrames;
-      default: return idleFrames;
-    }
-  };
+const SLEEP_ANIMS: AnimName[] = ['sleepCurl1', 'sleepCurl2', 'sleepFlat', 'sleepBelly'];
 
-  const frames = getFrames();
+export function AnimatedCat({ health, scale = 4 }: AnimatedCatProps): JSX.Element {
+  const [animation, setAnimation] = useState<AnimName>('idleSit');
+  const [frame, setFrame] = useState(0);
+  const [flip, setFlip] = useState(false);
+  const [posX, setPosX] = useState(0);
+  const actionRef = useRef<number>(0);
+  const innerTimeoutRef = useRef<number>(0);
 
-  // Frame animation
+  const currentAnim = ANIMS[animation];
+
+  // Frame loop
   useEffect(() => {
-    const interval = setInterval(() => {
-      setFrameIndex(i => (i + 1) % frames.length);
-    }, state === 'sleep' ? 1000 : 600);
-    return () => clearInterval(interval);
-  }, [frames.length, state]);
+    const iv = setInterval(() => {
+      setFrame(f => (f + 1) % currentAnim.frames);
+    }, currentAnim.speed);
+    return () => clearInterval(iv);
+  }, [currentAnim]);
 
-  // Blink timer (only when not sleeping)
-  const scheduleBlink = useCallback(() => {
-    if (state === 'sleep') return;
-    const delay = 4000 + Math.random() * 2000;
-    blinkTimeoutRef.current = window.setTimeout(() => {
-      setIsBlinking(true);
-      setTimeout(() => {
-        setIsBlinking(false);
-        scheduleBlink();
-      }, 120);
+  // Movement during walk
+  useEffect(() => {
+    if (!animation.startsWith('walk')) return;
+
+    const isRight = animation === 'walkRight';
+    const speed = 1.2;
+    const dir = isRight ? 1 : -1;
+
+    const iv = setInterval(() => {
+      setPosX(x => {
+        const next = x + speed * dir;
+        if (next > 35 || next < -35) {
+          setFlip(f => !f);
+          return x - speed * dir;
+        }
+        return next;
+      });
+    }, 50);
+    return () => clearInterval(iv);
+  }, [animation]);
+
+  // Pick a random sleep animation for wilting cats
+  const sleepAnim = useMemo(() => {
+    return SLEEP_ANIMS[Math.floor(Math.random() * SLEEP_ANIMS.length)];
+  }, []);
+
+  // Schedule random actions
+  const scheduleAction = useCallback(() => {
+    if (health === 'Wilting') {
+      setAnimation(sleepAnim);
+      return;
+    }
+
+    const delay = 2500 + Math.random() * 3500;
+    actionRef.current = window.setTimeout(() => {
+      const actions = health === 'Thriving' ? THRIVING_ACTIONS : FADING_ACTIONS;
+      const pick = actions[Math.floor(Math.random() * actions.length)];
+
+      setAnimation(pick.anim);
+      setFrame(0);
+
+      innerTimeoutRef.current = window.setTimeout(() => {
+        setAnimation('idleSit');
+        setFrame(0);
+        scheduleAction();
+      }, pick.duration);
     }, delay);
-  }, [state]);
+  }, [health, sleepAnim]);
 
   useEffect(() => {
-    if (state !== 'sleep') {
-      scheduleBlink();
-    }
+    scheduleAction();
     return () => {
-      if (blinkTimeoutRef.current) clearTimeout(blinkTimeoutRef.current);
+      clearTimeout(actionRef.current);
+      clearTimeout(innerTimeoutRef.current);
     };
-  }, [scheduleBlink, state]);
+  }, [scheduleAction]);
 
-  // Use blink frame when blinking
-  const currentFrame = isBlinking ? 'sitFront2' : frames[frameIndex];
+  const breathe = animation.startsWith('sleep') ? 'none' : 'pet-breathe 2.5s ease-in-out infinite';
 
   return (
-    <div className={`animated-cat animated-cat--${state}`}>
-      <CatSprite frame={currentFrame} scale={scale} />
+    <div
+      style={{
+        animation: breathe,
+        transform: `translateX(${posX}px)`,
+        transition: 'transform 0.05s linear',
+      }}
+    >
+      <CatSprite row={currentAnim.row} col={frame} scale={scale} flip={flip} />
     </div>
   );
 }
