@@ -16,12 +16,6 @@ const UPPER_CONNECTIONS: [number, number][] = [
   [11, 23], [12, 24], // torso
 ];
 
-const LOWER_CONNECTIONS: [number, number][] = [
-  [23, 24], // hips
-  [23, 25], [25, 27], // left leg
-  [24, 26], [26, 28], // right leg
-];
-
 /* ── colour by score ─────────────────────────────────── */
 function scoreColor(score: number): string {
   if (score >= 70) return '#3D6B4F';
@@ -106,24 +100,6 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         }
       }
 
-      // Derive lower body from shoulders
-      const lS = sm[LANDMARKS.LEFT_SHOULDER];
-      const rS = sm[LANDMARKS.RIGHT_SHOULDER];
-
-      if (isVis(lS) && isVis(rS)) {
-        const mx = (lS.x + rS.x) / 2;
-        const sSpan = Math.abs(rS.x - lS.x);
-        const sY = (lS.y + rS.y) / 2;
-        const below = Math.max(1.0 - sY, 0.25);
-
-        sm[LANDMARKS.LEFT_HIP] = { x: mx - sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_HIP] = { x: mx + sSpan * 0.4, y: sY + below * 0.36, z: 0, visibility: 1 };
-        sm[LANDMARKS.LEFT_KNEE] = { x: mx - sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_KNEE] = { x: mx + sSpan * 0.5, y: sY + below * 0.48, z: 0, visibility: 1 };
-        sm[LANDMARKS.LEFT_ANKLE] = { x: mx - sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
-        sm[LANDMARKS.RIGHT_ANKLE] = { x: mx + sSpan * 0.3, y: sY + below * 0.76, z: 0, visibility: 1 };
-      }
-
       // Map to canvas coords
       const pad = 0.08;
       const dW = W * (1 - 2 * pad);
@@ -147,14 +123,13 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ctx.stroke();
       };
 
-      // Lower body (faded)
-      for (const [a, b] of LOWER_CONNECTIONS) drawLine(a, b, 0.35, 3);
-
       // Upper body
       ctx.globalAlpha = 1;
       for (const [a, b] of UPPER_CONNECTIONS) drawLine(a, b, 1, 4);
 
       // Head - simple circle
+      const lS = sm[LANDMARKS.LEFT_SHOULDER];
+      const rS = sm[LANDMARKS.RIGHT_SHOULDER];
       const headPts = [sm[LANDMARKS.NOSE], sm[LANDMARKS.LEFT_EAR], sm[LANDMARKS.RIGHT_EAR]].filter(isVis);
       if (headPts.length && isVis(lS) && isVis(rS)) {
         const hc = {
@@ -196,24 +171,6 @@ function DigitalTwinImpl({ landmarks, postureScore, shoulderSlant }: DigitalTwin
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Lower joints (faded)
-      ctx.globalAlpha = 0.35;
-      const lowerIds = [
-        LANDMARKS.LEFT_HIP, LANDMARKS.RIGHT_HIP,
-        LANDMARKS.LEFT_KNEE, LANDMARKS.RIGHT_KNEE,
-        LANDMARKS.LEFT_ANKLE, LANDMARKS.RIGHT_ANKLE,
-      ];
-
-      for (const i of lowerIds) {
-        const pt = sm[i];
-        if (!isVis(pt)) continue;
-        const m = mp(pt);
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, 3, 0, Math.PI * 2);
         ctx.fill();
       }
 

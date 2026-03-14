@@ -10,7 +10,7 @@ export interface PostureData {
   neckAngle: number;
   shoulderSlant: number;
   trunkSimilarity: number;
-  isSlumping: boolean;
+  slumpSeverity: number;
 }
 
 export interface BlinkData {

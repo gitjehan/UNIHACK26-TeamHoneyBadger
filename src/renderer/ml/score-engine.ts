@@ -70,7 +70,7 @@ function initialSnapshot(): ScoreSnapshot {
       neckAngle: 175,
       shoulderSlant: 1,
       trunkSimilarity: 0.98,
-      isSlumping: false,
+      slumpSeverity: 0,
     },
     blink: {
       rate: 17,
@@ -278,7 +278,7 @@ class ScoreEngine {
     this.poseLandmarks = landmarks;
     const posture = scorePosture(landmarks, this.calibration);
     this.postureSmoothing.push(posture.score);
-    const slouchPenalty = posture.isSlumping ? 15 : 0;
+    const slouchPenalty = posture.slumpSeverity * 20;
     const smoothedPosture = clamp(
       Math.round((this.postureSmoothing.average ?? posture.score) - slouchPenalty),
       0,
