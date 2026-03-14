@@ -102,6 +102,12 @@ class ScoreEngine {
 
   private blinkDetector = new BlinkDetector();
 
+  private ambientBrightnessSmoother = new RollingAverage(5);
+
+  private ambientWarmthSmoother = new RollingAverage(5);
+
+  private fatigueSmoother = new RollingAverage(5);
+
   private postureSmoothing = new RollingAverage(60);
 
   private postureVariance = new RollingAverage(60);
@@ -297,6 +303,7 @@ class ScoreEngine {
     const blinkFrame = this.blinkDetector.update(landmarks, this.calibration?.baselineBlinkRate ?? 17, aspectRatio);
     this.snapshot = { ...this.snapshot, blink: blinkFrame };
     this.fatigueScore = blinkFrame.fatigueScore;
+    this.fatigueSmoother.push(this.fatigueScore);
     this.recompute(this.snapshot.posture, blinkFrame);
   }
 
@@ -432,10 +439,15 @@ class ScoreEngine {
     const t = clamp((overall - bucket.scoreMin) / span, 0, 1);
     let brightness = lerp(bucket.brightness[0], bucket.brightness[1], t);
     const warmth = lerp(bucket.warmth[0], bucket.warmth[1], 1 - t);
-    brightness = clamp(brightness - (this.fatigueScore / 100) * 0.2, 0.2, 1);
+    const smoothedFatigue = this.fatigueSmoother.filledCount > 0 ? this.fatigueSmoother.average : this.fatigueScore;
+    brightness = clamp(brightness - (smoothedFatigue / 100) * 0.2, 0.2, 1);
+    this.ambientBrightnessSmoother.push(brightness);
+    this.ambientWarmthSmoother.push(warmth);
+    const smoothedBrightness = this.ambientBrightnessSmoother.average || brightness;
+    const smoothedWarmth = this.ambientWarmthSmoother.average || warmth;
     return {
-      brightness: Math.round(brightness * 100) / 100,
-      warmth: Math.round(warmth * 100) / 100,
+      brightness: Math.round(smoothedBrightness * 100) / 100,
+      warmth: Math.round(smoothedWarmth * 100) / 100,
     };
   }
 
