@@ -12,6 +12,7 @@ interface BioPetProps {
   postureScore: number;
   focusScore: number;
   stressScore: number;
+  breakReminderDue?: boolean;
 }
 
 const HEALTH_HYS = 3000;
@@ -19,7 +20,7 @@ const SETTLE_WINDOW_MS = 3000;
 
 type HatchPhase = 'none' | 'crack' | 'burst' | 'emerge';
 
-export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stressScore }: BioPetProps): JSX.Element {
+export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stressScore, breakReminderDue = false }: BioPetProps): JSX.Element {
   const committedRef = useRef<PetHealthState>(pet.health);
   const pendingRef = useRef<PetHealthState>(pet.health);
   const pendingSinceRef = useRef(Date.now());
@@ -129,8 +130,8 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
   ].filter(Boolean).join(' ');
 
   return (
-    <div className="card">
-      <div className="pet-scene">
+    <div className="card bio-pet-card">
+      <div className={`pet-scene${breakReminderDue ? ' bio-pet--sleepy' : ''}`}>
         <div className={`pet-glow pet-glow--${healthClass}`} />
 
         {hatchPhase === 'burst' && <div className="hatch-flash-overlay" />}
@@ -199,8 +200,10 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
       {/* Meta section */}
       <div className="pet-meta-section">
         <div className="pet-stage-row">
-          <span className="pet-stage-label">Stage {pet.stage}</span>
-          <span className="pet-stage-name">{pet.stageName}</span>
+          <div className="pet-stage-name-stack">
+            <span className="pet-stage-name">{pet.stageName}</span>
+            <span className="pet-stage-label">Stage {pet.stage}</span>
+          </div>
           <span className={`pet-health-pill pet-health-pill--${healthClass}`}>
             <span className={`pet-health-dot pet-health-dot--${healthClass}`} />
             {pet.health}
@@ -225,12 +228,20 @@ export const BioPet = memo(function BioPet({ pet, postureScore, focusScore, stre
           <Chip label="Posture" value={postureScore} />
           <Chip label="Focus" value={focusScore} />
           <Chip label="Stress" value={stressScore} />
-          <Chip label="Time" value={`${Math.round(pet.totalLockedInMinutes)}m`} />
+          <Chip label="Time" value={formatLockedTime(pet.totalLockedInMinutes)} />
         </div>
       </div>
     </div>
   );
 });
+
+function formatLockedTime(minutes: number): string {
+  const m = Math.round(minutes);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  const rem = m % 60;
+  return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
+}
 
 function Chip({ label, value }: { label: string; value: number | string }) {
   return (

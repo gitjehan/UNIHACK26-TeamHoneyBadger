@@ -64,7 +64,7 @@ export const OverallGauge = memo(function OverallGauge({ value }: OverallGaugePr
           transform="rotate(-90 90 90)"
           style={{ transition: 'stroke-dasharray 1s ease, stroke 1s ease, stroke-dashoffset 1s ease' }}
         />
-        <text x="90" y="90" textAnchor="middle" fill={color} fontFamily="'Cormorant Garamond', 'Instrument Serif', Georgia, serif" fontSize="28" fontWeight={500} letterSpacing="-0.02em">
+        <text x="90" y="90" textAnchor="middle" fill={color} fontFamily="'DM Sans', sans-serif" fontSize="28" fontWeight={500} letterSpacing="-0.02em">
           <tspan>{clamped}</tspan>
           <tspan dx="4" fill="#A89B8C" fontFamily="'DM Sans', sans-serif" fontSize="10" fontWeight={500}>/100</tspan>
         </text>

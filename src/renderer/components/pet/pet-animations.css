@@ -478,9 +478,15 @@
 
 .pet-stage-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+}
+
+.pet-stage-name-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
 }
 
 .pet-stage-label {
@@ -493,7 +499,7 @@
 
 .pet-stage-name {
   font-size: 18px;
-  font-family: var(--font-display, system-ui);
+  font-family: var(--font-number, 'Outfit', sans-serif);
   font-weight: 500;
   color: var(--pet-text);
 }
@@ -567,12 +573,12 @@
 
 .pet-evolution-percent {
   font-size: 16px;
-  font-family: var(--font-display, system-ui);
+  font-family: var(--font-number, 'Outfit', sans-serif);
   font-weight: 500;
 }
 
 .pet-evolution-bar {
-  height: 4px;
+  height: 6px;
   background: var(--bg-card-muted, #F5F3F0);
   border-radius: 4px;
   overflow: hidden;
@@ -599,9 +605,9 @@
 /* ─── Stat Chips ────────────────────────────────────────────── */
 
 .pet-stat-chips {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  flex-wrap: wrap;
 }
 
 .pet-chip {
@@ -617,7 +623,7 @@
 }
 
 .pet-chip-value {
-  font-family: var(--font-display, system-ui);
+  font-family: var(--font-number, 'Outfit', sans-serif);
   font-size: 13px;
   font-weight: 500;
   color: var(--pet-text);

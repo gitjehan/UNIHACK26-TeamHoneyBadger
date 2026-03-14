@@ -114,6 +114,7 @@ export const Dashboard = memo(function Dashboard({
           postureScore={snapshot.posture.score}
           focusScore={snapshot.focus.score}
           stressScore={snapshot.stress.score}
+          breakReminderDue={state.breakReminderDue}
         />
       </div>
 

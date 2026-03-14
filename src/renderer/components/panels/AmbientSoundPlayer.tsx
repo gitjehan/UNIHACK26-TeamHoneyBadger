@@ -170,6 +170,7 @@ export const AmbientSoundPlayer = memo(function AmbientSoundPlayer(): JSX.Elemen
     <div className="card sound-player">
       <h3>Ambient Sounds</h3>
 
+      <div className="sound-dial-wrapper">
       <div className="sound-dial-wrap">
         {/* Icons placed around the orbit */}
         {SOUNDS.map((s) => {
@@ -203,6 +204,7 @@ export const AmbientSoundPlayer = memo(function AmbientSoundPlayer(): JSX.Elemen
           />
           <div className="sound-dial-center-dot" />
         </div>
+      </div>
       </div>
 
       {/* Status label */}
