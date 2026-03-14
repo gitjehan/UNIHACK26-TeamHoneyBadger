@@ -39,6 +39,24 @@
     linear-gradient(to bottom, rgba(4, 7, 12, 0.1) 0%, rgba(2, 4, 10, 0.5) 100%);
 }
 
+.leaderboard-map-location {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(7, 10, 16, 0.76);
+  color: #dce7ff;
+  padding: 5px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  backdrop-filter: blur(10px);
+  text-transform: uppercase;
+}
+
 .leaderboard-map-hud {
   position: absolute;
   top: 16px;
@@ -82,6 +100,10 @@
 
 .leaderboard-map-hud__row--current {
   color: #ffe99a;
+}
+
+.leaderboard-map-hud__row--placeholder {
+  opacity: 0.78;
 }
 
 .leaderboard-map-hud__rank {
@@ -184,6 +206,11 @@
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
 }
 
+.leaderboard-marker__sprite--pulse {
+  transform-origin: center bottom;
+  animation: leaderboardSpritePulse 2.2s ease-in-out infinite;
+}
+
 .leaderboard-marker__label {
   max-width: 140px;
   border-radius: 999px;
@@ -196,6 +223,65 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.leaderboard-sydney-callout {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(7, 9, 13, 0.75);
+  color: #f4f8ff;
+  padding: 2px 7px;
+  font-size: 9px;
+  line-height: 1.2;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.leaderboard-sydney-callout__emoji {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.leaderboard-sydney-callout__label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.leaderboard-harbour-pulse {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(122, 207, 255, 0.8);
+  background: rgba(122, 207, 255, 0.3);
+  box-shadow: 0 0 0 0 rgba(122, 207, 255, 0.55);
+  animation: harbourPulse 2s ease-out infinite;
+}
+
+@keyframes leaderboardSpritePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes harbourPulse {
+  0% {
+    transform: scale(0.8);
+    box-shadow: 0 0 0 0 rgba(122, 207, 255, 0.6);
+  }
+  70% {
+    transform: scale(1.4);
+    box-shadow: 0 0 0 18px rgba(122, 207, 255, 0);
+  }
+  100% {
+    transform: scale(0.8);
+    box-shadow: 0 0 0 0 rgba(122, 207, 255, 0);
+  }
 }
 
 @media (max-width: 1240px), (max-height: 760px) {
@@ -213,5 +299,9 @@
 
   .leaderboard-map-hud {
     width: min(220px, calc(100% - 148px));
+  }
+
+  .leaderboard-map-location {
+    display: none;
   }
 }
