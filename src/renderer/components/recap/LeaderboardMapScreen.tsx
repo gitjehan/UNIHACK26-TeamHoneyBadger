@@ -132,7 +132,10 @@ function scoreToMarkerSize(score: number): number {
   return Math.round(MIN_MARKER_SIZE_PX + ((MAX_MARKER_SIZE_PX - MIN_MARKER_SIZE_PX) * clampedScore) / 100);
 }
 
+const CBD_POSITION = { lng: 151.2093, lat: -33.8688, name: 'CBD' } as const;
+
 function resolveMarkerPosition(entry: LeaderboardEntry, index: number): { lng: number; lat: number; name: string } | null {
+  if (sameNickname(entry.nickname, 'honeybadger')) return CBD_POSITION;
   if (sameNickname(entry.nickname, 'anubhav')) return STRATHFIELD_POSITION;
   if (sameNickname(entry.nickname, 'eshaan')) return LANE_COVE_POSITION;
   return SYDNEY_POSITIONS[index] ?? null;
