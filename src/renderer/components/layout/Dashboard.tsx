@@ -68,6 +68,8 @@ export function Dashboard({
           videoRef={videoRef}
           poseFps={state.poseFps}
           faceFps={state.faceFps}
+          landmarks={state.poseLandmarks}
+          postureScore={snapshot.posture.score}
         />
         <SessionTimeline data={timeline} />
       </div>
