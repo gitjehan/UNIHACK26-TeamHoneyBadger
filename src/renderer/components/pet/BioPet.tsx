@@ -19,16 +19,14 @@ const BODY: Record<PetHealthState, { m: string; d: string; l: string; o: string 
   Wilting:  { m: '#c88070', d: '#a86050', l: '#e0a898', o: '#804030' },
 };
 
-const EC = { o: '#5a5040', b: '#faf5ed', s: '#e8dfd0', h: '#fffcf7', k: '#c89540', spot: '#f0e4d0' };
+const EC = { o: '#5a5040', b: '#faf5ed', s: '#e8dfd0', h: '#fffcf7', k: '#c89540' };
+
+// Egg profile: hand-tuned half-widths. Pointy top, round bottom — like a real egg.
+const EGG_P = [0, 1, 2, 3, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 5, 5, 5, 4, 4, 3, 2, 1, 0];
 
 function fp(ctx: CanvasRenderingContext2D, x: number, y: number, c: string) {
   ctx.fillStyle = c;
   ctx.fillRect(x * PX, y * PX, PX, PX);
-}
-
-function eggHW(dy: number, H: number, W: number): number {
-  const t = (dy + H) / (2 * H);
-  return Math.round(Math.sin(t * Math.PI) * W * (1 + 0.22 * (1 - t)));
 }
 
 // ── Background ─────────────────────────────────────────────
