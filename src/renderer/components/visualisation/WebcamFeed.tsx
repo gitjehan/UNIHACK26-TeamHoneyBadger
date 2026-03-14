@@ -208,11 +208,10 @@ export function WebcamFeed({ videoRef, landmarks = [], postureScore = 0, collaps
         padding: collapsed ? '8px 14px' : undefined,
         minHeight: 0,
         overflow: 'hidden',
-        transition: 'padding 0.2s ease',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h3 style={{ margin: 0, opacity: collapsed ? 0.5 : 1, transition: 'opacity 0.2s' }}>Webcam Feed</h3>
+        <h3 style={{ margin: 0 }}>Webcam Feed</h3>
         <button
           onClick={onToggle}
           style={{
