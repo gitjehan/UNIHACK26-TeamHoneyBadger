@@ -79,7 +79,7 @@ button {
   border-bottom: 1px solid var(--border-card);
   background: var(--bg-primary);
   padding: 16px 24px;
-  padding-left: 72px; /* clear macOS traffic lights */
+  padding-left: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1507,9 +1507,9 @@ input:focus-visible {
 }
 
 .sound-volume-icon {
-  font-size: 12px;
   flex-shrink: 0;
-  line-height: 1;
+  color: #a89b8c;
+  display: block;
 }
 
 .sound-volume-slider {
@@ -1538,4 +1538,112 @@ input:focus-visible {
 
 .sound-volume-slider::-webkit-slider-thumb:hover {
   transform: scale(1.2);
+}
+
+/* ── Sound Dial ─────────────────────────────────────────── */
+
+.sound-dial-wrap {
+  position: relative;
+  width: 200px;
+  height: 168px;
+  margin: 8px auto 0;
+}
+
+/* Dial knob — centred within wrap: DIAL_CX=100, DIAL_CY=100, KNOB_R=44 */
+.sound-dial-knob {
+  position: absolute;
+  left: 56px;
+  top: 56px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 38% 30%, #f8f4ee, #ddd8cf);
+  border: 1.5px solid #c5bfb5;
+  box-shadow:
+    3px 5px 14px rgba(44, 36, 22, 0.18),
+    inset -1px -2px 5px rgba(44, 36, 22, 0.1),
+    inset 1px 1px 4px rgba(255, 255, 255, 0.85);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.sound-dial-knob:active {
+  cursor: grabbing;
+}
+
+/* Pointer line — rotates around knob center.
+   top: 10px means 34px from pointer-top to knob-center (44-10=34) */
+.sound-dial-pointer {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  width: 3px;
+  height: 22px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--green-primary);
+  transform-origin: 50% 34px;
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sound-dial-pointer--instant {
+  transition: none;
+}
+
+.sound-dial-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b8b0a4;
+  transform: translate(-50%, -50%);
+}
+
+/* Icon buttons placed absolutely around the orbit */
+.sound-dial-icon {
+  position: absolute;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-card);
+  background: var(--bg-card-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.sound-dial-icon:hover {
+  background: var(--bg-card);
+  border-color: #cfc9bf;
+  box-shadow: 0 2px 6px rgba(44, 36, 22, 0.1);
+}
+
+.sound-dial-icon--active {
+  border-color: var(--green-primary);
+  background: var(--green-bg);
+  box-shadow: 0 0 0 3px rgba(74, 124, 89, 0.15);
+}
+
+.sound-dial-icon-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.sound-dial-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-height: 16px;
 }
