@@ -79,6 +79,8 @@ export const MetricCard = memo(function MetricCard({ label, value, unit, kind }:
       if (isBlinkRate && prev !== null && value !== null && value > prev) {
         setBlinkPulse(true);
         blinkTimeout = setTimeout(() => setBlinkPulse(false), 450);
+      } else {
+        setBlinkPulse(false);
       }
 
       return () => {
