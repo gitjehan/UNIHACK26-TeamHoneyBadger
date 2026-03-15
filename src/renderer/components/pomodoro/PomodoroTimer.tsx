@@ -1,5 +1,38 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 
+function playTimerCompleteSound() {
+  const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return;
+  const ctx = new AudioCtx();
+
+  // Play 3 descending bell chimes over ~5 seconds
+  const chimes = [
+    { freq: 880, time: 0 },
+    { freq: 660, time: 1.5 },
+    { freq: 440, time: 3.0 },
+  ];
+
+  chimes.forEach(({ freq, time }) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+
+    gain.gain.setValueAtTime(0, ctx.currentTime + time);
+    gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + time + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + time + 1.4);
+
+    osc.start(ctx.currentTime + time);
+    osc.stop(ctx.currentTime + time + 1.5);
+  });
+
+  // Close context after all chimes finish
+  setTimeout(() => ctx.close(), 5500);
+}
+
 type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 
 const MODE_DURATIONS: Record<TimerMode, number> = {
@@ -117,6 +150,7 @@ export const PomodoroTimer = memo(function PomodoroTimer({ postureScore }: Pomod
           // Timer finished
           clearTimer();
           setIsRunning(false);
+          playTimerCompleteSound();
 
           setCompletedRounds(rounds => {
             const newRounds = mode === 'focus' ? rounds + 1 : rounds;
