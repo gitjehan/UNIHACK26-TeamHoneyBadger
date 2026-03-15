@@ -2,7 +2,7 @@ import {
   AMBIENT_MAP,
   FOCUS_WEIGHTS,
   OVERALL_WEIGHTS,
-  PET_EVOLUTION,
+  getPetEvolution,
   STATE_THRESHOLDS,
 } from '@renderer/lib/constants';
 import { clamp, lerp } from '@renderer/lib/math';
@@ -120,7 +120,12 @@ class ScoreEngine {
 
   private ambientWarmthSmoother = new RollingAverage(10);
 
-  private timeline = new RollingBuffer<{ timestamp: number; posture: number; focus: number; stress: number }>(300);
+  private timeline = new RollingBuffer<{
+    timestamp: number;
+    posture: number;
+    focus: number;
+    stress: number;
+  }>(300);
 
   private poseLandmarks: Point[] = [];
 
@@ -174,7 +179,7 @@ class ScoreEngine {
   private absentSeconds = 0;
   private _breakReminderDue = false;
   private readonly BREAK_REMINDER_THRESHOLD = 1800; // 30 minutes
-  private readonly ABSENCE_RESET_THRESHOLD = 60;    // 60 seconds away resets
+  private readonly ABSENCE_RESET_THRESHOLD = 60; // 60 seconds away resets
 
   get personDetected(): boolean {
     return this._personDetected;
@@ -227,6 +232,10 @@ class ScoreEngine {
     this.pet = pet;
     this.previousPetStage = pet.stage;
     this.emit();
+  }
+
+  resetPet(): void {
+    this.setPetState(initialPetState());
   }
 
   getTimeline(): Array<{ timestamp: number; posture: number; focus: number; stress: number }> {
@@ -339,7 +348,12 @@ class ScoreEngine {
     this.recompute(adjustedPosture);
   }
 
-  updateFace(landmarks: Point[], emotionState: string, emotionConfidence: number, aspectRatio = 4 / 3): void {
+  updateFace(
+    landmarks: Point[],
+    emotionState: string,
+    emotionConfidence: number,
+    aspectRatio = 4 / 3,
+  ): void {
     this.faceLandmarks = landmarks;
     if (!this._personDetected) return;
     this.emotionState = emotionState || 'neutral';
@@ -352,10 +366,7 @@ class ScoreEngine {
     this.recompute(this.snapshot.posture, blinkFrame);
   }
 
-  private recompute(
-    posture = this.snapshot.posture,
-    blink = this.snapshot.blink,
-  ): void {
+  private recompute(posture = this.snapshot.posture, blink = this.snapshot.blink): void {
     const baselineBlink = 17;
     const blinkRateDeviation = Math.abs(blink.rate - baselineBlink) / Math.max(1, baselineBlink);
     const postureVariance = this.postureVariance.deviation;
@@ -480,9 +491,14 @@ class ScoreEngine {
     if (health !== 'Wilting') this.pet.sickSince = null;
     this.pet.health = health;
 
-    this.pet.eggCrackProgress = clamp((this.pet.totalLockedInMinutes / PET_EVOLUTION[1].minMinutes) * 100, 0, 100);
+    const evolution = getPetEvolution();
+    this.pet.eggCrackProgress = clamp(
+      (this.pet.totalLockedInMinutes / evolution[1].minMinutes) * 100,
+      0,
+      100,
+    );
 
-    const stage = [...PET_EVOLUTION]
+    const stage = [...evolution]
       .reverse()
       .find((candidate) => this.pet.totalLockedInMinutes >= candidate.minMinutes);
 
@@ -506,14 +522,15 @@ class ScoreEngine {
 
   private getAmbientTarget(): AmbientTarget {
     const overall = this.snapshot.overall.score;
-    const bucket = AMBIENT_MAP.find(
-      (range) => overall >= range.scoreMin && overall <= range.scoreMax,
-    ) ?? AMBIENT_MAP[AMBIENT_MAP.length - 1];
+    const bucket =
+      AMBIENT_MAP.find((range) => overall >= range.scoreMin && overall <= range.scoreMax) ??
+      AMBIENT_MAP[AMBIENT_MAP.length - 1];
     const span = Math.max(1, bucket.scoreMax - bucket.scoreMin);
     const t = clamp((overall - bucket.scoreMin) / span, 0, 1);
     let brightness = lerp(bucket.brightness[0], bucket.brightness[1], t);
     const warmth = lerp(bucket.warmth[0], bucket.warmth[1], 1 - t);
-    const smoothedFatigue = this.fatigueSmoother.filledCount > 0 ? this.fatigueSmoother.average : this.fatigueScore;
+    const smoothedFatigue =
+      this.fatigueSmoother.filledCount > 0 ? this.fatigueSmoother.average : this.fatigueScore;
     brightness = clamp(brightness - (smoothedFatigue / 100) * 0.2, 0.2, 1);
     this.ambientBrightnessSmoother.push(brightness);
     this.ambientWarmthSmoother.push(warmth);

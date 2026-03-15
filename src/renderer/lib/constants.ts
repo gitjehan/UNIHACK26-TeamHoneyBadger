@@ -42,9 +42,9 @@ export const AMBIENT_UPDATE_INTERVAL = 1000;
 export const AMBIENT_TRANSITION_DURATION = 2000;
 export const AMBIENT_MAP = [
   { scoreMin: 65, scoreMax: 100, brightness: [1.0, 1.0], warmth: [0.0, 0.0] },
-  { scoreMin: 40, scoreMax: 65,  brightness: [0.6, 1.0], warmth: [0.0, 0.5] },
-  { scoreMin: 20, scoreMax: 40,  brightness: [0.3, 0.6], warmth: [0.5, 0.85] },
-  { scoreMin: 0,  scoreMax: 20,  brightness: [0.2, 0.3], warmth: [0.85, 1.0] },
+  { scoreMin: 40, scoreMax: 65, brightness: [0.6, 1.0], warmth: [0.0, 0.5] },
+  { scoreMin: 20, scoreMax: 40, brightness: [0.3, 0.6], warmth: [0.5, 0.85] },
+  { scoreMin: 0, scoreMax: 20, brightness: [0.2, 0.3], warmth: [0.85, 1.0] },
 ] as const;
 
 export const POSE_FPS = 8;
@@ -101,11 +101,17 @@ export const RIGHT_EYE = {
   right: 263,
 };
 
-export const PET_HEALTH: Record<PetHealthState, { minScore: number; color: string; label: PetHealthState }> = {
+export const PET_HEALTH: Record<
+  PetHealthState,
+  { minScore: number; color: string; label: PetHealthState }
+> = {
   Thriving: { minScore: 65, color: '#4A7C59', label: 'Thriving' },
   Fading: { minScore: 30, color: '#B8860B', label: 'Fading' },
   Wilting: { minScore: 0, color: '#C0392B', label: 'Wilting' },
 };
+
+/** Set to true for dev: 10s per evolution stage, pet resets on load, bar reaches 100% in 10s. */
+export const USE_DEV_PET_EVOLUTION = true;
 
 export const PET_EVOLUTION = [
   { stage: 0, title: 'Egg', minMinutes: 0 },
@@ -115,6 +121,24 @@ export const PET_EVOLUTION = [
   { stage: 4, title: 'Guardian', minMinutes: 15 },
   { stage: 5, title: 'Ascended', minMinutes: 25 },
 ] as const;
+
+const DEV_EVOLUTION_INTERVAL_SECONDS = 10;
+
+/** Dev: each stage needs 10s of locked-in time, so the progress bar reaches 100% in 10s. */
+export const PET_EVOLUTION_DEV = [
+  { stage: 0, title: 'Egg', minMinutes: 0 },
+  { stage: 1, title: 'Kitten', minMinutes: DEV_EVOLUTION_INTERVAL_SECONDS / 60 },
+  { stage: 2, title: 'Mouser', minMinutes: (2 * DEV_EVOLUTION_INTERVAL_SECONDS) / 60 },
+  { stage: 3, title: 'Companion', minMinutes: (3 * DEV_EVOLUTION_INTERVAL_SECONDS) / 60 },
+  { stage: 4, title: 'Guardian', minMinutes: (4 * DEV_EVOLUTION_INTERVAL_SECONDS) / 60 },
+  { stage: 5, title: 'Ascended', minMinutes: (5 * DEV_EVOLUTION_INTERVAL_SECONDS) / 60 },
+] as const;
+
+export type PetEvolutionEntry = { readonly stage: number; readonly title: string; readonly minMinutes: number };
+
+export function getPetEvolution(): readonly PetEvolutionEntry[] {
+  return USE_DEV_PET_EVOLUTION ? PET_EVOLUTION_DEV : PET_EVOLUTION;
+}
 
 export const PET_ACCESSORIES = [
   { id: 'scarf', label: 'Scarf' },

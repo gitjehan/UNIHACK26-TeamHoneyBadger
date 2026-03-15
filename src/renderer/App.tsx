@@ -15,6 +15,7 @@ import type {
 } from '@renderer/lib/types';
 import { FaceEngine } from '@renderer/ml/face-engine';
 import { PoseEngine } from '@renderer/ml/pose-engine';
+import { USE_DEV_PET_EVOLUTION } from '@renderer/lib/constants';
 import { scoreEngine } from '@renderer/ml/score-engine';
 
 type FlowStage = 'welcome' | 'ready';
@@ -74,7 +75,11 @@ export default function App(): JSX.Element {
       ]);
       if (!mounted) return;
       const pet = sanitizePet(storedPet);
-      if (pet) scoreEngine.setPetState(pet);
+      if (USE_DEV_PET_EVOLUTION) {
+        scoreEngine.resetPet();
+      } else if (pet) {
+        scoreEngine.setPetState(pet);
+      }
       if (typeof storedNick === 'string' && storedNick.trim()) setNickname(storedNick);
       if (Array.isArray(storedBrightnessRange) && storedBrightnessRange.length === 2) {
         brightnessRangeRef.current = storedBrightnessRange as [number, number];

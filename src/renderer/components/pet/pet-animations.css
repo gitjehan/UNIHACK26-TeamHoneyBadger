@@ -449,6 +449,56 @@
   animation: evolution-glow-anim 2s ease-out forwards;
 }
 
+/* ─── Stage Aura Ring (ground glow beneath the cat) ────────── */
+
+.pet-stage-aura {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Companion — soft teal */
+.pet-stage-aura--3 {
+  width: 76px;
+  height: 14px;
+  background: radial-gradient(ellipse, rgba(56, 189, 196, 0.35) 0%, transparent 70%);
+}
+
+/* Guardian — royal purple */
+.pet-stage-aura--4 {
+  width: 90px;
+  height: 16px;
+  background: radial-gradient(ellipse, rgba(147, 112, 219, 0.45) 0%, transparent 70%);
+}
+
+/* Ascended — golden, pulsing */
+.pet-stage-aura--5 {
+  width: 110px;
+  height: 20px;
+  background: radial-gradient(ellipse, rgba(255, 215, 0, 0.6) 0%, transparent 70%);
+  animation: ascended-aura-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ascended-aura-pulse {
+  0%, 100% { opacity: 0.65; transform: translateX(-50%) scaleX(1); }
+  50%       { opacity: 1;    transform: translateX(-50%) scaleX(1.18); }
+}
+
+/* ─── Evolve Sparkle Colour Overrides ──────────────────────── */
+
+/* Mouser — teal */
+.evolve-sparkle--stage2 { background: #38BDC4; }
+/* Companion — blue */
+.evolve-sparkle--stage3 { background: #5B8DDE; }
+/* Guardian — purple */
+.evolve-sparkle--stage4 { background: #9370DB; }
+/* Ascended — gold (same as hatch) */
+.evolve-sparkle--stage5 { background: #FFD250; }
+
 /* ─── Reduced Motion ────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -463,7 +513,8 @@
   .hatch-sparkle,
   .hatch-fragment,
   .hatch-flash-overlay,
-  .evolution-glow-active {
+  .evolution-glow-active,
+  .pet-stage-aura--5 {
     animation: none;
   }
 }
