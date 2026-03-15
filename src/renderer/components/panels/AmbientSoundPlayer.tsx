@@ -207,19 +207,24 @@ export const AmbientSoundPlayer = memo(function AmbientSoundPlayer(): JSX.Elemen
       </div>
       </div>
 
-      {/* Status label */}
-      <div className="sound-dial-status">
-        <span>{activeLabel ?? 'Turn to select'}</span>
-        {activeSound && isPlaying && (
-          <span className="sound-option-eq" style={{ marginLeft: 6 }}>
-            <span /><span /><span />
-          </span>
-        )}
-      </div>
+      {/* Status label (when no sound selected) */}
+      {!activeSound && (
+        <div className="sound-dial-status">
+          <span>Turn to select</span>
+        </div>
+      )}
 
-      {/* Volume controls */}
+      {/* Label + volume controls (when sound selected) — single row to avoid overlap */}
       {activeSound && (
         <div className="sound-controls">
+          <span className="sound-controls-label">
+            {activeLabel}
+            {isPlaying && (
+              <span className="sound-option-eq" style={{ marginLeft: 6 }}>
+                <span /><span /><span />
+              </span>
+            )}
+          </span>
           <button
             type="button"
             className="sound-play-btn"
