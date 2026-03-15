@@ -16,7 +16,7 @@ const seededLeaderboard: LeaderboardEntry[] = [
     timestamp: new Date().toISOString(),
   },
   {
-    nickname: 'Auslee The Pido',
+    nickname: 'Jehan',
     sessionId: 'seed-2',
     avgOverallScore: 82,
     bestStreak: 43,
