@@ -88,7 +88,24 @@ interface AnimatedCatProps {
   health: 'Thriving' | 'Fading' | 'Wilting';
   scale?: number;
   filter?: string;
+  stage?: number;
 }
+
+const STAGE_SCALE: Record<number, number> = {
+  1: 2.0,
+  2: 2.5,
+  3: 3.0,
+  4: 3.0,
+  5: 3.2,
+};
+
+const STAGE_FILTER: Record<number, string | undefined> = {
+  1: 'brightness(0.85) saturate(0.75)',
+  2: undefined,
+  3: 'saturate(1.2)',
+  4: 'saturate(1.4) brightness(1.05)',
+  5: 'saturate(2.0) brightness(1.3)',
+};
 
 const THRIVING_ACTIONS: CalmAction[] = [
   { anim: 'yawnSit', duration: 1700 },
@@ -110,7 +127,9 @@ const randomBetween = (min: number, max: number): number => min + Math.random() 
 const randomInt = (min: number, max: number): number => Math.round(randomBetween(min, max));
 const pickRandom = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
-export function AnimatedCat({ health, scale = 3, filter }: AnimatedCatProps): JSX.Element {
+export function AnimatedCat({ health, scale = 3, filter, stage }: AnimatedCatProps): JSX.Element {
+  const resolvedScale = stage !== undefined ? (STAGE_SCALE[stage] ?? scale) : scale;
+  const resolvedFilter = filter ?? (stage !== undefined ? STAGE_FILTER[stage] : undefined);
   const [animation, setAnimation] = useState<AnimName>('idleSit');
   const [frame, setFrame] = useState(0);
   const [posX, setPosX] = useState(0);
@@ -265,7 +284,7 @@ export function AnimatedCat({ health, scale = 3, filter }: AnimatedCatProps): JS
         transition: 'transform 0.05s linear',
       }}
     >
-      <CatSprite row={currentAnim.row} col={frame} scale={scale} filter={filter} />
+      <CatSprite row={currentAnim.row} col={frame} scale={resolvedScale} filter={resolvedFilter} />
     </div>
   );
 }
