@@ -3,20 +3,50 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { MakerDMG } from '@electron-forge/maker-dmg';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { PublisherGithub } from '@electron-forge/publisher-github';
+import path from 'path';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    icon: path.resolve(__dirname, 'assets', 'icon'),
+    appBundleId: 'com.axis.app',
+    appCategoryType: 'public.app-category.productivity',
+    osxSign: {},
+    osxNotarize: process.env.APPLE_ID
+      ? {
+          appleId: process.env.APPLE_ID!,
+          appleIdPassword: process.env.APPLE_PASSWORD!,
+          teamId: process.env.APPLE_TEAM_ID!,
+        }
+      : undefined,
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: path.resolve(__dirname, 'assets', 'icon.ico'),
+    }),
     new MakerZIP({}, ['darwin']),
+    new MakerDMG({
+      icon: path.resolve(__dirname, 'assets', 'icon.icns'),
+      format: 'ULFO',
+    }),
     new MakerRpm({}),
     new MakerDeb({}),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'gitjehan',
+        name: 'UNIHACK26-TeamHoneyBadger',
+      },
+      prerelease: false,
+      draft: true,
+    }),
   ],
   plugins: [
     new VitePlugin({
